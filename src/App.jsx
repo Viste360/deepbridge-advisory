@@ -229,7 +229,7 @@ function HeroVisual() {
       <div className="absolute left-[24%] top-[76%] h-px w-[52%] -rotate-45 bg-gradient-to-r from-transparent via-white/25 to-transparent" />
 
       {nodes.map(([label, position]) => (
-        <div key={label} className={`absolute ${position} rounded-2xl border border-white/12 bg-slate-950/80 px-4 py-3 shadow-xl backdrop-blur`}>
+        <div key={label} className={`absolute ${position} rounded-2xl border border-white/[0.12] bg-slate-950/80 px-4 py-3 shadow-xl backdrop-blur`}>
           <p className="text-xs font-medium uppercase tracking-[0.18em] text-cyan-200">
             {label}
           </p>
@@ -307,15 +307,19 @@ export default function DeepBridgeAdvisoryLandingPage() {
   return (
     <main className="min-h-screen bg-slate-50 font-sans text-slate-950">
       <section className="relative overflow-hidden bg-slate-950 text-white">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.18),transparent_32%),radial-gradient(circle_at_80%_20%,rgba(14,165,233,0.14),transparent_30%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_32%),radial-gradient(circle_at_80%_20%,rgba(14,165,233,0.12),transparent_30%)]" />
 
-        <div
-          className="absolute inset-x-0 top-0 h-[460px] bg-cover bg-center opacity-60 mix-blend-screen"
-          style={{ backgroundImage: "url('/bridge-header.png')" }}
-        />
+        <div className="pointer-events-none absolute right-0 top-20 hidden h-[520px] w-[72%] overflow-hidden lg:block">
+          <img
+            src="/bridge-header.png"
+            alt=""
+            className="h-full w-full object-cover object-right-bottom opacity-35"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/70 to-slate-950/10" />
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/80 via-slate-950/35 to-slate-950/90" />
+        </div>
 
-        <div className="absolute inset-x-0 top-0 h-[460px] bg-gradient-to-b from-slate-950/10 via-slate-950/70 to-slate-950" />
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-slate-50 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-slate-50 via-slate-950/80 to-transparent" />
 
         <Container className="relative py-7 sm:py-9">
           <nav className="flex items-center justify-between" aria-label="Main navigation">
@@ -336,10 +340,10 @@ export default function DeepBridgeAdvisoryLandingPage() {
           <div id="top" className="grid items-center gap-12 pb-24 pt-20 sm:pt-24 lg:grid-cols-[1.05fr_0.95fr] lg:pb-32 lg:pt-28">
             <motion.div initial="hidden" animate="visible" variants={stagger} className="max-w-3xl">
               <motion.div variants={fadeUp} className="mb-7 flex flex-wrap gap-2">
-                <span className="rounded-full border border-white/15 bg-white/8 px-3 py-1 text-sm text-slate-200 backdrop-blur">
+                <span className="rounded-full border border-white/15 bg-white/[0.08] px-3 py-1 text-sm text-slate-200 backdrop-blur">
                   Senior contract consultants
                 </span>
-                <span className="rounded-full border border-white/15 bg-white/8 px-3 py-1 text-sm text-slate-200 backdrop-blur">
+                <span className="rounded-full border border-white/15 bg-white/[0.08] px-3 py-1 text-sm text-slate-200 backdrop-blur">
                   Reporting • Analytics • ERP • Transformation
                 </span>
               </motion.div>
@@ -516,7 +520,7 @@ export default function DeepBridgeAdvisoryLandingPage() {
               aria-label="Contact form"
             >
               <input type="hidden" name="_subject" value="New DeepBridge Advisory Website Inquiry" />
-              <input type="text" name="_gotcha" className="hidden" tabIndex="-1" autoComplete="off" />
+              <input type="text" name="_gotcha" className="hidden" tabIndex={-1} autoComplete="off" />
 
               <div className="grid gap-5 sm:grid-cols-2">
                 <Field id="name" label="Name" placeholder="Your name" autoComplete="name" required />
