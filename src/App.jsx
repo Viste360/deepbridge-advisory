@@ -190,26 +190,33 @@ function FeatureCard({ icon, label, title, description, dark = false }) {
 
 function HeaderBrand() {
   return (
-    <a href="#top" className="group flex items-center gap-4" aria-label="DeepBridge Advisory home">
-      <img
-        src="/db-logo.png"
-        alt="DeepBridge Advisory"
-        className="h-14 w-14 rounded-2xl object-contain shadow-xl shadow-cyan-500/20 transition group-hover:scale-105"
-      />
+    <a
+      href="#top"
+      className="group flex items-center gap-3"
+      aria-label="DeepBridge Advisory home"
+    >
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950/70 ring-1 ring-cyan-300/25 shadow-xl shadow-cyan-500/15 backdrop-blur">
+        <img
+          src="/db-logo.png"
+          alt="DeepBridge Advisory"
+          className="h-10 w-10 object-contain transition duration-300 group-hover:scale-105"
+        />
+      </div>
 
       <div className="leading-none">
-        <p className="text-lg font-bold tracking-[0.12em] text-white">
+        <p className="text-base font-bold tracking-[0.18em] text-white">
           DEEPBRIDGE
         </p>
 
-        <p className="mt-1 text-sm font-semibold tracking-[0.42em] text-cyan-400">
+        <p className="mt-1 text-xs font-semibold tracking-[0.42em] text-cyan-300">
           ADVISORY
         </p>
 
-        <p className="mt-3 hidden text-xs uppercase tracking-[0.16em] text-slate-300 sm:block">
-          Reporting <span className="mx-2 text-cyan-400">•</span> Analytics{" "}
-          <span className="mx-2 text-cyan-400">•</span> ERP{" "}
-          <span className="mx-2 text-cyan-400">•</span> Transformation
+        <p className="mt-2 hidden text-[10px] uppercase tracking-[0.24em] text-slate-300 sm:block">
+          Reporting <span className="mx-1.5 text-cyan-400">•</span>
+          Analytics <span className="mx-1.5 text-cyan-400">•</span>
+          ERP <span className="mx-1.5 text-cyan-400">•</span>
+          Transformation
         </p>
       </div>
     </a>
