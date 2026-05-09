@@ -190,12 +190,18 @@ function FeatureCard({ icon, label, title, description, dark = false }) {
 
 function HeaderBrand() {
   return (
-    <a href="#top" className="group flex items-center gap-4" aria-label="DeepBridge Advisory home">
-      <img
-  src="/db-logo.png"
-  alt=""
-  className="h-10 w-10 object-contain transition duration-300 group-hover:scale-105"
-/>
+    <a
+      href="#top"
+      className="group flex items-center gap-3"
+      aria-label="DeepBridge Advisory home"
+    >
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-950/80 ring-1 ring-cyan-300/30 shadow-xl shadow-cyan-500/20 backdrop-blur overflow-hidden">
+        <img
+          src="/favicon.png?v=3"
+          alt=""
+          className="h-12 w-12 rounded-2xl object-cover transition duration-300 group-hover:scale-105"
+        />
+      </div>
 
       <div className="leading-none">
         <p className="text-base font-bold tracking-[0.18em] text-white">
