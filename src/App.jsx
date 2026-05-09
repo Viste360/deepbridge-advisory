@@ -17,13 +17,7 @@ function Container({ children, className = "" }) {
 
 function DeepBridgeLogo({ className = "" }) {
   return (
-    <svg
-      viewBox="0 0 120 120"
-      className={className}
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
+    <svg viewBox="0 0 120 120" className={className} fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <rect x="8" y="8" width="104" height="104" rx="28" fill="url(#bg)" />
       <path d="M38 32H60C76 32 86 42 86 58C86 74 76 84 60 84H38V32Z" fill="white" fillOpacity="0.96" />
       <path d="M54 46H63C71 46 76 50 76 58C76 66 71 70 63 70H54V46Z" fill="#67E8F9" />
@@ -56,11 +50,7 @@ function CheckIcon({ className = "" }) {
 }
 
 function SimpleIcon({ label, className = "" }) {
-  return (
-    <span className={`inline-flex items-center justify-center font-semibold ${className}`} aria-hidden="true">
-      {label}
-    </span>
-  );
+  return <span className={`inline-flex items-center justify-center font-semibold ${className}`} aria-hidden="true">{label}</span>;
 }
 
 function Button({ children, href, variant = "primary", className = "" }) {
@@ -131,15 +121,11 @@ function HeroVisual() {
       </div>
       <div className="absolute left-1/2 top-1/2 h-[72%] w-px -translate-x-1/2 -translate-y-1/2 bg-gradient-to-b from-transparent via-cyan-300/40 to-transparent" />
       <div className="absolute left-1/2 top-1/2 h-px w-[72%] -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent" />
-      <div className="absolute left-[24%] top-[24%] h-px w-[52%] rotate-45 bg-gradient-to-r from-transparent via-white/25 to-transparent" />
-      <div className="absolute left-[24%] top-[76%] h-px w-[52%] -rotate-45 bg-gradient-to-r from-transparent via-white/25 to-transparent" />
-
       {nodes.map(([label, position]) => (
         <div key={label} className={`absolute ${position} rounded-2xl border border-white/12 bg-slate-950/80 px-4 py-3 shadow-xl backdrop-blur`}>
           <p className="text-xs font-medium uppercase tracking-[0.18em] text-cyan-200">{label}</p>
         </div>
       ))}
-
       <div className="absolute bottom-8 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm text-white backdrop-blur">
         <span className="h-2 w-2 rounded-full bg-cyan-300" /> Business-first matching
       </div>
@@ -147,7 +133,7 @@ function HeroVisual() {
   );
 }
 
-function Field({ id, label, type = "text", placeholder, autoComplete }) {
+function Field({ id, label, type = "text", placeholder, autoComplete, required = false }) {
   return (
     <div className="space-y-2">
       <label htmlFor={id} className="text-sm font-medium text-slate-800">{label}</label>
@@ -157,6 +143,7 @@ function Field({ id, label, type = "text", placeholder, autoComplete }) {
         type={type}
         placeholder={placeholder}
         autoComplete={autoComplete}
+        required={required}
         className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
       />
     </div>
@@ -375,29 +362,55 @@ export default function DeepBridgeAdvisoryLandingPage() {
               </div>
             </motion.div>
 
-            <motion.form variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.55, ease: "easeOut" }} className="rounded-[2rem] border border-slate-200 bg-slate-50 p-6 shadow-sm sm:p-8" aria-label="Contact form">
+            <motion.form
+              action="https://formspree.io/f/mlgzpyqv"
+              method="POST"
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.55, ease: "easeOut" }}
+              className="rounded-[2rem] border border-slate-200 bg-slate-50 p-6 shadow-sm sm:p-8"
+              aria-label="Contact form"
+            >
+              <input type="hidden" name="_subject" value="New DeepBridge Advisory Website Inquiry" />
+
               <div className="grid gap-5 sm:grid-cols-2">
-                <Field id="name" label="Name" placeholder="Your name" autoComplete="name" />
-                <Field id="email" label="Email" type="email" placeholder="you@company.com" autoComplete="email" />
+                <Field id="name" label="Name" placeholder="Your name" autoComplete="name" required />
+                <Field id="email" label="Email" type="email" placeholder="you@company.com" autoComplete="email" required />
                 <Field id="company" label="Company" placeholder="Company name" autoComplete="organization" />
+
                 <div className="space-y-2">
                   <label htmlFor="profile-type" className="text-sm font-medium text-slate-800">I am</label>
-                  <select id="profile-type" name="profileType" className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100">
+                  <select
+                    id="profile-type"
+                    name="role"
+                    required
+                    className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                  >
                     <option value="">Select one</option>
                     <option value="client">A client</option>
                     <option value="consultant">A consultant</option>
                   </select>
                 </div>
+
                 <div className="space-y-2 sm:col-span-2">
                   <label htmlFor="message" className="text-sm font-medium text-slate-800">Message</label>
-                  <textarea id="message" name="message" placeholder="Tell us about your project, hiring need or consulting profile." className="min-h-36 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100" />
+                  <textarea
+                    id="message"
+                    name="message"
+                    required
+                    placeholder="Tell us about your project, hiring need or consulting profile."
+                    className="min-h-36 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                  />
                 </div>
               </div>
 
               <button type="submit" className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-slate-950 px-7 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-2 sm:w-auto">
                 Let’s discuss your project <ArrowIcon className="ml-2 h-4 w-4" />
               </button>
-              <p className="mt-4 text-xs leading-6 text-slate-500">Static form placeholder. Connect your preferred form handler or CRM when ready.</p>
+
+              <p className="mt-4 text-xs leading-6 text-slate-500">We typically respond within 24 hours.</p>
             </motion.form>
           </div>
         </Container>
