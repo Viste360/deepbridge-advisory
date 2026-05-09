@@ -192,10 +192,10 @@ function HeaderBrand() {
   return (
     <a href="#top" className="group flex items-center gap-4" aria-label="DeepBridge Advisory home">
       <img
-        src="/db-logo.png"
-        alt="DeepBridge Advisory"
-        className="h-14 w-14 rounded-2xl object-contain shadow-xl shadow-cyan-500/20 transition duration-300 group-hover:scale-105"
-      />
+  src="/db-logo.png"
+  alt=""
+  className="h-10 w-10 object-contain transition duration-300 group-hover:scale-105"
+/>
 
       <div className="leading-none">
         <p className="text-base font-bold tracking-[0.18em] text-white">
