@@ -146,9 +146,11 @@ function SectionHeader({ eyebrow, title, description, align = "center", dark = f
       <p className="mb-3 text-sm font-semibold uppercase tracking-[0.22em] text-cyan-600">
         {eyebrow}
       </p>
+
       <h2 className={`text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl ${dark ? "text-white" : "text-slate-950"}`}>
         {title}
       </h2>
+
       <p className={`mt-5 text-base leading-8 sm:text-lg ${dark ? "text-slate-300" : "text-slate-600"}`}>
         {description}
       </p>
@@ -159,13 +161,25 @@ function SectionHeader({ eyebrow, title, description, align = "center", dark = f
 function FeatureCard({ icon, label, title, description, dark = false }) {
   return (
     <motion.div variants={fadeUp} transition={{ duration: 0.5, ease: "easeOut" }}>
-      <div className={`h-full rounded-3xl border p-6 transition duration-300 hover:-translate-y-1 ${dark ? "border-white/10 bg-white/[0.06] hover:bg-white/[0.09]" : "border-slate-200 bg-white shadow-sm hover:border-cyan-200 hover:shadow-xl hover:shadow-slate-200/70"}`}>
-        <div className={`mb-5 flex h-12 w-12 items-center justify-center rounded-2xl ${dark ? "bg-cyan-300 text-slate-950" : "bg-slate-950 text-cyan-300"}`}>
+      <div
+        className={`h-full rounded-3xl border p-6 transition duration-300 hover:-translate-y-1 ${
+          dark
+            ? "border-white/10 bg-white/[0.06] hover:bg-white/[0.09]"
+            : "border-slate-200 bg-white shadow-sm hover:border-cyan-200 hover:shadow-xl hover:shadow-slate-200/70"
+        }`}
+      >
+        <div
+          className={`mb-5 flex h-12 w-12 items-center justify-center rounded-2xl ${
+            dark ? "bg-cyan-300 text-slate-950" : "bg-slate-950 text-cyan-300"
+          }`}
+        >
           {icon || <span className="text-sm font-bold">{label}</span>}
         </div>
+
         <h3 className={`text-lg font-semibold ${dark ? "text-white" : "text-slate-950"}`}>
           {title}
         </h3>
+
         <p className={`mt-3 text-sm leading-7 ${dark ? "text-slate-300" : "text-slate-600"}`}>
           {description}
         </p>
@@ -187,11 +201,15 @@ function HeaderBrand() {
         <p className="text-lg font-bold tracking-[0.12em] text-white">
           DEEPBRIDGE
         </p>
+
         <p className="mt-1 text-sm font-semibold tracking-[0.42em] text-cyan-400">
           ADVISORY
         </p>
+
         <p className="mt-3 hidden text-xs uppercase tracking-[0.16em] text-slate-300 sm:block">
-          Reporting <span className="mx-2 text-cyan-400">•</span> Analytics <span className="mx-2 text-cyan-400">•</span> ERP <span className="mx-2 text-cyan-400">•</span> Transformation
+          Reporting <span className="mx-2 text-cyan-400">•</span> Analytics{" "}
+          <span className="mx-2 text-cyan-400">•</span> ERP{" "}
+          <span className="mx-2 text-cyan-400">•</span> Transformation
         </p>
       </div>
     </a>
@@ -229,7 +247,10 @@ function HeroVisual() {
       <div className="absolute left-[24%] top-[76%] h-px w-[52%] -rotate-45 bg-gradient-to-r from-transparent via-white/25 to-transparent" />
 
       {nodes.map(([label, position]) => (
-        <div key={label} className={`absolute ${position} rounded-2xl border border-white/[0.12] bg-slate-950/80 px-4 py-3 shadow-xl backdrop-blur`}>
+        <div
+          key={label}
+          className={`absolute ${position} rounded-2xl border border-white/[0.12] bg-slate-950/80 px-4 py-3 shadow-xl backdrop-blur`}
+        >
           <p className="text-xs font-medium uppercase tracking-[0.18em] text-cyan-200">
             {label}
           </p>
@@ -249,6 +270,7 @@ function Field({ id, label, type = "text", placeholder, autoComplete, required =
       <label htmlFor={id} className="text-sm font-medium text-slate-800">
         {label}
       </label>
+
       <input
         id={id}
         name={id}
@@ -313,10 +335,10 @@ export default function DeepBridgeAdvisoryLandingPage() {
           <img
             src="/bridge-header.png"
             alt=""
-            className="h-full w-full object-cover object-right-bottom opacity-35"
+            className="h-full w-full object-cover object-right-bottom opacity-[0.43]"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/70 to-slate-950/10" />
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/80 via-slate-950/35 to-slate-950/90" />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/58 to-slate-950/5" />
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/72 via-slate-950/26 to-slate-950/84" />
         </div>
 
         <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-slate-50 via-slate-950/80 to-transparent" />
@@ -332,7 +354,11 @@ export default function DeepBridgeAdvisoryLandingPage() {
               <a href="#contact" className="transition hover:text-white">Contact</a>
             </div>
 
-            <Button href="#contact" variant="outline" className="hidden border-cyan-400/50 bg-slate-950/30 text-white hover:bg-cyan-300 hover:text-slate-950 md:inline-flex">
+            <Button
+              href="#contact"
+              variant="outline"
+              className="hidden border-cyan-400/50 bg-slate-950/30 text-white hover:bg-cyan-300 hover:text-slate-950 md:inline-flex"
+            >
               Discuss a project
             </Button>
           </nav>
@@ -343,22 +369,36 @@ export default function DeepBridgeAdvisoryLandingPage() {
                 <span className="rounded-full border border-white/15 bg-white/[0.08] px-3 py-1 text-sm text-slate-200 backdrop-blur">
                   Senior contract consultants
                 </span>
+
                 <span className="rounded-full border border-white/15 bg-white/[0.08] px-3 py-1 text-sm text-slate-200 backdrop-blur">
                   Reporting • Analytics • ERP • Transformation
                 </span>
               </motion.div>
 
-              <motion.h1 variants={fadeUp} transition={{ duration: 0.6, ease: "easeOut" }} className="text-4xl font-semibold tracking-tight text-white sm:text-6xl lg:text-7xl">
+              <motion.h1
+                variants={fadeUp}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                className="text-4xl font-semibold tracking-tight text-white sm:text-6xl lg:text-7xl"
+              >
                 Specialist contract consultants for reporting, analytics and transformation delivery.
               </motion.h1>
 
-              <motion.p variants={fadeUp} transition={{ duration: 0.6, ease: "easeOut" }} className="mt-7 max-w-2xl text-lg leading-8 text-slate-300 sm:text-xl">
+              <motion.p
+                variants={fadeUp}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                className="mt-7 max-w-2xl text-lg leading-8 text-slate-300 sm:text-xl"
+              >
                 We connect UK and European organisations with senior consultants across BI, ERP reporting, finance transformation, supply chain analytics and operational delivery programmes.
               </motion.p>
 
               <motion.div variants={fadeUp} className="mt-10 flex flex-col gap-4 sm:flex-row">
-                <Button href="#contact">Hire Consultants <ArrowIcon className="ml-2 h-4 w-4" /></Button>
-                <Button href="#consultants" variant="outline">Join the Network</Button>
+                <Button href="#contact">
+                  Hire Consultants <ArrowIcon className="ml-2 h-4 w-4" />
+                </Button>
+
+                <Button href="#consultants" variant="outline">
+                  Join the Network
+                </Button>
               </motion.div>
             </motion.div>
 
@@ -377,10 +417,23 @@ export default function DeepBridgeAdvisoryLandingPage() {
               description="DeepBridge Advisory supports organisations that need specialist contract expertise for reporting, analytics and transformation programmes where delivery speed, stakeholder alignment and operational understanding matter."
             />
 
-            <motion.div variants={stagger} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} className="grid gap-4 sm:grid-cols-2">
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.2 }}
+              className="grid gap-4 sm:grid-cols-2"
+            >
               {clientNeeds.map((item) => (
-                <motion.div key={item} variants={fadeUp} className="flex items-start gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <CheckIcon className="mt-0.5 h-5 w-5 shrink-0 text-cyan-600" />
+                <motion.div
+                  key={item}
+                  variants={fadeUp}
+                  className="flex min-h-[88px] items-start gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:border-cyan-200 hover:shadow-xl hover:shadow-slate-200/70"
+                >
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-50">
+                    <CheckIcon className="h-4 w-4 text-cyan-600" />
+                  </div>
+
                   <p className="text-sm font-medium leading-7 text-slate-800">
                     {item}
                   </p>
@@ -394,9 +447,19 @@ export default function DeepBridgeAdvisoryLandingPage() {
       <section id="consultants" className="bg-white py-20 sm:py-24">
         <Container>
           <div className="grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-            <motion.div variants={stagger} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} className="grid gap-4 sm:grid-cols-2">
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.2 }}
+              className="grid gap-4 sm:grid-cols-2"
+            >
               {consultantBenefits.map((item) => (
-                <motion.div key={item} variants={fadeUp} className="rounded-3xl bg-slate-50 p-5 ring-1 ring-slate-200">
+                <motion.div
+                  key={item}
+                  variants={fadeUp}
+                  className="flex min-h-[82px] items-center rounded-3xl border border-slate-200 bg-slate-50 p-5 shadow-sm transition hover:-translate-y-1 hover:border-cyan-200 hover:bg-white hover:shadow-lg"
+                >
                   <p className="text-sm font-semibold leading-7 text-slate-900">
                     {item}
                   </p>
@@ -422,15 +485,27 @@ export default function DeepBridgeAdvisoryLandingPage() {
             description="We keep the process practical: understand the work, qualify the people and support both sides through selection and delivery."
           />
 
-          <motion.div variants={stagger} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.18 }} className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.18 }}
+            className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-4"
+          >
             {steps.map(([number, title, description]) => (
-              <motion.div key={title} variants={fadeUp} className="h-full rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <motion.div
+                key={title}
+                variants={fadeUp}
+                className="h-full rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-cyan-200 hover:shadow-xl hover:shadow-slate-200/70"
+              >
                 <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-sm font-bold text-cyan-700">
                   {number}
                 </div>
+
                 <h3 className="text-lg font-semibold text-slate-950">
                   {title}
                 </h3>
+
                 <p className="mt-3 text-sm leading-7 text-slate-600">
                   {description}
                 </p>
@@ -449,9 +524,22 @@ export default function DeepBridgeAdvisoryLandingPage() {
             description="Our network is strongest across BI, ERP, operations and finance environments where reporting must support real decisions."
           />
 
-          <motion.div variants={stagger} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.18 }} className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.18 }}
+            className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-3"
+          >
             {specialisms.map(([label, title, description, icon]) => (
-              <FeatureCard key={title} label={label} title={title} description={description} icon={icon} dark />
+              <FeatureCard
+                key={title}
+                label={label}
+                title={title}
+                description={description}
+                icon={icon}
+                dark
+              />
             ))}
           </motion.div>
         </Container>
@@ -467,9 +555,20 @@ export default function DeepBridgeAdvisoryLandingPage() {
               description="DeepBridge Advisory is designed for companies and consultants who value relevance, clarity and practical execution over volume-driven recruitment."
             />
 
-            <motion.div variants={stagger} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} className="grid gap-5 sm:grid-cols-2">
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.2 }}
+              className="grid gap-5 sm:grid-cols-2"
+            >
               {trustItems.map(([label, title, description]) => (
-                <FeatureCard key={title} label={label} title={title} description={description} />
+                <FeatureCard
+                  key={title}
+                  label={label}
+                  title={title}
+                  description={description}
+                />
               ))}
             </motion.div>
           </div>
@@ -479,13 +578,22 @@ export default function DeepBridgeAdvisoryLandingPage() {
       <section id="contact" className="bg-white py-20 sm:py-24">
         <Container>
           <div className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
-            <motion.div variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.25 }} transition={{ duration: 0.55, ease: "easeOut" }} className="rounded-[2rem] bg-slate-950 p-8 text-white shadow-2xl shadow-slate-200 lg:p-10">
+            <motion.div
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.25 }}
+              transition={{ duration: 0.55, ease: "easeOut" }}
+              className="rounded-[2rem] bg-slate-950 p-8 text-white shadow-2xl shadow-slate-200 lg:p-10"
+            >
               <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-300">
                 Contact
               </p>
+
               <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
                 Let’s discuss your project.
               </h2>
+
               <p className="mt-5 text-base leading-8 text-slate-300">
                 Tell us what you need to deliver, or share your consulting profile. We’ll respond with a clear next step.
               </p>
@@ -497,10 +605,12 @@ export default function DeepBridgeAdvisoryLandingPage() {
                     hello@deepbridgeadvisory.co.uk
                   </a>
                 </div>
+
                 <div className="flex items-center gap-3">
                   <MapIcon className="h-5 w-5 text-cyan-300" />
                   <span>London • United Kingdom</span>
                 </div>
+
                 <div className="flex items-center gap-3">
                   <BriefcaseIcon className="h-5 w-5 text-cyan-300" />
                   <span>Reporting • Analytics • ERP Transformation Talent</span>
@@ -531,6 +641,7 @@ export default function DeepBridgeAdvisoryLandingPage() {
                   <label htmlFor="profile-type" className="text-sm font-medium text-slate-800">
                     I am
                   </label>
+
                   <select
                     id="profile-type"
                     name="role"
@@ -547,6 +658,7 @@ export default function DeepBridgeAdvisoryLandingPage() {
                   <label htmlFor="message" className="text-sm font-medium text-slate-800">
                     Message
                   </label>
+
                   <textarea
                     id="message"
                     name="message"
@@ -557,7 +669,10 @@ export default function DeepBridgeAdvisoryLandingPage() {
                 </div>
               </div>
 
-              <button type="submit" className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-slate-950 px-7 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-2 sm:w-auto">
+              <button
+                type="submit"
+                className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-slate-950 px-7 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-2 sm:w-auto"
+              >
                 Let’s discuss your project <ArrowIcon className="ml-2 h-4 w-4" />
               </button>
 
@@ -576,6 +691,7 @@ export default function DeepBridgeAdvisoryLandingPage() {
               <p className="font-semibold text-slate-950">DeepBridge Advisory</p>
               <p>Reporting • Analytics • ERP Transformation Talent</p>
             </div>
+
             <p>© 2026 DeepBridge Advisory</p>
           </div>
         </Container>
