@@ -126,8 +126,8 @@ Follow `docs/google-workspace-signing-guide.md`.
 
 1. Enable eSignature for named DeepBridge administrators in the Workspace Admin
    console.
-2. Keep approved, in-signature and completed agreements in restricted Drive
-   folders.
+2. Use the restricted shared drive `DeepBridge Consultant Agreements` and its
+   numbered source, in-signature, completed-agreement and audit-trail folders.
 3. Send the request from the approved PDF in Drive.
 4. Record `request sent` and `consultant signed` from **Administration →
    Signing**.

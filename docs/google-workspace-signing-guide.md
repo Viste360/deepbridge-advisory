@@ -22,9 +22,11 @@ DeepBridge archive. Google sends each signer a personal eSignature email.
    agreements.
 4. In Google Drive, create a restricted shared-drive structure:
 
-   - `DeepBridge / Consultant Agreements / Approved source`
-   - `DeepBridge / Consultant Agreements / In signature`
-   - `DeepBridge / Consultant Agreements / Completed`
+   - shared drive: `DeepBridge Consultant Agreements`
+   - `01 Approved Source PDFs`
+   - `02 In Signature`
+   - `03 Completed Signed Agreements`
+   - `04 Google eSignature Audit Trails`
 
 5. Give access only to named DeepBridge administrators. Do not use
    `Anyone with the link`.
@@ -52,7 +54,10 @@ DeepBridge archive. Google sends each signer a personal eSignature email.
    shared mailbox as the countersigner.
 5. Add signature and date fields. Check every field and signer before sending.
 6. Enable automatic reminders where appropriate and send the request.
-7. Move the Drive working copy to **In signature**.
+7. Google creates and locks the signing PDF beside the source document while
+   the request is active. Leave that locked file in place. Use
+   **02 In Signature** only for unlocked working files or shortcuts; do not
+   defeat Google's lock by copying an active request.
 8. Return to the portal and open **Signing**.
 9. Find the consultant and agreement, then select **Record request sent**.
 
@@ -74,7 +79,9 @@ The consultant's portal status now becomes `Ready to sign`.
 
 1. DeepBridge countersigns in Google Workspace.
 2. In Drive, open the completed request and confirm all signers and dates.
-3. Retain the completed signed PDF and its audit trail under **Completed**.
+3. Retain the completed signed PDF under
+   **03 Completed Signed Agreements** and its audit trail under
+   **04 Google eSignature Audit Trails**.
 4. In the portal, open **Signing** and select **Upload completed pack**.
 5. Upload:
 
