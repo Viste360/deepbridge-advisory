@@ -40,6 +40,9 @@ import {
   type AdminSigningItem,
   type PortalBrowserSession,
 } from "./portalApi";
+
+const googleSignInEnabled =
+  import.meta.env.VITE_GOOGLE_AUTH_ENABLED === "true";
 import type {
   ComplianceRequirement,
   DocumentStatus,
@@ -202,18 +205,22 @@ function LoginPage({
             </button>
           </form>
 
-          <div className="portal-divider">
-            <span>or</span>
-          </div>
+          {googleSignInEnabled ? (
+            <>
+              <div className="portal-divider">
+                <span>or</span>
+              </div>
 
-          <button
-            type="button"
-            className="portal-button portal-button-secondary"
-            onClick={handleGoogle}
-            disabled={!portalConfigured || busy}
-          >
-            Continue with Google
-          </button>
+              <button
+                type="button"
+                className="portal-button portal-button-secondary"
+                onClick={handleGoogle}
+                disabled={!portalConfigured || busy}
+              >
+                Continue with Google
+              </button>
+            </>
+          ) : null}
 
           {status.message ? (
             <p className={`portal-form-message ${status.tone}`} role="status">
