@@ -98,17 +98,63 @@ function Header() {
   const [open, setOpen] = useState(false);
   const menuId = useId();
   const toggleRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    if (!open) return undefined;
+    const desktopQuery = window.matchMedia("(min-width: 821px)");
+    const closeAtDesktopWidth = (event: MediaQueryListEvent) => {
+      if (event.matches) setOpen(false);
+    };
+    const closeOnHistoryNavigation = () => setOpen(false);
+
+    desktopQuery.addEventListener("change", closeAtDesktopWidth);
+    window.addEventListener("popstate", closeOnHistoryNavigation);
+    return () => {
+      desktopQuery.removeEventListener("change", closeAtDesktopWidth);
+      window.removeEventListener("popstate", closeOnHistoryNavigation);
+    };
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("menu-open", open);
+
+    if (!open) {
+      return () => document.documentElement.classList.remove("menu-open");
+    }
+
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setOpen(false);
         toggleRef.current?.focus();
+        return;
+      }
+
+      if (event.key === "Tab") {
+        const menuLinks = Array.from(
+          menuRef.current?.querySelectorAll<HTMLAnchorElement>("a") ?? [],
+        );
+        const focusable = [
+          ...(toggleRef.current ? [toggleRef.current] : []),
+          ...menuLinks,
+        ];
+        const first = focusable[0];
+        const last = focusable.at(-1);
+
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
       }
     };
+
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    return () => {
+      document.documentElement.classList.remove("menu-open");
+      document.removeEventListener("keydown", onKeyDown);
+    };
   }, [open]);
 
   return (
@@ -144,6 +190,7 @@ function Header() {
         </button>
       </div>
       <nav
+        ref={menuRef}
         id={menuId}
         className={`mobile-nav ${open ? "is-open" : ""}`}
         aria-label="Mobile navigation"
@@ -159,16 +206,21 @@ function Header() {
               onClick={() => setOpen(false)}
             >
               {item.label}
-              <span aria-hidden="true">↗</span>
+              <span className="direction-arrow" aria-hidden="true">
+                →
+              </span>
             </NavLink>
           ))}
           <Link
-            className="button button-primary"
+            className="mobile-nav-cta"
             to="/contact?type=client"
             tabIndex={open ? 0 : -1}
             onClick={() => setOpen(false)}
           >
-            Discuss a requirement
+            <span>Discuss a requirement</span>
+            <span className="direction-arrow" aria-hidden="true">
+              →
+            </span>
           </Link>
         </div>
       </nav>
@@ -185,7 +237,10 @@ function Footer() {
           <h2>What expertise does the programme need now?</h2>
         </div>
         <Link className="button button-light" to="/contact?type=client">
-          Start a conversation <span aria-hidden="true">↗</span>
+          Start a conversation
+          <span className="direction-arrow" aria-hidden="true">
+            →
+          </span>
         </Link>
       </div>
       <div className="shell footer-grid">

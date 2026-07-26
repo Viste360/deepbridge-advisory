@@ -311,7 +311,9 @@ export function ContactPage() {
                   : enquiryType === "client"
                     ? "Discuss your requirement"
                     : "Send enquiry"}{" "}
-              <span aria-hidden="true">↗</span>
+              <span className="direction-arrow" aria-hidden="true">
+                →
+              </span>
             </button>
 
             {submitMessage && (

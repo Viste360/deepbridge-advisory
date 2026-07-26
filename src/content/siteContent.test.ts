@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { expertise, processSteps } from "./siteContent";
+import { consultantJourney, expertise, processSteps } from "./siteContent";
 import { company, pageMeta, primaryNavigation } from "../config/site";
 import seo from "../config/seo.json";
 
@@ -9,6 +9,7 @@ describe("site content integrity", () => {
     expect(company.companyNumber).toBe("16775578");
     expect(expertise).toHaveLength(4);
     expect(processSteps).toHaveLength(4);
+    expect(consultantJourney).toHaveLength(5);
     expect(primaryNavigation.some((item) => item.href === "/for-clients")).toBe(
       true,
     );

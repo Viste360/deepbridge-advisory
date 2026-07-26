@@ -210,7 +210,10 @@ export function HomePage() {
               ))}
             </div>
             <Link className="text-link" to="/for-clients">
-              See how we support clients <span aria-hidden="true">↗</span>
+              See how we support clients
+              <span className="direction-arrow" aria-hidden="true">
+                →
+              </span>
             </Link>
           </div>
         </div>

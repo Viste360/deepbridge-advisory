@@ -151,6 +151,29 @@ export const consultantInformation = [
   "Relevant work-authorisation and assignment-specific compliance information",
 ];
 
+export const consultantJourney = [
+  {
+    title: "Initial discussion",
+    text: "We learn where you are based, when you are available and the transformation work you do best.",
+  },
+  {
+    title: "Experience review",
+    text: "We review your delivery background, sector context and preferred working model before discussing assignments.",
+  },
+  {
+    title: "Project matching",
+    text: "We contact you when the scope, location, timing and commercial expectations align with your profile.",
+  },
+  {
+    title: "Client introduction",
+    text: "We share the programme context, coordinate the conversation and keep expectations clear on both sides.",
+  },
+  {
+    title: "Engagement support",
+    text: "We stay involved through onboarding and maintain direct contact while the assignment is under way.",
+  },
+];
+
 export const principles = [
   {
     title: "Relevance over volume",

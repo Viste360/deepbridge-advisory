@@ -33,7 +33,10 @@ export function ButtonLink({
 }) {
   return (
     <Link className={`button button-${variant}`} to={to}>
-      {children} <span aria-hidden="true">↗</span>
+      {children}
+      <span className="direction-arrow" aria-hidden="true">
+        →
+      </span>
     </Link>
   );
 }
@@ -72,7 +75,9 @@ export function ExpertiseGrid({ detailed = false }: { detailed?: boolean }) {
         <article className="expertise-item" key={item.code}>
           <div className="expertise-topline">
             <span>{item.code}</span>
-            <span aria-hidden="true">↗</span>
+            <span className="direction-arrow" aria-hidden="true">
+              →
+            </span>
           </div>
           <h3>{item.title}</h3>
           <p>{item.summary}</p>

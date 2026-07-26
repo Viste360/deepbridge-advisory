@@ -14,6 +14,7 @@ import {
   clientServices,
   consultantExpectations,
   consultantInformation,
+  consultantJourney,
   principles,
 } from "../content/siteContent";
 
@@ -185,7 +186,7 @@ export function ConsultantsPage() {
           <ul className="expectation-list">
             {consultantExpectations.map((item) => (
               <li key={item}>
-                <span aria-hidden="true">↗</span>
+                <span aria-hidden="true">—</span>
                 {item}
               </li>
             ))}
@@ -223,6 +224,26 @@ export function ConsultantsPage() {
             Payment terms are confirmed in the applicable consultant agreement
             before an assignment begins.
           </p>
+        </div>
+      </section>
+      <section className="section consultant-journey-section">
+        <div className="shell">
+          <SectionHeading
+            eyebrow="How the relationship works"
+            title="A clear route from introduction to engagement"
+            text="Each stage is designed to keep context, expectations and communication clear."
+          />
+          <ol className="consultant-journey-grid">
+            {consultantJourney.map((step, index) => (
+              <li key={step.title}>
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <div>
+                  <h3>{step.title}</h3>
+                  <p>{step.text}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
       <section className="single-cta">
@@ -303,7 +324,10 @@ export function AboutPage() {
               questions require appropriately qualified advice.
             </p>
             <Link className="text-link" to="/legal">
-              Read our legal notice <span aria-hidden="true">↗</span>
+              Read our legal notice
+              <span className="direction-arrow" aria-hidden="true">
+                →
+              </span>
             </Link>
           </div>
         </div>
