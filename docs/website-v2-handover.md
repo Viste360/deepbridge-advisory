@@ -128,17 +128,17 @@ A consent banner is intentionally omitted because no optional tracking technolog
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `VITE_SITE_URL` | Recommended | Canonical public base URL; defaults to `https://deepbridgeadvisory.co.uk` |
 | `VITE_FORMSPREE_ENDPOINT` | Recommended | Managed form endpoint; defaults to the existing DeepBridge Formspree endpoint |
 
-Neither value is treated as a secret. No secret keys are exposed to the browser.
+The canonical domain is maintained in `src/config/seo.json`. The form endpoint
+is not treated as a secret. No secret keys are exposed to the browser.
 
 ## Deployment
 
 1. Confirm the information listed in the final checklist below.
 2. Run `npm ci`.
 3. Run `npm run check`.
-4. Configure the two public environment variables in Vercel if they differ from the documented defaults.
+4. Configure the public form endpoint in Vercel if it differs from the documented default.
 5. Deploy the reviewed feature branch to a Vercel preview.
 6. Test the preview form with a non-sensitive test enquiry and confirm its destination.
 7. Review the Privacy, Cookies and Legal pages with the appropriate UK/EU adviser.
@@ -197,7 +197,7 @@ The original and rebuilt production bundles were measured locally with the same 
 | Largest Contentful Paint | 10.5 s | 1.5 s |
 | Total Blocking Time | 0 ms | 0 ms |
 | Cumulative Layout Shift | 0 | 0 |
-| JavaScript bundle, gzip | 105.20 kB | 87.82 kB |
+| JavaScript bundle, gzip | 105.20 kB | 88.25 kB |
 
 Local Lighthouse scores are diagnostic rather than a guarantee of field performance. Production monitoring should be added only if DeepBridge approves an appropriate privacy-conscious analytics approach.
 
@@ -205,8 +205,8 @@ Local Lighthouse scores are diagnostic rather than a guarantee of field performa
 
 - The form provider, destination inbox and retention practice are controlled outside this repository and must be verified before production.
 - Successful live form delivery was not triggered during browser QA because that would create a real external submission.
-- The site is a client-rendered Vite application. Social and search metadata are included, but static generation or server rendering could be evaluated later if organic search becomes a major acquisition channel.
-- The Vercel rewrite supplies the custom not-found experience but may return the application shell with HTTP 200 for unknown routes. Edge routing can be added later if strict 404 status handling becomes important.
+- The React experience remains client-side after initial load, while the production build now emits route-specific HTML shells with unique titles, descriptions, canonical URLs and social metadata for every public route.
+- Known routes are emitted as clean static HTML files and the deployment includes a dedicated `404.html`, allowing Vercel to return a genuine not-found response without a catch-all SPA rewrite.
 - No public CV upload is included. A managed upload workflow requires malware scanning, access control, retention rules and an approved privacy process.
 - No live opportunity records are published. Future listings need an owner, closing process and prompt removal of stale `JobPosting` data.
 - No founder biography, portrait, client logo, testimonial, certification, insurance claim or performance metric has been added without approved evidence.
@@ -218,7 +218,7 @@ Local Lighthouse scores are diagnostic rather than a guarantee of field performa
 3. Add privacy-conscious, consent-aware analytics only if there is a defined business question.
 4. Replace Formspree with an owned server-side enquiry workflow if DeepBridge needs tighter rate limiting, auditability and retention control.
 5. Add secure CV upload through a managed private storage and malware-scanning service.
-6. Consider route pre-rendering when there is a sustained SEO/content programme.
+6. Extend the current route-level metadata generator if a sustained editorial or insight-content programme is introduced.
 7. Add verified client references or anonymised capability examples only after written approval.
 
 ## Information DeepBridge Must Confirm Before Production
@@ -245,4 +245,3 @@ Local Lighthouse scores are diagnostic rather than a guarantee of field performa
 - [ ] Any professional indemnity or other insurance claims before they are mentioned.
 - [ ] Final lawyer or privacy-professional review of the public legal pages.
 - [ ] Explicit approval of the preview before production deployment.
-
