@@ -14,6 +14,7 @@ import {
   clientServices,
   consultantExpectations,
   consultantInformation,
+  consultantJourney,
   principles,
 } from "../content/siteContent";
 
@@ -26,7 +27,9 @@ export function ExpertisePage() {
         title="Specialist capability where transformation gets complex."
         intro="DeepBridge focuses on the programme environments where operational context, technology and delivery discipline must work together."
         aside={
-          <ButtonLink to="/contact?type=client">Discuss your requirement</ButtonLink>
+          <ButtonLink to="/contact?type=client#contact-form">
+            Discuss your requirement
+          </ButtonLink>
         }
       />
       <section className="section">
@@ -84,7 +87,9 @@ export function ClientsPage() {
         title="Focused expertise for demanding programmes."
         intro="DeepBridge supports organisations that need experienced specialists without relying on high-volume candidate submissions."
         aside={
-          <ButtonLink to="/contact?type=client">Discuss your requirement</ButtonLink>
+          <ButtonLink to="/contact?type=client#contact-form">
+            Discuss your requirement
+          </ButtonLink>
         }
       />
       <section className="section">
@@ -153,7 +158,9 @@ export function ClientsPage() {
             Share the context, location, working model and target start date.
             We will come back with a clear next step.
           </p>
-          <ButtonLink to="/contact?type=client">Discuss your requirement</ButtonLink>
+          <ButtonLink to="/contact?type=client#contact-form">
+            Discuss your requirement
+          </ButtonLink>
         </div>
       </section>
     </>
@@ -185,7 +192,7 @@ export function ConsultantsPage() {
           <ul className="expectation-list">
             {consultantExpectations.map((item) => (
               <li key={item}>
-                <span aria-hidden="true">↗</span>
+                <span aria-hidden="true">—</span>
                 {item}
               </li>
             ))}
@@ -223,6 +230,26 @@ export function ConsultantsPage() {
             Payment terms are confirmed in the applicable consultant agreement
             before an assignment begins.
           </p>
+        </div>
+      </section>
+      <section className="section consultant-journey-section">
+        <div className="shell">
+          <SectionHeading
+            eyebrow="How the relationship works"
+            title="A clear route from introduction to engagement"
+            text="Each stage is designed to keep context, expectations and communication clear."
+          />
+          <ol className="consultant-journey-grid">
+            {consultantJourney.map((step, index) => (
+              <li key={step.title}>
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <div>
+                  <h3>{step.title}</h3>
+                  <p>{step.text}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
       <section className="single-cta">
@@ -303,7 +330,10 @@ export function AboutPage() {
               questions require appropriately qualified advice.
             </p>
             <Link className="text-link" to="/legal">
-              Read our legal notice <span aria-hidden="true">↗</span>
+              Read our legal notice
+              <span className="direction-arrow" aria-hidden="true">
+                →
+              </span>
             </Link>
           </div>
         </div>

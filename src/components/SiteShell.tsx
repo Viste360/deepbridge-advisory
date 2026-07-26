@@ -17,14 +17,54 @@ import {
 function Brand() {
   return (
     <Link className="brand" to="/" title="DeepBridge Advisory home">
-      <span className="brand-mark" aria-hidden="true">
-        <span>D</span>
-        <span>B</span>
-      </span>
-      <span className="brand-name">
-        <strong>DeepBridge</strong>
-        <span>Advisory</span>
-      </span>
+      <img
+        className="brand-logo"
+        src="/brand/deepbridge-logo-light.png"
+        alt="DeepBridge Advisory"
+      />
+    </Link>
+  );
+}
+
+function focusContactForm(behaviour: ScrollBehavior = "auto") {
+  const form = document.getElementById("contact-form");
+  if (!form) return;
+
+  form.scrollIntoView({ behavior: behaviour, block: "start" });
+  form.focus({ preventScroll: true });
+}
+
+function ContactFormLink({
+  className,
+  children,
+  tabIndex,
+  onClick,
+}: {
+  className: string;
+  children: ReactNode;
+  tabIndex?: number;
+  onClick?: () => void;
+}) {
+  const location = useLocation();
+
+  return (
+    <Link
+      className={className}
+      to="/contact?type=client#contact-form"
+      tabIndex={tabIndex}
+      onClick={() => {
+        onClick?.();
+        if (location.pathname === "/contact") {
+          const reduceMotion = window.matchMedia(
+            "(prefers-reduced-motion: reduce)",
+          ).matches;
+          window.requestAnimationFrame(() =>
+            focusContactForm(reduceMotion ? "auto" : "smooth"),
+          );
+        }
+      }}
+    >
+      {children}
     </Link>
   );
 }
@@ -98,17 +138,63 @@ function Header() {
   const [open, setOpen] = useState(false);
   const menuId = useId();
   const toggleRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    if (!open) return undefined;
+    const desktopQuery = window.matchMedia("(min-width: 821px)");
+    const closeAtDesktopWidth = (event: MediaQueryListEvent) => {
+      if (event.matches) setOpen(false);
+    };
+    const closeOnHistoryNavigation = () => setOpen(false);
+
+    desktopQuery.addEventListener("change", closeAtDesktopWidth);
+    window.addEventListener("popstate", closeOnHistoryNavigation);
+    return () => {
+      desktopQuery.removeEventListener("change", closeAtDesktopWidth);
+      window.removeEventListener("popstate", closeOnHistoryNavigation);
+    };
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("menu-open", open);
+
+    if (!open) {
+      return () => document.documentElement.classList.remove("menu-open");
+    }
+
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setOpen(false);
         toggleRef.current?.focus();
+        return;
+      }
+
+      if (event.key === "Tab") {
+        const menuLinks = Array.from(
+          menuRef.current?.querySelectorAll<HTMLAnchorElement>("a") ?? [],
+        );
+        const focusable = [
+          ...(toggleRef.current ? [toggleRef.current] : []),
+          ...menuLinks,
+        ];
+        const first = focusable[0];
+        const last = focusable.at(-1);
+
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
       }
     };
+
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    return () => {
+      document.documentElement.classList.remove("menu-open");
+      document.removeEventListener("keydown", onKeyDown);
+    };
   }, [open]);
 
   return (
@@ -127,9 +213,9 @@ function Header() {
             </NavLink>
           ))}
         </nav>
-        <Link className="header-cta" to="/contact?type=client">
+        <ContactFormLink className="header-cta">
           Discuss a requirement
-        </Link>
+        </ContactFormLink>
         <button
           ref={toggleRef}
           className="menu-toggle"
@@ -144,6 +230,7 @@ function Header() {
         </button>
       </div>
       <nav
+        ref={menuRef}
         id={menuId}
         className={`mobile-nav ${open ? "is-open" : ""}`}
         aria-label="Mobile navigation"
@@ -159,17 +246,21 @@ function Header() {
               onClick={() => setOpen(false)}
             >
               {item.label}
-              <span aria-hidden="true">↗</span>
+              <span className="direction-arrow" aria-hidden="true">
+                →
+              </span>
             </NavLink>
           ))}
-          <Link
-            className="button button-primary"
-            to="/contact?type=client"
+          <ContactFormLink
+            className="mobile-nav-cta"
             tabIndex={open ? 0 : -1}
             onClick={() => setOpen(false)}
           >
-            Discuss a requirement
-          </Link>
+            <span>Discuss a requirement</span>
+            <span className="direction-arrow" aria-hidden="true">
+              →
+            </span>
+          </ContactFormLink>
         </div>
       </nav>
     </header>
@@ -184,9 +275,12 @@ function Footer() {
           <p className="eyebrow">The next delivery question</p>
           <h2>What expertise does the programme need now?</h2>
         </div>
-        <Link className="button button-light" to="/contact?type=client">
-          Start a conversation <span aria-hidden="true">↗</span>
-        </Link>
+        <ContactFormLink className="button button-light">
+          Start a conversation
+          <span className="direction-arrow" aria-hidden="true">
+            →
+          </span>
+        </ContactFormLink>
       </div>
       <div className="shell footer-grid">
         <div className="footer-brand">
@@ -243,18 +337,26 @@ export function SiteShell({ children }: { children: ReactNode }) {
   const firstRender = useRef(true);
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "auto" });
-
-    if (firstRender.current) {
-      firstRender.current = false;
-      return undefined;
-    }
-
+    const targetId = location.hash.slice(1);
     const focusFrame = window.requestAnimationFrame(() => {
+      if (targetId === "contact-form") {
+        focusContactForm();
+        firstRender.current = false;
+        return;
+      }
+
+      window.scrollTo({ top: 0, behavior: "auto" });
+
+      if (firstRender.current) {
+        firstRender.current = false;
+        return;
+      }
+
       mainRef.current?.focus({ preventScroll: true });
     });
+
     return () => window.cancelAnimationFrame(focusFrame);
-  }, [location.pathname]);
+  }, [location.hash, location.pathname]);
 
   return (
     <>

@@ -150,7 +150,9 @@ export function ContactPage() {
           </aside>
 
           <form
+            id="contact-form"
             className="contact-form"
+            tabIndex={-1}
             onSubmit={handleSubmit}
             noValidate
             acceptCharset="UTF-8"
@@ -311,7 +313,9 @@ export function ContactPage() {
                   : enquiryType === "client"
                     ? "Discuss your requirement"
                     : "Send enquiry"}{" "}
-              <span aria-hidden="true">↗</span>
+              <span className="direction-arrow" aria-hidden="true">
+                →
+              </span>
             </button>
 
             {submitMessage && (
