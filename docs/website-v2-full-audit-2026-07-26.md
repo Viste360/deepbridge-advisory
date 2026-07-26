@@ -94,16 +94,20 @@ rules and sitemap reference are valid. Changing this would alter DeepBridge's
 AI-crawler policy and should be treated as a separate business decision in the
 Cloudflare dashboard, not silently changed in application code.
 
-## Verification required on the Vercel preview
+## Vercel preview validation
 
-- Every known route returns 200 directly.
-- An unknown route returns 404 and renders the branded not-found page.
-- Each route returns its own title, description, canonical URL and Open Graph
-  URL in the initial HTML response.
-- The contact enquiry selector updates the URL and visible fields.
-- Required-field validation and the form status announcement still work.
-- Static assets, robots and sitemap files remain unaffected by clean routing.
-- Mobile navigation, keyboard focus and reduced-motion behavior remain intact.
+- Vercel completed all three connected preview deployments successfully.
+- Direct visits to Expertise, For Clients, Contact and Privacy rendered their
+  correct page content, titles, canonical URLs and indexing directives.
+- An unknown direct URL rendered the branded not-found page with noindex and
+  nofollow directives.
+- The contact enquiry selector updated the URL, visible fields and form subject.
+- Required-field validation focused the first invalid field.
+- The local production build confirmed that every known route has its own
+  initial HTML response, while the Vercel preview confirmed those files are
+  routed correctly.
+- Static assets, robots and sitemap files remain present in the production
+  output.
 
 ## Local production-candidate validation
 
