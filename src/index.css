@@ -188,61 +188,15 @@ a {
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
   width: fit-content;
   color: var(--white);
   text-decoration: none;
 }
 
-.brand-mark {
-  position: relative;
-  display: grid;
-  width: 42px;
-  height: 42px;
-  grid-template-columns: 1fr 1fr;
-  place-items: center;
-  overflow: hidden;
-  border: 1px solid rgba(169, 233, 223, 0.5);
-  border-radius: 50%;
-  background: #0c2634;
-  box-shadow: inset 0 0 0 5px rgba(67, 208, 199, 0.06);
-  font-family: var(--serif);
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-.brand-mark::after {
-  position: absolute;
-  top: 6px;
-  bottom: 6px;
-  left: 50%;
-  width: 1px;
-  background: var(--aqua);
-  content: "";
-  transform: rotate(18deg);
-}
-
-.brand-mark span:last-child {
-  color: var(--aqua);
-}
-
-.brand-name {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  text-transform: uppercase;
-}
-
-.brand-name strong {
-  font-size: 0.86rem;
-  letter-spacing: 0.14em;
-}
-
-.brand-name > span {
-  color: var(--aqua-soft);
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.3em;
+.brand-logo {
+  display: block;
+  width: 190px;
+  height: auto;
 }
 
 .desktop-nav {
@@ -2109,17 +2063,12 @@ a {
     width: min(100% - 28px, 520px);
   }
 
-  .brand-name strong {
-    font-size: 0.76rem;
-  }
-
   .site-header {
     --mobile-header-height: 68px;
   }
 
-  .brand-mark {
-    width: 40px;
-    height: 40px;
+  .brand-logo {
+    width: 168px;
   }
 
   .menu-toggle {

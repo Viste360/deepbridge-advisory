@@ -17,14 +17,11 @@ import {
 function Brand() {
   return (
     <Link className="brand" to="/" title="DeepBridge Advisory home">
-      <span className="brand-mark" aria-hidden="true">
-        <span>D</span>
-        <span>B</span>
-      </span>
-      <span className="brand-name">
-        <strong>DeepBridge</strong>
-        <span>Advisory</span>
-      </span>
+      <img
+        className="brand-logo"
+        src="/brand/deepbridge-logo-light.png"
+        alt="DeepBridge Advisory"
+      />
     </Link>
   );
 }
