@@ -1,0 +1,17 @@
+{
+  "brand": "DeepBridge Advisory",
+  "legal_entity": "DUSTDEEP LTD",
+  "colors": {
+    "deep_navy": "#071722",
+    "navy_soft": "#142D38",
+    "bridge_aqua": "#43D0C7",
+    "soft_aqua": "#A9E9DF",
+    "advisory_ivory": "#F5F4EF",
+    "slate": "#56666C"
+  },
+  "typography": {
+    "display": "Georgia",
+    "interface_and_documents": "Arial"
+  },
+  "website": "https://www.deepbridgeadvisory.co.uk"
+}
