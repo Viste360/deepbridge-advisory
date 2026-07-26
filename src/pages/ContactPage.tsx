@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { PageMeta } from "../components/SiteShell";
 import { PageHero } from "../components/Ui";
@@ -36,6 +36,7 @@ function Field({
   autoComplete,
   required,
   hint,
+  maxLength,
 }: {
   id: string;
   label: string;
@@ -43,6 +44,7 @@ function Field({
   autoComplete?: string;
   required?: boolean;
   hint?: string;
+  maxLength?: number;
 }) {
   const hintId = hint ? `${id}-hint` : undefined;
   return (
@@ -62,27 +64,23 @@ function Field({
         autoComplete={autoComplete}
         required={required}
         aria-describedby={hintId}
+        maxLength={maxLength ?? (type === "email" ? 254 : 160)}
       />
     </div>
   );
 }
 
 export function ContactPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const requestedType = searchParams.get("type");
   const initialType: EnquiryType =
     requestedType === "consultant" || requestedType === "general"
       ? requestedType
       : "client";
-  const [enquiryType, setEnquiryType] =
-    useState<EnquiryType>(initialType);
+  const enquiryType = initialType;
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [submitMessage, setSubmitMessage] = useState("");
   const statusRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setEnquiryType(initialType);
-  }, [initialType]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -145,8 +143,8 @@ export function ContactPage() {
                 <p>United Kingdom and Europe</p>
               </div>
               <div>
-                <span>Registered office</span>
-                <p>{company.registeredOffice}</p>
+                <span>Response</span>
+                <p>Direct review by DeepBridge</p>
               </div>
             </div>
           </aside>
@@ -155,15 +153,27 @@ export function ContactPage() {
             className="contact-form"
             onSubmit={handleSubmit}
             noValidate
+            acceptCharset="UTF-8"
+            aria-busy={submitState === "submitting"}
             aria-label="DeepBridge Advisory enquiry form"
           >
             <input type="hidden" name="enquiryType" value={enquiryType} />
             <input
               type="hidden"
-              name="_gotcha"
-              value=""
+              name="_subject"
+              value={`New ${enquiryType} enquiry — DeepBridge Advisory`}
               readOnly
             />
+            <div className="form-honeypot" aria-hidden="true">
+              <label htmlFor="website">Website</label>
+              <input
+                id="website"
+                name="_gotcha"
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
+              />
+            </div>
 
             <fieldset className="enquiry-choice">
               <legend>What can we help with?</legend>
@@ -176,8 +186,9 @@ export function ContactPage() {
                     }
                     type="button"
                     aria-pressed={enquiryType === option.value}
+                    disabled={submitState === "submitting"}
                     onClick={() => {
-                      setEnquiryType(option.value);
+                      setSearchParams({ type: option.value }, { replace: true });
                       setSubmitState("idle");
                       setSubmitMessage("");
                     }}
@@ -250,6 +261,7 @@ export function ContactPage() {
                     label="LinkedIn profile"
                     type="url"
                     hint="Please use a full https:// address."
+                    maxLength={500}
                   />
                 </>
               )}

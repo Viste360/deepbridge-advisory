@@ -23,7 +23,15 @@ const organisationSchema = {
       legalName: company.legalName,
       url: siteConfig.siteUrl,
       email: company.contactEmail,
+      sameAs: [siteConfig.linkedInUrl],
       areaServed: ["United Kingdom", "Europe"],
+      knowsAbout: [
+        "SAP S/4HANA transformation",
+        "Enterprise resource planning",
+        "Supply chain transformation",
+        "Data and business intelligence",
+        "Programme leadership",
+      ],
       description:
         "A specialist advisory and delivery partner supporting transformation programmes with experienced independent consultants.",
       address: {

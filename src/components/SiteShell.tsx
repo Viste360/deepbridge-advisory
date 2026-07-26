@@ -43,6 +43,8 @@ export function PageMeta({
   };
 
   useEffect(() => {
+    const pageUrl = `${siteConfig.siteUrl}${path === "/" ? "/" : path}`;
+    const socialImageUrl = `${siteConfig.siteUrl}${siteConfig.socialImagePath}`;
     document.title = meta.title;
 
     const setMeta = (selector: string, attribute: string, value: string) => {
@@ -51,8 +53,20 @@ export function PageMeta({
     };
 
     setMeta('meta[name="description"]', "content", meta.description);
+    setMeta(
+      'meta[name="robots"]',
+      "content",
+      path === "/404"
+        ? "noindex, nofollow"
+        : "index, follow, max-image-preview:large",
+    );
     setMeta('meta[property="og:title"]', "content", meta.title);
     setMeta('meta[property="og:description"]', "content", meta.description);
+    setMeta('meta[property="og:url"]', "content", pageUrl);
+    setMeta('meta[property="og:image"]', "content", socialImageUrl);
+    setMeta('meta[name="twitter:title"]', "content", meta.title);
+    setMeta('meta[name="twitter:description"]', "content", meta.description);
+    setMeta('meta[name="twitter:image"]', "content", socialImageUrl);
 
     let canonical = document.querySelector<HTMLLinkElement>(
       'link[rel="canonical"]',
@@ -62,7 +76,7 @@ export function PageMeta({
       canonical.rel = "canonical";
       document.head.append(canonical);
     }
-    canonical.href = `${siteConfig.siteUrl}${path === "/" ? "" : path}`;
+    canonical.href = pageUrl;
 
     const scriptId = "deepbridge-structured-data";
     document.getElementById(scriptId)?.remove();
@@ -225,9 +239,21 @@ function Footer() {
 
 export function SiteShell({ children }: { children: ReactNode }) {
   const location = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
+  const firstRender = useRef(true);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
+
+    if (firstRender.current) {
+      firstRender.current = false;
+      return undefined;
+    }
+
+    const focusFrame = window.requestAnimationFrame(() => {
+      mainRef.current?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(focusFrame);
   }, [location.pathname]);
 
   return (
@@ -236,7 +262,9 @@ export function SiteShell({ children }: { children: ReactNode }) {
         Skip to main content
       </a>
       <Header />
-      <main id="main-content">{children}</main>
+      <main ref={mainRef} id="main-content" tabIndex={-1}>
+        {children}
+      </main>
       <Footer />
     </>
   );

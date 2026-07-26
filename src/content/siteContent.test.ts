@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { expertise, processSteps } from "./siteContent";
 import { company, pageMeta, primaryNavigation } from "../config/site";
+import seo from "../config/seo.json";
 
 describe("site content integrity", () => {
   it("keeps the core operating details and journeys complete", () => {
@@ -21,5 +22,7 @@ describe("site content integrity", () => {
       expect(pageMeta[item.href]?.title).toBeTruthy();
       expect(pageMeta[item.href]?.description).toBeTruthy();
     });
+    expect(pageMeta["/404"]?.title).toContain("Page Not Found");
+    expect(seo.siteUrl).toBe("https://www.deepbridgeadvisory.co.uk");
   });
 });

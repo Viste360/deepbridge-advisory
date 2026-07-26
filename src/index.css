@@ -92,6 +92,10 @@ a {
   outline-offset: 4px;
 }
 
+#main-content:focus {
+  outline: none;
+}
+
 ::selection {
   color: var(--ink);
   background: var(--aqua-soft);
@@ -1367,10 +1371,19 @@ a {
 }
 
 .contact-form {
+  position: relative;
   padding: clamp(28px, 5vw, 58px);
   border: 1px solid var(--line);
   background: var(--white);
   box-shadow: var(--shadow);
+}
+
+.form-honeypot {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
 }
 
 .enquiry-choice {
@@ -1406,6 +1419,11 @@ a {
   border-color: var(--ink);
   color: var(--white);
   background: var(--ink);
+}
+
+.enquiry-choice button:disabled {
+  cursor: wait;
+  opacity: 0.7;
 }
 
 .enquiry-choice button span,
