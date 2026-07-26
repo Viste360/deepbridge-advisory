@@ -213,6 +213,7 @@ Browser-visible:
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
+- `VITE_GOOGLE_AUTH_ENABLED=false` until the reviewed OAuth client is active
 
 Server-only:
 
