@@ -119,7 +119,9 @@ export function SplitCta() {
             Tell us what the programme needs, where the work will take place and
             when support is required.
           </p>
-          <ButtonLink to="/contact?type=client">Discuss your requirement</ButtonLink>
+          <ButtonLink to="/contact?type=client#contact-form">
+            Discuss your requirement
+          </ButtonLink>
         </article>
         <article>
           <p className="eyebrow">For independent specialists</p>

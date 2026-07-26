@@ -29,6 +29,49 @@ function Brand() {
   );
 }
 
+function focusContactForm(behaviour: ScrollBehavior = "auto") {
+  const form = document.getElementById("contact-form");
+  if (!form) return;
+
+  form.scrollIntoView({ behavior: behaviour, block: "start" });
+  form.focus({ preventScroll: true });
+}
+
+function ContactFormLink({
+  className,
+  children,
+  tabIndex,
+  onClick,
+}: {
+  className: string;
+  children: ReactNode;
+  tabIndex?: number;
+  onClick?: () => void;
+}) {
+  const location = useLocation();
+
+  return (
+    <Link
+      className={className}
+      to="/contact?type=client#contact-form"
+      tabIndex={tabIndex}
+      onClick={() => {
+        onClick?.();
+        if (location.pathname === "/contact") {
+          const reduceMotion = window.matchMedia(
+            "(prefers-reduced-motion: reduce)",
+          ).matches;
+          window.requestAnimationFrame(() =>
+            focusContactForm(reduceMotion ? "auto" : "smooth"),
+          );
+        }
+      }}
+    >
+      {children}
+    </Link>
+  );
+}
+
 export function PageMeta({
   path,
   schema,
@@ -173,9 +216,9 @@ function Header() {
             </NavLink>
           ))}
         </nav>
-        <Link className="header-cta" to="/contact?type=client">
+        <ContactFormLink className="header-cta">
           Discuss a requirement
-        </Link>
+        </ContactFormLink>
         <button
           ref={toggleRef}
           className="menu-toggle"
@@ -211,9 +254,8 @@ function Header() {
               </span>
             </NavLink>
           ))}
-          <Link
+          <ContactFormLink
             className="mobile-nav-cta"
-            to="/contact?type=client"
             tabIndex={open ? 0 : -1}
             onClick={() => setOpen(false)}
           >
@@ -221,7 +263,7 @@ function Header() {
             <span className="direction-arrow" aria-hidden="true">
               →
             </span>
-          </Link>
+          </ContactFormLink>
         </div>
       </nav>
     </header>
@@ -236,12 +278,12 @@ function Footer() {
           <p className="eyebrow">The next delivery question</p>
           <h2>What expertise does the programme need now?</h2>
         </div>
-        <Link className="button button-light" to="/contact?type=client">
+        <ContactFormLink className="button button-light">
           Start a conversation
           <span className="direction-arrow" aria-hidden="true">
             →
           </span>
-        </Link>
+        </ContactFormLink>
       </div>
       <div className="shell footer-grid">
         <div className="footer-brand">
@@ -298,18 +340,26 @@ export function SiteShell({ children }: { children: ReactNode }) {
   const firstRender = useRef(true);
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "auto" });
-
-    if (firstRender.current) {
-      firstRender.current = false;
-      return undefined;
-    }
-
+    const targetId = location.hash.slice(1);
     const focusFrame = window.requestAnimationFrame(() => {
+      if (targetId === "contact-form") {
+        focusContactForm();
+        firstRender.current = false;
+        return;
+      }
+
+      window.scrollTo({ top: 0, behavior: "auto" });
+
+      if (firstRender.current) {
+        firstRender.current = false;
+        return;
+      }
+
       mainRef.current?.focus({ preventScroll: true });
     });
+
     return () => window.cancelAnimationFrame(focusFrame);
-  }, [location.pathname]);
+  }, [location.hash, location.pathname]);
 
   return (
     <>

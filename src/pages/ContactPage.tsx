@@ -150,7 +150,9 @@ export function ContactPage() {
           </aside>
 
           <form
+            id="contact-form"
             className="contact-form"
+            tabIndex={-1}
             onSubmit={handleSubmit}
             noValidate
             acceptCharset="UTF-8"

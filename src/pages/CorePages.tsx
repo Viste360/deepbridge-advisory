@@ -27,7 +27,9 @@ export function ExpertisePage() {
         title="Specialist capability where transformation gets complex."
         intro="DeepBridge focuses on the programme environments where operational context, technology and delivery discipline must work together."
         aside={
-          <ButtonLink to="/contact?type=client">Discuss your requirement</ButtonLink>
+          <ButtonLink to="/contact?type=client#contact-form">
+            Discuss your requirement
+          </ButtonLink>
         }
       />
       <section className="section">
@@ -85,7 +87,9 @@ export function ClientsPage() {
         title="Focused expertise for demanding programmes."
         intro="DeepBridge supports organisations that need experienced specialists without relying on high-volume candidate submissions."
         aside={
-          <ButtonLink to="/contact?type=client">Discuss your requirement</ButtonLink>
+          <ButtonLink to="/contact?type=client#contact-form">
+            Discuss your requirement
+          </ButtonLink>
         }
       />
       <section className="section">
@@ -154,7 +158,9 @@ export function ClientsPage() {
             Share the context, location, working model and target start date.
             We will come back with a clear next step.
           </p>
-          <ButtonLink to="/contact?type=client">Discuss your requirement</ButtonLink>
+          <ButtonLink to="/contact?type=client#contact-form">
+            Discuss your requirement
+          </ButtonLink>
         </div>
       </section>
     </>
