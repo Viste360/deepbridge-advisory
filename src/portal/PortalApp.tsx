@@ -1562,7 +1562,7 @@ function AdminDashboard() {
             id: snapshot.profile.id,
             fullName: "Roland Schneider",
             email: "roland.schneider@example.de",
-            businessName: "Roland Schneider Consulting",
+            businessName: "HS Consulting",
             accessStatus: "active",
             onboardingComplete: 1,
             onboardingTotal: 14,
@@ -1708,7 +1708,7 @@ function AdminConsultantsPage() {
             id: snapshot.profile.id,
             fullName: "Roland Schneider",
             email: "roland.schneider@example.de",
-            businessName: "Roland Schneider Consulting",
+            businessName: "HS Consulting",
             accessStatus: "active",
             assignment: {
               id: snapshot.assignment.id,
