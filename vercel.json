@@ -2,6 +2,17 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "cleanUrls": true,
   "trailingSlash": false,
+  "functions": {
+    "api/admin/documents/upload-finalize.ts": {
+      "maxDuration": 300
+    },
+    "api/admin/signing/upload-finalize.ts": {
+      "maxDuration": 300
+    },
+    "api/compliance/upload-finalize.ts": {
+      "maxDuration": 300
+    }
+  },
   "rewrites": [
     {
       "source": "/robots.txt",
