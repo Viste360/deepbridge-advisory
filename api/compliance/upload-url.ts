@@ -8,7 +8,7 @@ import {
   PortalHttpError,
   readJsonBody,
   requirePortalUser,
-} from "../_lib/server";
+} from "../_lib/server.js";
 
 const allowedMimeTypes = new Set([
   "application/pdf",

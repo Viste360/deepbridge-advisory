@@ -6,7 +6,7 @@ import {
   json,
   PortalHttpError,
   readJsonBody,
-} from "../_lib/server";
+} from "../_lib/server.js";
 
 function validSecret(request: IncomingMessage) {
   const expected = process.env.MALWARE_SCAN_CALLBACK_SECRET?.trim();
