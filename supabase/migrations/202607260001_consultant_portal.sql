@@ -848,7 +848,11 @@ begin
     invitation_record.full_name,
     invitation_record.business_name,
     invitation_record.role,
-    case when new.email_confirmed_at is null then 'invited' else 'active' end,
+    case
+      when new.email_confirmed_at is null
+      then 'invited'::public.portal_access_status
+      else 'active'::public.portal_access_status
+    end,
     new.email_confirmed_at,
     invitation_record.invited_at
   )
@@ -857,7 +861,7 @@ begin
       email_verified_at = excluded.email_verified_at,
       access_status = case
         when excluded.email_verified_at is null then portal_profiles.access_status
-        else 'active'
+        else 'active'::public.portal_access_status
       end,
       updated_at = now();
 
