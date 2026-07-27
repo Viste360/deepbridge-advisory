@@ -191,8 +191,10 @@ only after preview approval. Verify the portal-specific `X-Robots-Tag`,
 After the production environment is connected:
 
 1. Sign in as the named DeepBridge administrator.
-2. Open **Consultants** and create Roland's invitation using his confirmed
-   private business email and legal business name.
+2. Open **Consultants** and create Roland Schneider's invitation using his
+   confirmed private business email and the business name **HS Consulting**.
+   This is a B2B engagement; the assignment record is configured at
+   **EUR 500 per day**.
 3. The server creates his consultant record, links the Planning Cluster Lead
    assignment, assigns the default documents and compliance requirements, and
    creates consultant-visible and internal onboarding tasks.

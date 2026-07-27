@@ -5,7 +5,7 @@ export const consultantSnapshot: PortalSnapshot = {
     id: "demo-consultant",
     email: "roland.schneider@example.de",
     fullName: "Roland Schneider",
-    businessName: "Roland Schneider Consulting",
+    businessName: "HS Consulting",
     country: "Germany",
     phone: "+49 000 000000",
     role: "consultant",
