@@ -2744,7 +2744,7 @@ function AdminSigningPage() {
         action={
           <a
             className="portal-button portal-button-primary"
-            href="https://drive.google.com/drive/my-drive"
+            href="https://drive.google.com/drive/folders/1KoFJH59qiKLCeXTyLr1jvgu_Mb9SPZDR"
             target="_blank"
             rel="noreferrer"
           >
