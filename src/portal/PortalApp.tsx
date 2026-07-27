@@ -265,35 +265,60 @@ function LoginPage({
 }
 
 function AuthCallbackPage() {
+  const [error, setError] = useState("");
+
   useEffect(() => {
     let active = true;
-    const code = new URLSearchParams(window.location.search).get("code");
-    const complete = code
-      ? completeAuthCallback(code).then(() => getPortalSession())
+    const search = new URLSearchParams(window.location.search);
+    const code = search.get("code") || undefined;
+    const tokenHash = search.get("token_hash") || undefined;
+    const type = search.get("type") || undefined;
+    const hasVerification = Boolean(code || (tokenHash && type));
+    const complete = hasVerification
+      ? completeAuthCallback({ code, tokenHash, type }).then(() =>
+          getPortalSession(),
+        )
       : getPortalSession();
     complete
       .then((session) => {
-        if (active && session)
+        if (!active) return;
+        if (session)
           window.location.replace(
             session.role === "admin" ? "/admin" : "/dashboard",
           );
+        else setError("The secure link could not create a portal session.");
       })
-      .catch(() => undefined);
-    const timer = window.setTimeout(() => {
-      if (active) window.location.replace("/login");
-    }, 5000);
+      .catch((callbackError: unknown) => {
+        if (active)
+          setError(
+            callbackError instanceof Error
+              ? callbackError.message
+              : "The secure link is invalid or has expired.",
+          );
+      });
     return () => {
       active = false;
-      window.clearTimeout(timer);
     };
   }, []);
 
   return (
     <main className="portal-centred-state">
       <Brand />
-      <span className="portal-loader" aria-hidden="true" />
-      <h1>Completing secure sign-in</h1>
-      <p>Please keep this window open for a moment.</p>
+      {error ? (
+        <>
+          <h1>Sign-in link could not be completed</h1>
+          <p>{error}</p>
+          <Link className="portal-button" to="/login">
+            Request a new secure link
+          </Link>
+        </>
+      ) : (
+        <>
+          <span className="portal-loader" aria-hidden="true" />
+          <h1>Completing secure sign-in</h1>
+          <p>Please keep this window open for a moment.</p>
+        </>
+      )}
     </main>
   );
 }
