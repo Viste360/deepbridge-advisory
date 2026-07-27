@@ -1059,7 +1059,8 @@
 }
 
 .status-ready_to_sign,
-.status-uploaded {
+.status-uploaded,
+.status-invited {
   color: #2858a5;
   background: #e1e9fb;
 }
@@ -1071,7 +1072,8 @@
 }
 
 .status-rejected,
-.status-expired {
+.status-expired,
+.status-revoked {
   color: #943e3e;
   background: #f5dfdf;
 }

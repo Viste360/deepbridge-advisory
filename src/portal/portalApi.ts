@@ -65,6 +65,24 @@ export interface AdminSigningItem {
   certificateScanStatus?: "pending" | "clean" | "infected" | "failed";
 }
 
+export interface AdminConsultant {
+  id: string;
+  fullName: string;
+  email: string;
+  businessName: string;
+  accessStatus: "invited" | "active" | "revoked";
+  lastLoginAt?: string;
+  assignment?: {
+    id: string;
+    title: string;
+    location: string;
+    startDate: string;
+    status: string;
+  };
+  onboardingComplete: number;
+  onboardingTotal: number;
+}
+
 export const portalDemoEnabled =
   import.meta.env.DEV && import.meta.env.VITE_PORTAL_DEMO_MODE !== "false";
 
@@ -393,6 +411,37 @@ export async function createInvitation(input: {
   businessName: string;
 }) {
   return authorisedRequest("/api/invitations/create", input);
+}
+
+export async function listAdminConsultants(): Promise<AdminConsultant[]> {
+  const result = await apiRequest<{ consultants: unknown }>(
+    "/api/admin/consultants/list",
+  );
+  return records(result.consultants).map((row) => {
+    const assignment = record(row.assignment);
+    return {
+      id: text(row.id),
+      fullName: text(row.full_name),
+      email: text(row.email),
+      businessName: text(row.business_name),
+      accessStatus: text(
+        row.access_status,
+        "invited",
+      ) as AdminConsultant["accessStatus"],
+      lastLoginAt: displayDateTime(row.last_login_at) || undefined,
+      assignment: text(assignment.id)
+        ? {
+            id: text(assignment.id),
+            title: text(assignment.title),
+            location: text(assignment.primary_location),
+            startDate: displayDate(assignment.start_date),
+            status: text(assignment.status),
+          }
+        : undefined,
+      onboardingComplete: Number(row.onboarding_complete) || 0,
+      onboardingTotal: Number(row.onboarding_total) || 0,
+    };
+  });
 }
 
 export async function listAdminDocumentCatalogue(): Promise<AdminDocumentCatalogue> {
