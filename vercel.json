@@ -21,7 +21,7 @@
           "value": "portal.deepbridgeadvisory.com"
         }
       ],
-      "destination": "/index.html"
+      "destination": "/"
     }
   ],
   "headers": [
