@@ -294,6 +294,9 @@ export async function loadPortalSnapshot(
   const compliance: ComplianceRequirement[] = records(result.compliance).map(
     (row) => ({
       id: text(row.id),
+      consultantId: text(row.consultant_id) || undefined,
+      consultantName: text(row.consultant_name) || undefined,
+      consultantEmail: text(row.consultant_email) || undefined,
       title: text(row.title),
       description: text(row.description),
       status: text(
@@ -306,6 +309,14 @@ export async function loadPortalSnapshot(
       administratorNote: text(row.administrator_note) || undefined,
       rejectionReason: text(row.rejection_reason) || undefined,
       submissionId: text(row.submission_id) || undefined,
+      originalFilename: text(row.original_filename) || undefined,
+      mimeType: text(row.mime_type) || undefined,
+      sizeBytes:
+        typeof row.size_bytes === "number"
+          ? row.size_bytes
+          : typeof row.size_bytes === "string"
+            ? Number(row.size_bytes)
+            : undefined,
       scanStatus:
         text(row.malware_scan_status) === "clean"
           ? "clean"
@@ -377,6 +388,45 @@ export async function uploadComplianceFile(
       expiryDate: expiryDate || null,
     },
   );
+}
+
+export async function uploadComplianceFileAsAdmin(
+  requirementId: string,
+  file: File,
+  expiryDate?: string,
+) {
+  if (!storageClient) throw new Error("Portal storage is not configured.");
+  const upload = await post<{ path: string; token: string }>(
+    "/api/admin/compliance/upload-url",
+    {
+      requirementId,
+      originalFilename: file.name,
+      mimeType: file.type,
+      sizeBytes: file.size,
+    },
+  );
+  const { error } = await storageClient.storage
+    .from("consultant-compliance")
+    .uploadToSignedUrl(upload.path, upload.token, file, {
+      contentType: file.type,
+      upsert: false,
+    });
+  if (error) throw error;
+  await post<{ submissionId: string }>(
+    "/api/admin/compliance/upload-finalize",
+    {
+      requirementId,
+      storagePath: upload.path,
+      originalFilename: file.name,
+      mimeType: file.type,
+      sizeBytes: file.size,
+      expiryDate: expiryDate || null,
+    },
+  );
+}
+
+export async function getComplianceSubmissionAccess(submissionId: string) {
+  return authorisedRequest("/api/admin/compliance/access", { submissionId });
 }
 
 export async function reviewComplianceSubmission(

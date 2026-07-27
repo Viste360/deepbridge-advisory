@@ -22,6 +22,8 @@ The portal includes:
 - completed Google PDF and audit-trail import with a dual security-scan gate;
 - private final PDFs and signing certificates;
 - secure compliance uploads with file constraints and a malware-scan gate;
+- administrator uploads on behalf of a consultant, with explicit attribution,
+  quarantine and the same malware-scan gate;
 - consultant-visible and administrator-only onboarding tasks;
 - an administrator invitation, document, compliance and audit interface;
 - short-lived signed document links;
@@ -70,6 +72,14 @@ the browser, API, database and storage bucket. The API creates a one-file signed
 upload URL scoped to the consultant and requirement. New files remain
 `pending` and cannot be viewed or accepted by an administrator until the
 malware scanning service reports `clean`.
+
+A DeepBridge administrator may also upload evidence already supplied by the
+consultant from **Administration → Compliance**. The administrator selects the
+consultant requirement, uploads the file through a one-use signed URL and is
+recorded as the actor in the audit history. This does not bypass quarantine or
+review: the file is unavailable until the malware scanner reports `clean`, and
+the administrator must still accept or reject it. Cleared files open through
+five-minute signed links.
 
 The scanning callback validates a shared secret. The scanning service itself is
 an external operational dependency and must be connected before production.

@@ -22,6 +22,7 @@ import {
   acknowledgeDocument,
   completeAuthCallback,
   createInvitation,
+  getComplianceSubmissionAccess,
   getConsultantSignedUpload,
   getDocumentAccess,
   getPortalSession,
@@ -39,6 +40,7 @@ import {
   signInWithGoogle,
   signOutPortal,
   uploadComplianceFile,
+  uploadComplianceFileAsAdmin,
   uploadCompletedSigningPack,
   uploadAdminDocumentVersion,
   uploadManualSignedDocument,
@@ -1386,6 +1388,8 @@ function UploadDialog({
   requirement,
   onClose,
   onUpload,
+  contextLabel = "Secure upload",
+  introduction = "The selected file is uploaded to private quarantine storage and is not available to reviewers until the security check passes.",
 }: {
   requirement: ComplianceRequirement;
   onClose: () => void;
@@ -1394,6 +1398,8 @@ function UploadDialog({
     file: File,
     expiryDate: string,
   ) => Promise<void>;
+  contextLabel?: string;
+  introduction?: string;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -1446,12 +1452,9 @@ function UploadDialog({
         >
           ×
         </button>
-        <p className="portal-kicker">Secure upload</p>
+        <p className="portal-kicker">{contextLabel}</p>
         <h2 id="upload-title">{requirement.title}</h2>
-        <p>
-          The selected file is uploaded to private quarantine storage and is not
-          available to reviewers until the security check passes.
-        </p>
+        <p>{introduction}</p>
         <form className="portal-form" onSubmit={submit}>
           <label htmlFor="compliance-file">Choose file</label>
           <input
@@ -3139,13 +3142,81 @@ function AdminSigningPackDialog({
 
 function AdminCompliancePage() {
   const { snapshot, demo, refresh, updateCompliance } = usePortal();
+  const [selected, setSelected] = useState<ComplianceRequirement | null>(null);
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [openingSubmissionId, setOpeningSubmissionId] = useState("");
+
+  async function uploadForConsultant(
+    requirement: ComplianceRequirement,
+    file: File,
+    expiryDate: string,
+  ) {
+    const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+    if (
+      !ALLOWED_UPLOAD_TYPES.has(file.type) ||
+      !ALLOWED_UPLOAD_EXTENSIONS.has(extension)
+    ) {
+      throw new Error("Upload a PDF, JPG or PNG file.");
+    }
+    if (file.size > MAX_UPLOAD_BYTES)
+      throw new Error("The maximum file size is 10 MB.");
+
+    if (demo) {
+      updateCompliance(requirement.id, {
+        status: "uploaded",
+        uploadedAt: new Date().toLocaleDateString("en-GB"),
+        expiryDate: expiryDate || undefined,
+        submissionId: `demo-admin-${requirement.id}`,
+        originalFilename: file.name,
+        scanStatus: "clean",
+      });
+    } else {
+      await uploadComplianceFileAsAdmin(
+        requirement.id,
+        file,
+        expiryDate,
+      );
+      await refresh();
+    }
+    setError("");
+    setMessage(
+      `${requirement.title} uploaded for ${requirement.consultantName || "the consultant"} and queued for security checks.`,
+    );
+  }
+
+  async function openSubmission(requirement: ComplianceRequirement) {
+    if (!requirement.submissionId) return;
+    setOpeningSubmissionId(requirement.submissionId);
+    setError("");
+    try {
+      if (demo) {
+        setMessage("Secure preview is available only in the live portal.");
+        return;
+      }
+      const result = await getComplianceSubmissionAccess(
+        requirement.submissionId,
+      );
+      if (!result.url)
+        throw new Error("The secure viewing link could not be created.");
+      window.open(result.url, "_blank", "noopener,noreferrer");
+    } catch (accessError) {
+      setError(
+        accessError instanceof Error
+          ? accessError.message
+          : "The submission could not be opened.",
+      );
+    } finally {
+      setOpeningSubmissionId("");
+    }
+  }
 
   async function review(
     requirement: ComplianceRequirement,
     status: "accepted" | "rejected",
   ) {
     if (!requirement.submissionId) return;
+    setError("");
     try {
       if (demo) {
         updateCompliance(requirement.id, {
@@ -3171,7 +3242,7 @@ function AdminCompliancePage() {
       }
       setMessage(`${requirement.title} marked ${status}.`);
     } catch (error) {
-      setMessage(
+      setError(
         error instanceof Error ? error.message : "Review could not be saved.",
       );
     }
@@ -3189,12 +3260,30 @@ function AdminCompliancePage() {
           {message}
         </p>
       ) : null}
+      {error ? (
+        <p className="portal-form-message error" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <div className="portal-privacy-callout">
+        <span aria-hidden="true">i</span>
+        <p>
+          Administrators may prepare a consultant&apos;s onboarding pack here.
+          Every file is stored privately, scanned before viewing and recorded in
+          the audit history. PDF, JPG and PNG files are accepted, up to 10 MB.
+        </p>
+      </div>
       <div className="portal-review-list">
         {snapshot.compliance.map((requirement) => (
           <article className="portal-panel" key={requirement.id}>
             <div className="portal-review-heading">
               <div>
-                <p className="portal-card-label">Roland Schneider</p>
+                <p className="portal-card-label">
+                  {requirement.consultantName || "Consultant"}
+                  {requirement.consultantEmail
+                    ? ` · ${requirement.consultantEmail}`
+                    : ""}
+                </p>
                 <h2>{requirement.title}</h2>
               </div>
               <StatusPill status={requirement.status} />
@@ -3208,6 +3297,10 @@ function AdminCompliancePage() {
               <div>
                 <dt>Expiry</dt>
                 <dd>{requirement.expiryDate || "Not supplied"}</dd>
+              </div>
+              <div>
+                <dt>File</dt>
+                <dd>{requirement.originalFilename || "No submission"}</dd>
               </div>
               <div>
                 <dt>Security scan</dt>
@@ -3226,10 +3319,23 @@ function AdminCompliancePage() {
                 type="button"
                 disabled={
                   !requirement.submissionId ||
-                  requirement.scanStatus !== "clean"
+                  requirement.scanStatus !== "clean" ||
+                  openingSubmissionId === requirement.submissionId
                 }
+                onClick={() => openSubmission(requirement)}
               >
-                View securely
+                {openingSubmissionId === requirement.submissionId
+                  ? "Opening…"
+                  : "View securely"}
+              </button>
+              <button
+                className="portal-button portal-button-secondary"
+                type="button"
+                onClick={() => setSelected(requirement)}
+              >
+                {requirement.submissionId
+                  ? "Upload replacement"
+                  : "Upload for consultant"}
               </button>
               <button
                 className="portal-button portal-button-danger"
@@ -3257,6 +3363,15 @@ function AdminCompliancePage() {
           </article>
         ))}
       </div>
+      {selected ? (
+        <UploadDialog
+          requirement={selected}
+          contextLabel={`Administrator upload · ${selected.consultantName || "Consultant"}`}
+          introduction="Upload only evidence supplied or approved by the consultant. It will remain quarantined and unavailable for review until the security scan passes. The audit history records that DeepBridge uploaded it on the consultant's behalf."
+          onClose={() => setSelected(null)}
+          onUpload={uploadForConsultant}
+        />
+      ) : null}
     </>
   );
 }
