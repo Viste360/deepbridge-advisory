@@ -29,7 +29,21 @@ export interface AdminDocumentCatalogueItem {
     scanStatus: "pending" | "clean" | "infected" | "failed";
     locked: boolean;
     effectiveAt: string;
+    createdAt: string;
+    originalFilename: string;
+    sizeBytes: number;
   }>;
+}
+
+export interface AdminDocumentCatalogue {
+  documents: AdminDocumentCatalogueItem[];
+  scannerConfigured: boolean;
+}
+
+export interface UploadProgress {
+  phase: "preparing" | "uploading" | "finalising";
+  percent: number;
+  estimatedSecondsRemaining?: number;
 }
 
 export interface AdminSigningItem {
@@ -381,34 +395,44 @@ export async function createInvitation(input: {
   return authorisedRequest("/api/invitations/create", input);
 }
 
-export async function listAdminDocumentCatalogue(): Promise<
-  AdminDocumentCatalogueItem[]
-> {
-  const result = await apiRequest<{ documents: unknown }>(
+export async function listAdminDocumentCatalogue(): Promise<AdminDocumentCatalogue> {
+  const result = await apiRequest<{
+    documents: unknown;
+    scannerConfigured?: boolean;
+  }>(
     "/api/admin/documents/catalogue",
   );
-  return records(result.documents).map((row) => ({
-    id: text(row.id),
-    slug: text(row.slug),
-    title: text(row.title),
-    description: text(row.description),
-    category:
-      text(row.category) === "signature"
-        ? "signature"
-        : text(row.category) === "acknowledgement"
-          ? "acknowledgement"
-          : "information",
-    versions: records(row.document_versions).map((version) => ({
-      id: text(version.id),
-      versionLabel: text(version.version_label),
-      scanStatus: text(
-        version.malware_scan_status,
-        "pending",
-      ) as AdminDocumentCatalogueItem["versions"][number]["scanStatus"],
-      locked: Boolean(version.locked_at),
-      effectiveAt: displayDate(version.effective_at),
+  return {
+    scannerConfigured: result.scannerConfigured === true,
+    documents: records(result.documents).map((row) => ({
+      id: text(row.id),
+      slug: text(row.slug),
+      title: text(row.title),
+      description: text(row.description),
+      category:
+        text(row.category) === "signature"
+          ? "signature"
+          : text(row.category) === "acknowledgement"
+            ? "acknowledgement"
+            : "information",
+      versions: records(row.document_versions).map((version) => ({
+        id: text(version.id),
+        versionLabel: text(version.version_label),
+        scanStatus: text(
+          version.malware_scan_status,
+          "pending",
+        ) as AdminDocumentCatalogueItem["versions"][number]["scanStatus"],
+        locked: Boolean(version.locked_at),
+        effectiveAt: displayDate(version.effective_at),
+        createdAt: text(version.created_at),
+        originalFilename: text(version.original_filename),
+        sizeBytes:
+          typeof version.size_bytes === "number"
+            ? version.size_bytes
+            : Number(version.size_bytes) || 0,
+      })),
     })),
-  }));
+  };
 }
 
 async function sha256(file: File) {
@@ -423,13 +447,17 @@ export async function uploadAdminDocumentVersion(input: {
   assignmentId: string;
   versionLabel: string;
   file: File;
+  onProgress?: (progress: UploadProgress) => void;
 }) {
-  if (!storageClient) throw new Error("Portal storage is not configured.");
+  if (!storageClient || !supabaseUrl || !supabaseAnonKey)
+    throw new Error("Portal storage is not configured.");
   if (input.file.type !== "application/pdf")
     throw new Error("Only PDF documents are accepted.");
   if (input.file.size > 25 * 1024 * 1024)
     throw new Error("The maximum document size is 25 MB.");
 
+  input.onProgress?.({ phase: "preparing", percent: 0 });
+  const contentSha256 = await sha256(input.file);
   const upload = await post<{ path: string; token: string }>(
     "/api/admin/documents/upload-url",
     {
@@ -438,14 +466,65 @@ export async function uploadAdminDocumentVersion(input: {
       sizeBytes: input.file.size,
     },
   );
-  const { error } = await storageClient.storage
-    .from("portal-documents")
-    .uploadToSignedUrl(upload.path, upload.token, input.file, {
-      contentType: "application/pdf",
-      upsert: false,
-    });
-  if (error) throw error;
 
+  const encodedPath = upload.path
+    .split("/")
+    .map((part) => encodeURIComponent(part))
+    .join("/");
+  const uploadUrl = new URL(
+    `${supabaseUrl}/storage/v1/object/upload/sign/portal-documents/${encodedPath}`,
+  );
+  uploadUrl.searchParams.set("token", upload.token);
+  await new Promise<void>((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    const startedAt = performance.now();
+    request.open("PUT", uploadUrl.toString());
+    request.setRequestHeader("apikey", supabaseAnonKey);
+    request.setRequestHeader("Authorization", `Bearer ${supabaseAnonKey}`);
+    request.setRequestHeader("x-upsert", "false");
+    request.upload.addEventListener("progress", (event) => {
+      const total = event.lengthComputable ? event.total : input.file.size;
+      const elapsedSeconds = Math.max(
+        (performance.now() - startedAt) / 1000,
+        0.1,
+      );
+      const bytesPerSecond = event.loaded / elapsedSeconds;
+      const estimatedSecondsRemaining =
+        bytesPerSecond > 0
+          ? Math.max(0, Math.ceil((total - event.loaded) / bytesPerSecond))
+          : undefined;
+      input.onProgress?.({
+        phase: "uploading",
+        percent: Math.min(99, Math.round((event.loaded / total) * 100)),
+        estimatedSecondsRemaining,
+      });
+    });
+    request.addEventListener("load", () => {
+      if (request.status >= 200 && request.status < 300) resolve();
+      else {
+        let message = "The private upload could not be completed.";
+        try {
+          const result = JSON.parse(request.responseText) as {
+            message?: string;
+            error?: string;
+          };
+          message = result.message || result.error || message;
+        } catch {
+          // Supabase may return a non-JSON gateway error.
+        }
+        reject(new Error(message));
+      }
+    });
+    request.addEventListener("error", () =>
+      reject(new Error("The private upload connection was interrupted.")),
+    );
+    const form = new FormData();
+    form.append("cacheControl", "3600");
+    form.append("", input.file);
+    request.send(form);
+  });
+
+  input.onProgress?.({ phase: "finalising", percent: 100 });
   return post<{ versionId: string; status: string }>(
     "/api/admin/documents/upload-finalize",
     {
@@ -456,9 +535,15 @@ export async function uploadAdminDocumentVersion(input: {
       originalFilename: input.file.name,
       mimeType: input.file.type,
       sizeBytes: input.file.size,
-      contentSha256: await sha256(input.file),
+      contentSha256,
     },
   );
+}
+
+export async function removeAdminDocumentVersion(versionId: string) {
+  return post<{ removed: true }>("/api/admin/documents/remove-version", {
+    versionId,
+  });
 }
 
 export async function listAdminSigningItems(): Promise<AdminSigningItem[]> {

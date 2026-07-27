@@ -20,7 +20,7 @@ export default async function handler(
     const { data, error } = await admin
       .from("documents")
       .select(
-        "id, slug, title, description, category, sort_order, document_versions(id, version_label, malware_scan_status, locked_at, effective_at, assignment_id)",
+        "id, slug, title, description, category, sort_order, document_versions(id, version_label, original_filename, size_bytes, malware_scan_status, locked_at, effective_at, created_at, assignment_id)",
       )
       .order("sort_order")
       .order("created_at", {
@@ -28,7 +28,13 @@ export default async function handler(
         ascending: false,
       });
     if (error) throw error;
-    return json(response, 200, { documents: data ?? [] });
+    return json(response, 200, {
+      documents: data ?? [],
+      scannerConfigured: Boolean(
+        process.env.MALWARE_SCAN_PROVIDER?.trim() &&
+          process.env.MALWARE_SCAN_CALLBACK_SECRET?.trim(),
+      ),
+    });
   } catch (error) {
     return handleApiError(response, error);
   }
