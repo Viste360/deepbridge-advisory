@@ -1,7 +1,9 @@
 import {
+  CSSProperties,
   FormEvent,
   ReactNode,
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useRef,
@@ -29,6 +31,7 @@ import {
   portalConfigured,
   portalDemoEnabled,
   recordGoogleSigningStep,
+  removeAdminDocumentVersion,
   reviewComplianceSubmission,
   sendMagicLink,
   signInWithGoogle,
@@ -39,6 +42,7 @@ import {
   type AdminDocumentCatalogueItem,
   type AdminSigningItem,
   type PortalBrowserSession,
+  type UploadProgress,
 } from "./portalApi";
 
 const googleSignInEnabled =
@@ -1841,6 +1845,9 @@ function createDemoDocumentCatalogue(
         scanStatus: "clean",
         locked: true,
         effectiveAt: document.updatedAt,
+        createdAt: new Date().toISOString(),
+        originalFilename: `${document.id}.pdf`,
+        sizeBytes: 480_000,
       },
     ],
   }));
@@ -1851,17 +1858,25 @@ function AdminDocumentsPage() {
   const [catalogue, setCatalogue] = useState<AdminDocumentCatalogueItem[]>([]);
   const [selected, setSelected] =
     useState<AdminDocumentCatalogueItem | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<{
+    document: AdminDocumentCatalogueItem;
+    version: AdminDocumentCatalogueItem["versions"][number];
+  } | null>(null);
   const [message, setMessage] = useState("");
   const [loadingCatalogue, setLoadingCatalogue] = useState(true);
+  const [scannerConfigured, setScannerConfigured] = useState(demo);
 
-  async function refreshCatalogue() {
+  const refreshCatalogue = useCallback(async () => {
     if (demo) {
       setCatalogue(createDemoDocumentCatalogue(snapshot.documents));
+      setScannerConfigured(true);
       setLoadingCatalogue(false);
       return;
     }
     try {
-      setCatalogue(await listAdminDocumentCatalogue());
+      const result = await listAdminDocumentCatalogue();
+      setCatalogue(result.documents);
+      setScannerConfigured(result.scannerConfigured);
     } catch (catalogueError) {
       setMessage(
         catalogueError instanceof Error
@@ -1871,16 +1886,22 @@ function AdminDocumentsPage() {
     } finally {
       setLoadingCatalogue(false);
     }
-  }
+  }, [demo, snapshot.documents]);
 
   useEffect(() => {
     let active = true;
     const request = demo
-      ? Promise.resolve(createDemoDocumentCatalogue(snapshot.documents))
+      ? Promise.resolve({
+          documents: createDemoDocumentCatalogue(snapshot.documents),
+          scannerConfigured: true,
+        })
       : listAdminDocumentCatalogue();
     request
-      .then((documents) => {
-        if (active) setCatalogue(documents);
+      .then((result) => {
+        if (active) {
+          setCatalogue(result.documents);
+          setScannerConfigured(result.scannerConfigured);
+        }
       })
       .catch((catalogueError) => {
         if (active)
@@ -1898,10 +1919,26 @@ function AdminDocumentsPage() {
     };
   }, [demo, snapshot.documents]);
 
+  useEffect(() => {
+    if (
+      demo ||
+      !scannerConfigured ||
+      !catalogue.some(
+        (document) => document.versions[0]?.scanStatus === "pending",
+      )
+    )
+      return;
+    const timer = window.setInterval(() => {
+      void refreshCatalogue();
+    }, 8000);
+    return () => window.clearInterval(timer);
+  }, [catalogue, demo, refreshCatalogue, scannerConfigured]);
+
   async function handleVersionUpload(input: {
     document: AdminDocumentCatalogueItem;
     versionLabel: string;
     file: File;
+    onProgress?: (progress: UploadProgress) => void;
   }) {
     if (demo) {
       setCatalogue((current) =>
@@ -1916,6 +1953,9 @@ function AdminDocumentsPage() {
                     scanStatus: "pending",
                     locked: false,
                     effectiveAt: new Date().toLocaleDateString("en-GB"),
+                    createdAt: new Date().toISOString(),
+                    originalFilename: input.file.name,
+                    sizeBytes: input.file.size,
                   },
                   ...document.versions,
                 ],
@@ -1929,11 +1969,40 @@ function AdminDocumentsPage() {
         assignmentId: snapshot.assignment.id,
         versionLabel: input.versionLabel,
         file: input.file,
+        onProgress: input.onProgress,
       });
       await refreshCatalogue();
     }
     setMessage(
-      `${input.document.title} v${input.versionLabel} uploaded. It will publish automatically after the security scan passes.`,
+      scannerConfigured
+        ? `${input.document.title} v${input.versionLabel} uploaded. It will publish automatically after the security scan passes.`
+        : `${input.document.title} v${input.versionLabel} is stored privately. Publication is paused until the security scanner is connected.`,
+    );
+  }
+
+  async function handleVersionRemoval() {
+    if (!removeTarget) return;
+    const { document, version } = removeTarget;
+    if (demo) {
+      setCatalogue((current) =>
+        current.map((item) =>
+          item.id === document.id
+            ? {
+                ...item,
+                versions: item.versions.filter(
+                  (candidate) => candidate.id !== version.id,
+                ),
+              }
+            : item,
+        ),
+      );
+    } else {
+      await removeAdminDocumentVersion(version.id);
+      await refreshCatalogue();
+    }
+    setRemoveTarget(null);
+    setMessage(
+      `${document.title} v${version.versionLabel} was removed from private quarantine. You can upload the corrected PDF now.`,
     );
   }
 
@@ -1963,6 +2032,13 @@ function AdminDocumentsPage() {
           preserved.
         </p>
       </div>
+      {!scannerConfigured ? (
+        <div className="portal-form-message warning" role="status">
+          <strong>Security scanner setup required.</strong> Uploaded PDFs remain
+          private and unavailable to consultants. You can remove a pending
+          upload and replace it while the scanner connection is completed.
+        </div>
+      ) : null}
       {message ? (
         <p className="portal-form-message success" role="status">
           {message}
@@ -1982,6 +2058,27 @@ function AdminDocumentsPage() {
           <tbody>
             {catalogue.map((document) => {
               const latest = document.versions[0];
+              const statusLabel = latest?.locked
+                ? "Published"
+                : latest?.scanStatus === "infected"
+                  ? "Blocked"
+                  : latest?.scanStatus === "failed"
+                    ? "Scan failed"
+                    : latest
+                      ? scannerConfigured
+                        ? "Security scan"
+                        : "Scanner setup required"
+                      : "Needs upload";
+              const statusDetail =
+                latest?.scanStatus === "pending" && scannerConfigured
+                  ? "Usually under 2 minutes · refreshes automatically"
+                  : latest?.scanStatus === "pending"
+                    ? "Held safely in private quarantine"
+                    : latest?.scanStatus === "failed"
+                      ? "Remove the upload and try again"
+                      : latest?.scanStatus === "infected"
+                        ? "File is quarantined and cannot be published"
+                        : "";
               return (
               <tr key={document.id}>
                 <td>
@@ -1995,23 +2092,43 @@ function AdminDocumentsPage() {
                     className={`portal-status ${
                       latest?.locked
                         ? "status-completed"
-                        : latest
+                        : latest?.scanStatus === "infected" ||
+                            latest?.scanStatus === "failed"
+                          ? "status-rejected"
+                          : latest
                           ? "status-under_review"
                           : "status-missing"
                     }`}
                   >
                     <span aria-hidden="true" />
-                    {latest?.locked
-                      ? "Published"
-                      : latest
-                        ? "Security scan"
-                        : "Needs upload"}
+                    {statusLabel}
                   </span>
+                  {statusDetail ? (
+                    <small className="portal-status-detail">
+                      {statusDetail}
+                    </small>
+                  ) : null}
                 </td>
                 <td>
-                  <button type="button" onClick={() => setSelected(document)}>
-                    {latest ? "Add version" : "Upload"}
-                  </button>
+                  <div className="portal-table-actions">
+                    {latest && !latest.locked ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setRemoveTarget({ document, version: latest })
+                        }
+                      >
+                        Remove upload
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setSelected(document)}
+                      >
+                        {latest ? "Add version" : "Upload"}
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
               );
@@ -2031,6 +2148,14 @@ function AdminDocumentsPage() {
           onUpload={handleVersionUpload}
         />
       ) : null}
+      {removeTarget ? (
+        <AdminDocumentRemovalDialog
+          document={removeTarget.document}
+          version={removeTarget.version}
+          onClose={() => setRemoveTarget(null)}
+          onConfirm={handleVersionRemoval}
+        />
+      ) : null}
     </>
   );
 }
@@ -2046,6 +2171,7 @@ function AdminDocumentUploadDialog({
     document: AdminDocumentCatalogueItem;
     versionLabel: string;
     file: File;
+    onProgress?: (progress: UploadProgress) => void;
   }) => Promise<void>;
 }) {
   const latestLabel = document.versions[0]?.versionLabel;
@@ -2059,6 +2185,7 @@ function AdminDocumentUploadDialog({
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [progress, setProgress] = useState<UploadProgress | null>(null);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -2073,11 +2200,13 @@ function AdminDocumentUploadDialog({
     }
     setBusy(true);
     setError("");
+    setProgress({ phase: "preparing", percent: 0 });
     try {
       await onUpload({
         document,
         versionLabel,
         file,
+        onProgress: setProgress,
       });
       onClose();
     } catch (uploadError) {
@@ -2087,6 +2216,7 @@ function AdminDocumentUploadDialog({
           : "The document could not be uploaded.",
       );
       setBusy(false);
+      setProgress(null);
     }
   }
 
@@ -2103,6 +2233,7 @@ function AdminDocumentUploadDialog({
           className="portal-modal-close"
           onClick={onClose}
           aria-label="Close document upload"
+          disabled={busy}
         >
           ×
         </button>
@@ -2131,6 +2262,7 @@ function AdminDocumentUploadDialog({
             onChange={(event) => setFile(event.target.files?.[0] ?? null)}
           />
           <small>PDF only · maximum 25 MB · previous versions are retained</small>
+          {progress ? <UploadProgressIndicator progress={progress} /> : null}
           {error ? (
             <p className="portal-form-message error" role="alert">
               {error}
@@ -2141,6 +2273,7 @@ function AdminDocumentUploadDialog({
               className="portal-button portal-button-secondary"
               type="button"
               onClick={onClose}
+              disabled={busy}
             >
               Cancel
             </button>
@@ -2153,6 +2286,139 @@ function AdminDocumentUploadDialog({
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function UploadProgressIndicator({ progress }: { progress: UploadProgress }) {
+  const phaseLabel =
+    progress.phase === "preparing"
+      ? "Preparing secure upload"
+      : progress.phase === "finalising"
+        ? "Finalising private storage"
+        : "Uploading encrypted PDF";
+  const timeLabel =
+    progress.phase === "uploading" &&
+    progress.estimatedSecondsRemaining !== undefined
+      ? progress.estimatedSecondsRemaining < 2
+        ? "Almost complete"
+        : `About ${progress.estimatedSecondsRemaining} seconds remaining`
+      : progress.phase === "finalising"
+        ? "A few seconds remaining"
+        : "Calculating upload time";
+
+  return (
+    <div
+      className="portal-upload-progress"
+      role="progressbar"
+      aria-label={phaseLabel}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={progress.percent}
+    >
+      <div
+        className="portal-upload-ring"
+        style={
+          {
+            "--portal-upload-percent": `${progress.percent * 3.6}deg`,
+          } as CSSProperties
+        }
+        aria-hidden="true"
+      >
+        <span>{progress.percent}%</span>
+      </div>
+      <div>
+        <strong>{phaseLabel}</strong>
+        <span>{timeLabel}</span>
+      </div>
+    </div>
+  );
+}
+
+function AdminDocumentRemovalDialog({
+  document,
+  version,
+  onClose,
+  onConfirm,
+}: {
+  document: AdminDocumentCatalogueItem;
+  version: AdminDocumentCatalogueItem["versions"][number];
+  onClose: () => void;
+  onConfirm: () => Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function confirmRemoval() {
+    setBusy(true);
+    setError("");
+    try {
+      await onConfirm();
+    } catch (removalError) {
+      setError(
+        removalError instanceof Error
+          ? removalError.message
+          : "The upload could not be removed.",
+      );
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="portal-modal-backdrop" role="presentation">
+      <div
+        className="portal-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="document-removal-title"
+      >
+        <button
+          type="button"
+          className="portal-modal-close"
+          onClick={onClose}
+          aria-label="Close document removal"
+          disabled={busy}
+        >
+          ×
+        </button>
+        <p className="portal-kicker">Remove private upload</p>
+        <h2 id="document-removal-title">{document.title}</h2>
+        <p>
+          Version {version.versionLabel}
+          {version.originalFilename
+            ? ` (${version.originalFilename})`
+            : ""}{" "}
+          has not been published. Removing it deletes the quarantined copy and
+          lets you reuse the same version label for a corrected PDF.
+        </p>
+        <p>
+          Published versions cannot be removed because they are retained in the
+          audit history.
+        </p>
+        {error ? (
+          <p className="portal-form-message error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <div className="portal-modal-actions">
+          <button
+            className="portal-button portal-button-secondary"
+            type="button"
+            onClick={onClose}
+            disabled={busy}
+          >
+            Keep upload
+          </button>
+          <button
+            className="portal-button portal-button-danger"
+            type="button"
+            onClick={() => void confirmRemoval()}
+            disabled={busy}
+          >
+            {busy ? "Removing…" : "Remove upload"}
+          </button>
+        </div>
       </div>
     </div>
   );
