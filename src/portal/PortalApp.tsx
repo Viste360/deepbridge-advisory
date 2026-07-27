@@ -1554,7 +1554,41 @@ function ProfilePage() {
 }
 
 function AdminDashboard() {
-  const { snapshot } = usePortal();
+  const { snapshot, demo } = usePortal();
+  const [consultants, setConsultants] = useState<AdminConsultant[]>(
+    demo
+      ? [
+          {
+            id: snapshot.profile.id,
+            fullName: "Roland Schneider",
+            email: "roland.schneider@example.de",
+            businessName: "Roland Schneider Consulting",
+            accessStatus: "active",
+            onboardingComplete: 1,
+            onboardingTotal: 14,
+          },
+        ]
+      : [],
+  );
+  const [consultantsLoading, setConsultantsLoading] = useState(!demo);
+  useEffect(() => {
+    if (demo) return;
+    let active = true;
+    void listAdminConsultants()
+      .then((items) => {
+        if (active) setConsultants(items);
+      })
+      .finally(() => {
+        if (active) setConsultantsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [demo]);
+  const activeConsultants = consultants.filter(
+    (consultant) => consultant.accessStatus === "active",
+  );
+  const primaryConsultant = activeConsultants[0];
   const outstanding = snapshot.compliance.filter((item) =>
     ["uploaded", "under_review"].includes(item.status),
   ).length;
@@ -1579,8 +1613,12 @@ function AdminDashboard() {
       <section className="portal-admin-stats">
         <article>
           <p>Active consultants</p>
-          <strong>1</strong>
-          <span>Roland Schneider</span>
+          <strong>{consultantsLoading ? "—" : activeConsultants.length}</strong>
+          <span>
+            {consultantsLoading
+              ? "Loading secure records"
+              : primaryConsultant?.fullName ?? "No active consultants"}
+          </span>
         </article>
         <article>
           <p>Compliance review</p>
@@ -1619,7 +1657,10 @@ function AdminDashboard() {
                 </span>
                 <span>
                   <strong>{item.title}</strong>
-                  <small>Roland Schneider · Uploaded {item.uploadedAt}</small>
+                  <small>
+                    {primaryConsultant?.fullName ?? "Consultant"} · Uploaded{" "}
+                    {item.uploadedAt}
+                  </small>
                 </span>
                 <StatusPill status={item.status} />
                 <span aria-hidden="true">→</span>
@@ -1631,7 +1672,11 @@ function AdminDashboard() {
             </span>
             <span>
               <strong>Statement of Work</strong>
-              <small>Roland has signed · DeepBridge countersignature due</small>
+              <small>
+                {primaryConsultant
+                  ? `${primaryConsultant.fullName} · Review signing status`
+                  : "Review signing status"}
+              </small>
             </span>
             <StatusPill status="awaiting_deepbridge" />
             <span aria-hidden="true">→</span>
