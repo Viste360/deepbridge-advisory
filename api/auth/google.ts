@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { createPortalAuthClient } from "../_lib/authCookies";
-import { handleApiError, json } from "../_lib/server";
+import { createPortalAuthClient } from "../_lib/authCookies.js";
+import { handleApiError, json } from "../_lib/server.js";
 
 export default async function handler(
   request: IncomingMessage,

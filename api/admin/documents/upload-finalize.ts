@@ -7,7 +7,7 @@ import {
   readJsonBody,
   requestContext,
   requirePortalUser,
-} from "../../_lib/server";
+} from "../../_lib/server.js";
 
 function cleanText(value: unknown, maximum: number) {
   return typeof value === "string" ? value.trim().slice(0, maximum) : "";

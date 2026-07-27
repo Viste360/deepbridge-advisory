@@ -4,7 +4,7 @@ import {
   handleApiError,
   json,
   requirePortalUser,
-} from "../../_lib/server";
+} from "../../_lib/server.js";
 
 export default async function handler(
   request: IncomingMessage,

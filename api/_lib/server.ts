@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createClient, type User } from "@supabase/supabase-js";
-import { createPortalAuthClient } from "./authCookies";
+import { createPortalAuthClient } from "./authCookies.js";
 
 export interface PortalServerUser {
   user: User;
