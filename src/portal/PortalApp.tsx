@@ -24,6 +24,7 @@ import {
   createInvitation,
   getDocumentAccess,
   getPortalSession,
+  listAdminConsultants,
   listAdminDocumentCatalogue,
   listAdminSigningItems,
   loadPortalSnapshot,
@@ -40,6 +41,7 @@ import {
   uploadCompletedSigningPack,
   uploadAdminDocumentVersion,
   type AdminDocumentCatalogueItem,
+  type AdminConsultant,
   type AdminSigningItem,
   type PortalBrowserSession,
   type UploadProgress,
@@ -576,7 +578,12 @@ function PageHeader({
 function StatusPill({
   status,
 }: {
-  status: DocumentStatus | ComplianceRequirement["status"] | "active";
+  status:
+    | DocumentStatus
+    | ComplianceRequirement["status"]
+    | "active"
+    | "invited"
+    | "revoked";
 }) {
   const labels: Record<string, string> = {
     not_reviewed: "Not reviewed",
@@ -592,6 +599,8 @@ function StatusPill({
     rejected: "Rejected",
     expired: "Expired",
     active: "Active",
+    invited: "Invited",
+    revoked: "Revoked",
   };
   return (
     <span className={`portal-status status-${status}`}>
@@ -1647,6 +1656,69 @@ function AdminDashboard() {
 function AdminConsultantsPage() {
   const { snapshot, demo } = usePortal();
   const [showInvite, setShowInvite] = useState(false);
+  const [consultants, setConsultants] = useState<AdminConsultant[]>(
+    demo
+      ? [
+          {
+            id: snapshot.profile.id,
+            fullName: "Roland Schneider",
+            email: "roland.schneider@example.de",
+            businessName: "Roland Schneider Consulting",
+            accessStatus: "active",
+            assignment: {
+              id: snapshot.assignment.id,
+              title: snapshot.assignment.title,
+              location: snapshot.assignment.location,
+              startDate: snapshot.assignment.startDate,
+              status: "active",
+            },
+            onboardingComplete: snapshot.tasks.filter((task) => task.complete)
+              .length,
+            onboardingTotal: snapshot.tasks.length,
+          },
+        ]
+      : [],
+  );
+  const [loading, setLoading] = useState(!demo);
+  const [error, setError] = useState("");
+  const refreshConsultants = useCallback(async () => {
+    if (demo) return;
+    setLoading(true);
+    setError("");
+    try {
+      setConsultants(await listAdminConsultants());
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Consultants could not be loaded.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [demo]);
+  useEffect(() => {
+    if (demo) return;
+    let active = true;
+    void listAdminConsultants()
+      .then((items) => {
+        if (active) setConsultants(items);
+      })
+      .catch((loadError: unknown) => {
+        if (!active) return;
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Consultants could not be loaded.",
+        );
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [demo]);
   return (
     <>
       <PageHeader
@@ -1675,31 +1747,62 @@ function AdminConsultantsPage() {
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>
-                <strong>Roland Schneider</strong>
-                <span>roland.schneider@example.de</span>
-              </td>
-              <td>
-                <strong>{snapshot.assignment.title}</strong>
-                <span>{snapshot.assignment.endCustomer}</span>
-              </td>
-              <td>
-                <StatusPill status="active" />
-              </td>
-              <td>
-                {snapshot.tasks.filter((task) => task.complete).length} of{" "}
-                {snapshot.tasks.length}
-              </td>
-              <td>
-                <button type="button">Open record</button>
-              </td>
-            </tr>
+            {consultants.map((consultant) => (
+              <tr key={consultant.id}>
+                <td>
+                  <strong>{consultant.fullName}</strong>
+                  <span>{consultant.email}</span>
+                </td>
+                <td>
+                  <strong>
+                    {consultant.assignment?.title ?? "No active assignment"}
+                  </strong>
+                  <span>
+                    {consultant.assignment
+                      ? `${consultant.assignment.location} · ${consultant.assignment.startDate}`
+                      : consultant.businessName}
+                  </span>
+                </td>
+                <td>
+                  <StatusPill status={consultant.accessStatus} />
+                </td>
+                <td>
+                  {consultant.onboardingComplete} of{" "}
+                  {consultant.onboardingTotal}
+                </td>
+                <td>
+                  {consultant.lastLoginAt ? (
+                    <span>Last login {consultant.lastLoginAt}</span>
+                  ) : (
+                    <span>Awaiting first sign-in</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {!loading && !consultants.length ? (
+              <tr>
+                <td colSpan={5}>No consultants have been invited yet.</td>
+              </tr>
+            ) : null}
+            {loading ? (
+              <tr>
+                <td colSpan={5}>Loading secure consultant records…</td>
+              </tr>
+            ) : null}
+            {error ? (
+              <tr>
+                <td colSpan={5}>{error}</td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </section>
       {showInvite ? (
-        <InviteDialog demo={demo} onClose={() => setShowInvite(false)} />
+        <InviteDialog
+          demo={demo}
+          onClose={() => setShowInvite(false)}
+          onInvited={refreshConsultants}
+        />
       ) : null}
     </>
   );
@@ -1708,9 +1811,11 @@ function AdminConsultantsPage() {
 function InviteDialog({
   demo,
   onClose,
+  onInvited,
 }: {
   demo: boolean;
   onClose: () => void;
+  onInvited?: () => Promise<void>;
 }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -1725,6 +1830,7 @@ function InviteDialog({
         businessName: String(formData.get("businessName") ?? ""),
       };
       if (!demo) await createInvitation(input);
+      await onInvited?.();
       setMessage(
         demo
           ? "Preview complete. No email was sent."
