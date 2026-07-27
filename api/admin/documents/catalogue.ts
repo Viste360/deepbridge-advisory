@@ -32,6 +32,8 @@ export default async function handler(
       documents: data ?? [],
       scannerConfigured: Boolean(
         process.env.MALWARE_SCAN_PROVIDER?.trim() &&
+          process.env.MALWARE_SCAN_SERVICE_URL?.trim() &&
+          process.env.MALWARE_SCAN_TRIGGER_SECRET?.trim() &&
           process.env.MALWARE_SCAN_CALLBACK_SECRET?.trim(),
       ),
     });

@@ -8,6 +8,7 @@ import {
   requestContext,
   requirePortalUser,
 } from "../../_lib/server.js";
+import { requestMalwareScan } from "../../_lib/scanner.js";
 
 function cleanText(value: unknown, maximum: number) {
   return typeof value === "string" ? value.trim().slice(0, maximum) : "";
@@ -115,6 +116,23 @@ export default async function handler(
       ...requestContext(request),
       metadata: { provider: "google_workspace", scan_status: "pending" },
     });
+
+    await Promise.all([
+      requestMalwareScan({
+        objectType: "signature_artifact",
+        objectId: envelope.id,
+        artifactKind: "final",
+        bucket: "signed-documents",
+        storagePath: finalPath,
+      }),
+      requestMalwareScan({
+        objectType: "signature_artifact",
+        objectId: envelope.id,
+        artifactKind: "certificate",
+        bucket: "signed-documents",
+        storagePath: certificatePath,
+      }),
+    ]);
 
     return json(response, 202, {
       envelopeId: envelope.id,

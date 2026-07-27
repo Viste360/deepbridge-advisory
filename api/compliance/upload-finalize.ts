@@ -8,6 +8,7 @@ import {
   requestContext,
   requirePortalUser,
 } from "../_lib/server.js";
+import { requestMalwareScan } from "../_lib/scanner.js";
 
 const allowedMimeTypes = new Set([
   "application/pdf",
@@ -99,6 +100,13 @@ export default async function handler(
       object_id: submission.id,
       consultant_id: actor.user.id,
       ...requestContext(request),
+    });
+
+    await requestMalwareScan({
+      objectType: "compliance_submission",
+      objectId: submission.id,
+      bucket: "consultant-compliance",
+      storagePath,
     });
 
     return json(response, 201, {

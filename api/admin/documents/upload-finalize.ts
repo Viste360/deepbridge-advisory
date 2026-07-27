@@ -8,6 +8,7 @@ import {
   requestContext,
   requirePortalUser,
 } from "../../_lib/server.js";
+import { requestMalwareScan } from "../../_lib/scanner.js";
 
 function cleanText(value: unknown, maximum: number) {
   return typeof value === "string" ? value.trim().slice(0, maximum) : "";
@@ -107,6 +108,13 @@ export default async function handler(
       assignment_id: assignmentId,
       ...requestContext(request),
       metadata: { document_id: documentId, version_label: versionLabel },
+    });
+
+    await requestMalwareScan({
+      objectType: "document_version",
+      objectId: version.id,
+      bucket: "portal-documents",
+      storagePath,
     });
 
     return json(response, 201, {
