@@ -36,7 +36,7 @@ DeepBridge archive. Google sends each signer a personal eSignature email.
 ## Upload an approved agreement
 
 1. Save the counsel-approved PDF in Drive under **Approved source**.
-2. Sign in to `portal.deepbridgeadvisory.co.uk` as an administrator.
+2. Sign in to `portal.deepbridgeadvisory.com` as an administrator.
 3. Open **Documents**.
 4. Select **Add approved PDF**.
 5. Choose the document type, enter the version such as `1.0`, and upload the

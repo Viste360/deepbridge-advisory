@@ -5,7 +5,7 @@ Handover date: 26 July 2026
 ## Outcome
 
 The repository now contains a separate consultant-portal surface designed for
-`portal.deepbridgeadvisory.co.uk`. The existing public marketing site remains
+`portal.deepbridgeadvisory.com`. The existing public marketing site remains
 unchanged at its existing routes.
 
 The portal includes:
@@ -81,8 +81,8 @@ an external operational dependency and must be connected before production.
 3. Confirm that all three storage buckets are private:
    `portal-documents`, `consultant-compliance` and `signed-documents`.
 4. In Auth URL Configuration, set:
-   - Site URL: `https://portal.deepbridgeadvisory.co.uk`
-   - Redirect URL: `https://portal.deepbridgeadvisory.co.uk/auth/callback`
+   - Site URL: `https://portal.deepbridgeadvisory.com`
+   - Redirect URL: `https://portal.deepbridgeadvisory.com/auth/callback`
 5. Require email confirmation and disable anonymous sign-ins.
 6. Before enabling the invitation hook, create the initial DeepBridge
    administrator in Supabase Auth, then insert a
@@ -182,7 +182,7 @@ In particular, protect:
 - `DOCUSIGN_CONNECT_HMAC_SECRET`
 - `MALWARE_SCAN_CALLBACK_SECRET`
 
-Point `portal.deepbridgeadvisory.co.uk` to the reviewed production deployment
+Point `portal.deepbridgeadvisory.com` to the reviewed production deployment
 only after preview approval. Verify the portal-specific `X-Robots-Tag`,
 `Cache-Control`, `Referrer-Policy`, CSP and robots response after the DNS change.
 
