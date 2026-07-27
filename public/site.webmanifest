@@ -1,0 +1,21 @@
+{
+  "name": "DeepBridge Advisory",
+  "short_name": "DeepBridge",
+  "description": "Specialist consultants for complex transformation programmes.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#071722",
+  "theme_color": "#071722",
+  "icons": [
+    {
+      "src": "/favicon-192.png?v=3",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/brand/deepbridge-monogram-512.png?v=3",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

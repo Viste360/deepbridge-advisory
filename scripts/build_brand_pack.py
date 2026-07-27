@@ -213,7 +213,7 @@ def make_logo_assets() -> dict[str, Path]:
     dark.save(assets["dark"], optimize=True)
     monogram.save(assets["monogram"], optimize=True)
 
-    for size in (512, 256, 180, 64, 32):
+    for size in (512, 256, 192, 180, 64, 48, 32, 16):
         icon = render_monogram(size)
         icon.save(
             LOGOS_DIR / f"DeepBridge-Advisory-Monogram-{size}.png",
@@ -233,6 +233,13 @@ def make_logo_assets() -> dict[str, Path]:
         optimize=True,
     )
     render_monogram(64).save(ROOT / "public" / "favicon-64.png", optimize=True)
+    render_monogram(32).save(ROOT / "public" / "favicon-32.png", optimize=True)
+    render_monogram(192).save(ROOT / "public" / "favicon-192.png", optimize=True)
+    render_monogram(64).save(
+        ROOT / "public" / "favicon.ico",
+        format="ICO",
+        sizes=[(16, 16), (32, 32), (48, 48), (64, 64)],
+    )
     render_monogram(180).save(
         ROOT / "public" / "apple-touch-icon.png",
         optimize=True,
