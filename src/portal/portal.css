@@ -1970,6 +1970,31 @@
   gap: 14px;
 }
 
+.portal-signing-steps > label {
+  display: block;
+  margin: 18px 0 7px;
+  color: var(--portal-ink);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.portal-signing-steps > input[type="file"] {
+  width: 100%;
+  padding: 11px;
+  border: 1px solid var(--portal-line);
+  background: #fff;
+  color: var(--portal-ink);
+  font: inherit;
+}
+
+.portal-signing-steps > small {
+  display: block;
+  margin: 7px 0 16px;
+  color: var(--portal-muted);
+  font-size: 0.62rem;
+  line-height: 1.45;
+}
+
 .portal-table-complete {
   color: var(--portal-muted);
   font-size: 0.78rem;

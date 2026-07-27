@@ -121,6 +121,28 @@ The consultant cannot see another consultant's records, the DeepBridge Drive
 archive, internal verification notes, private source-folder links or service
 credentials.
 
+## Manual signed-PDF fallback
+
+Use this only when the Google Workspace request cannot be completed.
+
+1. The consultant opens the assigned signature document in the portal and
+   downloads the approved, locked PDF.
+2. The consultant signs the complete PDF using an established PDF signing tool
+   or prints, signs and scans the full document.
+3. The consultant uploads the signed PDF through **Signing fallback**. The file
+   is stored privately and remains unavailable to DeepBridge until its malware
+   scan reports `clean`.
+4. In **Administration → Signing**, DeepBridge downloads the cleared
+   consultant-signed PDF, reviews it and countersigns outside the portal.
+5. DeepBridge uploads the final countersigned PDF together with a PDF audit
+   note or signing evidence.
+6. The portal marks the agreement complete only after both final files pass
+   their security scans. The consultant can then download the locked final PDF
+   and audit evidence.
+
+The consultant upload never completes the agreement by itself and cannot
+replace the approved source version.
+
 ## Test before using real documents
 
 Use `yonwallace@gmail.com` as the consultant test identity.

@@ -60,14 +60,20 @@ export default async function handler(
 
     const { data: envelope, error: envelopeError } = await admin
       .from("signature_envelopes")
-      .select("id")
+      .select("id, provider, provider_status")
       .eq("assigned_document_id", assignedDocumentId)
-      .eq("provider", "google_workspace")
       .order("created_at", { ascending: false })
       .limit(1)
       .single();
-    if (envelopeError || !envelope)
-      throw new PortalHttpError(409, "Google signature record not found.");
+    if (
+      envelopeError ||
+      !envelope ||
+      envelope.provider_status !== "consultant_signed"
+    )
+      throw new PortalHttpError(
+        409,
+        "A verified consultant signature record was not found.",
+      );
 
     const expectedPrefix = `${assigned.consultant_id}/${assignedDocumentId}/${envelope.id}/`;
     if (
@@ -114,7 +120,7 @@ export default async function handler(
       assignment_id: assigned.assignment_id,
       consultant_id: assigned.consultant_id,
       ...requestContext(request),
-      metadata: { provider: "google_workspace", scan_status: "pending" },
+      metadata: { provider: envelope.provider, scan_status: "pending" },
     });
 
     await Promise.all([
