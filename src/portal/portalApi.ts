@@ -160,8 +160,20 @@ export function onPortalSessionChange(
   return () => undefined;
 }
 
-export async function completeAuthCallback(code: string) {
-  return post<{ authenticated: true }>("/api/auth/exchange", { code });
+export async function completeAuthCallback({
+  code,
+  tokenHash,
+  type,
+}: {
+  code?: string;
+  tokenHash?: string;
+  type?: string;
+}) {
+  return post<{ authenticated: true }>("/api/auth/exchange", {
+    code,
+    tokenHash,
+    type,
+  });
 }
 
 export async function sendMagicLink(email: string) {

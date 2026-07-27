@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { EmailOtpType } from "@supabase/supabase-js";
 import { createPortalAuthClient } from "../_lib/authCookies.js";
 import {
   handleApiError,
@@ -18,9 +19,19 @@ export default async function handler(
   try {
     const body = await readJsonBody(request);
     const code = typeof body.code === "string" ? body.code : "";
-    if (!code) throw new PortalHttpError(400, "Sign-in code is missing.");
+    const tokenHash =
+      typeof body.tokenHash === "string" ? body.tokenHash.trim() : "";
+    const type = typeof body.type === "string" ? body.type.trim() : "";
+    if (!code && (!tokenHash || !type))
+      throw new PortalHttpError(400, "Sign-in verification is missing.");
+
     const auth = createPortalAuthClient(request, response);
-    const { error } = await auth.auth.exchangeCodeForSession(code);
+    const { error } = code
+      ? await auth.auth.exchangeCodeForSession(code)
+      : await auth.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: type as EmailOtpType,
+        });
     if (error)
       throw new PortalHttpError(
         401,
