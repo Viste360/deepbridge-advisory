@@ -22,6 +22,7 @@ import {
   acknowledgeDocument,
   completeAuthCallback,
   createInvitation,
+  getConsultantSignedUpload,
   getDocumentAccess,
   getPortalSession,
   listAdminConsultants,
@@ -40,6 +41,7 @@ import {
   uploadComplianceFile,
   uploadCompletedSigningPack,
   uploadAdminDocumentVersion,
+  uploadManualSignedDocument,
   type AdminDocumentCatalogueItem,
   type AdminConsultant,
   type AdminSigningItem,
@@ -914,6 +916,7 @@ function DocumentDetailPage() {
   const document = snapshot.documents.find((item) => item.id === documentId);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [manualSignedPdf, setManualSignedPdf] = useState<File | null>(null);
 
   if (!document) return <Navigate to="/documents" replace />;
   const selectedDocument = document;
@@ -1013,6 +1016,43 @@ function DocumentDetailPage() {
     }
   }
 
+  async function handleManualSignedUpload() {
+    if (!manualSignedPdf) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      if (manualSignedPdf.type !== "application/pdf") {
+        throw new Error("Choose a PDF containing the signed document.");
+      }
+      if (manualSignedPdf.size > 25 * 1024 * 1024) {
+        throw new Error("The maximum signed PDF size is 25 MB.");
+      }
+      if (demo) {
+        updateDocument(selectedDocument.id, {
+          status: "awaiting_deepbridge",
+        });
+      } else {
+        await uploadManualSignedDocument({
+          assignedDocumentId: selectedDocument.id,
+          file: manualSignedPdf,
+        });
+        await refresh();
+      }
+      setManualSignedPdf(null);
+      setMessage(
+        "Your signed PDF passed securely to DeepBridge for review and countersignature.",
+      );
+    } catch (uploadError) {
+      setMessage(
+        uploadError instanceof Error
+          ? uploadError.message
+          : "The signed PDF could not be uploaded.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <>
       <nav className="portal-breadcrumb" aria-label="Breadcrumb">
@@ -1098,7 +1138,7 @@ function DocumentDetailPage() {
                 onClick={() => handleDocumentAccess("source")}
                 disabled={busy}
               >
-                Open approved PDF
+                Open / download approved PDF
               </button>
             ) : null}
             {document.status === "completed" &&
@@ -1153,6 +1193,40 @@ function DocumentDetailPage() {
                   </p>
                 </li>
               </ol>
+            </section>
+          ) : null}
+          {document.category === "signature" &&
+          ["not_reviewed", "ready_to_sign"].includes(document.status) ? (
+            <section className="portal-panel portal-signing-steps">
+              <p className="portal-card-label">Signing fallback</p>
+              <h2>Upload an externally signed PDF</h2>
+              <p>
+                If Google signing is unavailable, download the approved PDF,
+                sign it with your usual PDF signing tool or by hand, and upload
+                the complete signed PDF here. DeepBridge must still review and
+                countersign it before the agreement becomes complete.
+              </p>
+              <label htmlFor="manual-signed-pdf">Signed PDF</label>
+              <input
+                id="manual-signed-pdf"
+                type="file"
+                accept=".pdf,application/pdf"
+                disabled={busy}
+                onChange={(event) =>
+                  setManualSignedPdf(event.target.files?.[0] ?? null)
+                }
+              />
+              <small>
+                PDF only · maximum 25 MB · private and malware-scanned
+              </small>
+              <button
+                type="button"
+                className="portal-button portal-button-secondary"
+                disabled={!manualSignedPdf || busy}
+                onClick={() => void handleManualSignedUpload()}
+              >
+                {busy ? "Uploading and scanning…" : "Upload signed PDF"}
+              </button>
             </section>
           ) : null}
           <section className="portal-panel portal-note-panel">
@@ -2591,6 +2665,7 @@ function createDemoSigningItems(
       versionLabel: document.version,
       status: document.status,
       publicationReady: true,
+      provider: "google_workspace",
       providerStatus:
         document.status === "completed"
           ? "completed"
@@ -2704,6 +2779,28 @@ function AdminSigningPage() {
     }
   }
 
+  async function downloadConsultantUpload(item: AdminSigningItem) {
+    setBusyId(item.id);
+    setMessage("");
+    try {
+      if (demo) {
+        setMessage("Consultant-signed PDF download requested securely.");
+      } else {
+        const result = await getConsultantSignedUpload(item.id);
+        if (result.url)
+          window.open(result.url, "_blank", "noopener,noreferrer");
+      }
+    } catch (downloadError) {
+      setMessage(
+        downloadError instanceof Error
+          ? downloadError.message
+          : "The consultant-signed PDF is not available.",
+      );
+    } finally {
+      setBusyId("");
+    }
+  }
+
   async function uploadPack(input: {
     item: AdminSigningItem;
     completedPdf: File;
@@ -2739,8 +2836,8 @@ function AdminSigningPage() {
     <>
       <PageHeader
         eyebrow="Administration"
-        title="Google Workspace signing"
-        description="Send the request from Drive, record its progress here and import the completed agreement and audit trail."
+        title="Document signing"
+        description="Use Google Workspace when available, or securely review a consultant-uploaded signed PDF before countersigning."
         action={
           <a
             className="portal-button portal-button-primary"
@@ -2804,7 +2901,7 @@ function AdminSigningPage() {
               <th>Consultant</th>
               <th>Agreement</th>
               <th>Portal status</th>
-              <th>Google record</th>
+              <th>Signing record</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -2812,6 +2909,8 @@ function AdminSigningPage() {
             {items.map((item) => {
               const scanning =
                 item.providerStatus === "security_review" ||
+                item.providerStatus ===
+                  "consultant_upload_security_review" ||
                 item.finalScanStatus === "pending" ||
                 item.certificateScanStatus === "pending";
               return (
@@ -2835,10 +2934,18 @@ function AdminSigningPage() {
                           ? item.providerStatus.replaceAll("_", " ")
                           : "Not sent"}
                     </strong>
-                    <span>{item.sentAt ?? "No Google request recorded"}</span>
+                    <span>
+                      {item.provider === "manual_upload"
+                        ? "Manual signed-PDF fallback"
+                        : item.sentAt ?? "No Google request recorded"}
+                    </span>
                   </td>
                   <td>
-                    {item.status === "not_reviewed" ? (
+                    {scanning ? (
+                      <span className="portal-table-complete">
+                        Security scan pending
+                      </span>
+                    ) : item.status === "not_reviewed" ? (
                       <button
                         type="button"
                         disabled={!item.publicationReady || busyId === item.id}
@@ -2854,17 +2961,33 @@ function AdminSigningPage() {
                       >
                         Record consultant signed
                       </button>
-                    ) : item.status === "awaiting_deepbridge" && !scanning ? (
-                      <button type="button" onClick={() => setSelected(item)}>
-                        Upload completed pack
-                      </button>
+                    ) : item.status === "awaiting_deepbridge" ? (
+                      item.provider === "manual_upload" ? (
+                        <div className="portal-table-actions">
+                          <button
+                            type="button"
+                            disabled={busyId === item.id}
+                            onClick={() =>
+                              void downloadConsultantUpload(item)
+                            }
+                          >
+                            Download signed PDF
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelected(item)}
+                          >
+                            Upload countersigned pack
+                          </button>
+                        </div>
+                      ) : (
+                        <button type="button" onClick={() => setSelected(item)}>
+                          Upload completed pack
+                        </button>
+                      )
                     ) : item.status === "completed" ? (
                       <span className="portal-table-complete">Complete</span>
-                    ) : (
-                      <span className="portal-table-complete">
-                        Security scan pending
-                      </span>
-                    )}
+                    ) : null}
                   </td>
                 </tr>
               );
@@ -2950,11 +3073,16 @@ function AdminSigningPackDialog({
         >
           ×
         </button>
-        <p className="portal-kicker">Completed Google signing pack</p>
+        <p className="portal-kicker">
+          {item.provider === "manual_upload"
+            ? "Completed manual signing pack"
+            : "Completed Google signing pack"}
+        </p>
         <h2 id="signing-pack-title">{item.title}</h2>
         <p>
-          Download both files from the completed Google Workspace request. They
-          remain unavailable until the security scanner clears them.
+          {item.provider === "manual_upload"
+            ? "Upload the final countersigned PDF and a PDF audit note or signing evidence. Both remain unavailable until the security scanner clears them."
+            : "Download both files from the completed Google Workspace request. They remain unavailable until the security scanner clears them."}
         </p>
         <form className="portal-form" onSubmit={submit}>
           <label htmlFor="completed-agreement">Completed signed PDF</label>
@@ -2967,7 +3095,11 @@ function AdminSigningPackDialog({
               setCompletedPdf(event.target.files?.[0] ?? null)
             }
           />
-          <label htmlFor="google-audit-trail">Google audit trail PDF</label>
+          <label htmlFor="google-audit-trail">
+            {item.provider === "manual_upload"
+              ? "Signing evidence / audit note PDF"
+              : "Google audit trail PDF"}
+          </label>
           <input
             id="google-audit-trail"
             type="file"

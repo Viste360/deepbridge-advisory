@@ -20,14 +20,21 @@ export default async function handler(
   }
 
   try {
-    const actor = await requirePortalUser(request, response, "admin");
-    await enforceRateLimit(request, actor.user.id, "signed_pack_upload", 20, 3600);
+    const actor = await requirePortalUser(request, response);
+    if (actor.profile.role !== "consultant")
+      throw new PortalHttpError(403, "Consultant access is required.");
+    await enforceRateLimit(
+      request,
+      actor.user.id,
+      "manual_signature_upload",
+      10,
+      3600,
+    );
     const body = await readJsonBody(request);
     const assignedDocumentId =
       typeof body.assignedDocumentId === "string"
         ? body.assignedDocumentId
         : "";
-    const kind = body.kind === "certificate" ? "certificate" : "final";
     const sizeBytes =
       typeof body.sizeBytes === "number" ? Math.round(body.sizeBytes) : 0;
     if (!/^[0-9a-f-]{36}$/i.test(assignedDocumentId))
@@ -40,35 +47,34 @@ export default async function handler(
     const admin = getSupabaseAdmin();
     const { data: assigned, error: assignedError } = await admin
       .from("assigned_documents")
-      .select("id, consultant_id, status")
+      .select(
+        "id, consultant_id, status, document_versions!inner(malware_scan_status, locked_at, documents!inner(category))",
+      )
       .eq("id", assignedDocumentId)
+      .eq("consultant_id", actor.user.id)
       .single();
     if (assignedError || !assigned)
       throw new PortalHttpError(404, "Assigned document not found.");
-    if (assigned.status !== "awaiting_deepbridge")
+    const version = Array.isArray(assigned.document_versions)
+      ? assigned.document_versions[0]
+      : assigned.document_versions;
+    const document = Array.isArray(version?.documents)
+      ? version.documents[0]
+      : version?.documents;
+    if (document?.category !== "signature")
+      throw new PortalHttpError(400, "This document does not require signing.");
+    if (version?.malware_scan_status !== "clean" || !version?.locked_at)
       throw new PortalHttpError(
         409,
-        "Record the consultant signature before uploading the completed pack.",
+        "The approved PDF has not passed publication checks.",
       );
-
-    const { data: envelope, error: envelopeError } = await admin
-      .from("signature_envelopes")
-      .select("id, provider, provider_status")
-      .eq("assigned_document_id", assignedDocumentId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
-    if (
-      envelopeError ||
-      !envelope ||
-      envelope.provider_status !== "consultant_signed"
-    )
+    if (!["not_reviewed", "ready_to_sign"].includes(assigned.status))
       throw new PortalHttpError(
         409,
-        "The consultant signature must be verified before uploading the completed pack.",
+        "This document is not accepting another signed upload.",
       );
 
-    const path = `${assigned.consultant_id}/${assignedDocumentId}/${envelope.id}/${kind}-${randomUUID()}.pdf`;
+    const path = `${actor.user.id}/${assignedDocumentId}/manual-consultant/${randomUUID()}.pdf`;
     const { data, error } = await admin.storage
       .from("signed-documents")
       .createSignedUploadUrl(path, { upsert: false });

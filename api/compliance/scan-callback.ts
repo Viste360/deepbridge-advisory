@@ -69,7 +69,7 @@ export default async function handler(
         .update({ [statusColumn]: status })
         .eq("id", objectId)
         .select(
-          "id, assigned_document_id, pending_final_storage_path, pending_certificate_storage_path, final_scan_status, certificate_scan_status, assigned_documents!inner(consultant_id, assignment_id, document_versions!inner(documents!inner(slug)))",
+          "id, assigned_document_id, provider, provider_status, pending_final_storage_path, pending_certificate_storage_path, final_scan_status, certificate_scan_status, assigned_documents!inner(consultant_id, assignment_id, document_versions!inner(documents!inner(slug)))",
         )
         .single();
       if (envelopeError || !envelope)
@@ -84,6 +84,53 @@ export default async function handler(
       const assigned = Array.isArray(envelope.assigned_documents)
         ? envelope.assigned_documents[0]
         : envelope.assigned_documents;
+
+      if (
+        envelope.provider === "manual_upload" &&
+        envelope.provider_status === "consultant_upload_security_review"
+      ) {
+        if (status === "clean" && envelope.pending_final_storage_path) {
+          const [envelopeUpdate, assignedUpdate] = await Promise.all([
+            admin
+              .from("signature_envelopes")
+              .update({
+                provider_status: "consultant_signed",
+                consultant_signed_at: now,
+              })
+              .eq("id", envelope.id),
+            admin
+              .from("assigned_documents")
+              .update({ status: "awaiting_deepbridge" })
+              .eq("id", envelope.assigned_document_id),
+          ]);
+          if (envelopeUpdate.error) throw envelopeUpdate.error;
+          if (assignedUpdate.error) throw assignedUpdate.error;
+        } else if (status !== "clean") {
+          const { error: envelopeStatusError } = await admin
+            .from("signature_envelopes")
+            .update({ provider_status: "security_review_failed" })
+            .eq("id", envelope.id);
+          if (envelopeStatusError) throw envelopeStatusError;
+        }
+
+        await admin.from("audit_events").insert({
+          actor_label: "Malware scanning service",
+          action:
+            status === "clean"
+              ? "manual_signed_pdf_scan_passed"
+              : "manual_signed_pdf_scan_not_cleared",
+          object_type: "signature_envelope",
+          object_id: envelope.id,
+          assignment_id: assigned?.assignment_id,
+          consultant_id: assigned?.consultant_id,
+          metadata: {
+            status,
+            artifact_kind: artifactKind,
+            provider: "manual_upload",
+          },
+        });
+        return json(response, 200, { received: true });
+      }
 
       if (
         finalStatus === "clean" &&

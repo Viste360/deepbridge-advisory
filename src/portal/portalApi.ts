@@ -57,6 +57,7 @@ export interface AdminSigningItem {
   versionLabel: string;
   status: PortalDocument["status"];
   publicationReady: boolean;
+  provider?: "google_workspace" | "manual_upload";
   providerStatus?: string;
   sentAt?: string;
   consultantSignedAt?: string;
@@ -413,6 +414,43 @@ export async function createInvitation(input: {
   return authorisedRequest("/api/invitations/create", input);
 }
 
+export async function uploadManualSignedDocument(input: {
+  assignedDocumentId: string;
+  file: File;
+}) {
+  if (!storageClient) throw new Error("Portal storage is not configured.");
+  if (input.file.type !== "application/pdf")
+    throw new Error("Only PDF documents are accepted.");
+  if (input.file.size > 25 * 1024 * 1024)
+    throw new Error("The maximum PDF size is 25 MB.");
+  const upload = await post<{ path: string; token: string }>(
+    "/api/documents/manual-signing/upload-url",
+    {
+      assignedDocumentId: input.assignedDocumentId,
+      mimeType: input.file.type,
+      sizeBytes: input.file.size,
+    },
+  );
+  const { error } = await storageClient.storage
+    .from("signed-documents")
+    .uploadToSignedUrl(upload.path, upload.token, input.file, {
+      contentType: "application/pdf",
+      upsert: false,
+    });
+  if (error) throw error;
+  return post<{ envelopeId: string; status: string }>(
+    "/api/documents/manual-signing/upload-finalize",
+    {
+      assignedDocumentId: input.assignedDocumentId,
+      storagePath: upload.path,
+      originalFilename: input.file.name,
+      mimeType: input.file.type,
+      sizeBytes: input.file.size,
+      contentSha256: await sha256(input.file),
+    },
+  );
+}
+
 export async function listAdminConsultants(): Promise<AdminConsultant[]> {
   const result = await apiRequest<{ consultants: unknown }>(
     "/api/admin/consultants/list",
@@ -625,6 +663,12 @@ export async function listAdminSigningItems(): Promise<AdminSigningItem[]> {
       versionLabel: text(row.version_label),
       status: text(row.status, "not_reviewed") as PortalDocument["status"],
       publicationReady: bool(row.publication_ready),
+      provider:
+        text(envelope.provider) === "manual_upload"
+          ? "manual_upload"
+          : text(envelope.provider) === "google_workspace"
+            ? "google_workspace"
+            : undefined,
       providerStatus: text(envelope.provider_status) || undefined,
       sentAt: displayDateTime(envelope.sent_at) || undefined,
       consultantSignedAt:
@@ -633,6 +677,14 @@ export async function listAdminSigningItems(): Promise<AdminSigningItem[]> {
       finalScanStatus: scanStatus(envelope.final_scan_status),
       certificateScanStatus: scanStatus(envelope.certificate_scan_status),
     };
+  });
+}
+
+export async function getConsultantSignedUpload(
+  assignedDocumentId: string,
+) {
+  return authorisedRequest("/api/admin/signing/consultant-upload", {
+    assignedDocumentId,
   });
 }
 

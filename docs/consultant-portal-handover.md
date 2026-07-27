@@ -17,6 +17,8 @@ The portal includes:
 - a consultant dashboard with assignment details and progress;
 - separate agreements, acknowledgements and informational documents;
 - administrator-recorded Google Workspace eSignature requests;
+- a quarantined consultant signed-PDF fallback when Google signing is
+  unavailable;
 - completed Google PDF and audit-trail import with a dual security-scan gate;
 - private final PDFs and signing certificates;
 - secure compliance uploads with file constraints and a malware-scan gate;
@@ -138,6 +140,12 @@ Follow `docs/google-workspace-signing-guide.md`.
 Google does not currently provide a public embedded eSignature API. The portal
 therefore keeps the Google event and Drive archive operationally separate from
 its access-controlled delivery copies.
+
+If Google signing is unavailable, the consultant can download the approved PDF
+and upload a signed PDF back to the portal. The upload remains quarantined
+until the malware scanner clears it. DeepBridge then downloads, reviews and
+countersigns it, and uploads the final PDF plus signing evidence. The
+consultant upload alone never completes the agreement.
 
 ### 4. Malware scanning
 
