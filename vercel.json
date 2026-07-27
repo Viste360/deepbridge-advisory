@@ -8,7 +8,7 @@
       "has": [
         {
           "type": "host",
-          "value": "portal.deepbridgeadvisory.co.uk"
+          "value": "portal.deepbridgeadvisory.com"
         }
       ],
       "destination": "/portal-robots.txt"
@@ -18,7 +18,7 @@
       "has": [
         {
           "type": "host",
-          "value": "portal.deepbridgeadvisory.co.uk"
+          "value": "portal.deepbridgeadvisory.com"
         }
       ],
       "destination": "/index.html"
@@ -63,7 +63,7 @@
       "has": [
         {
           "type": "host",
-          "value": "portal.deepbridgeadvisory.co.uk"
+          "value": "portal.deepbridgeadvisory.com"
         }
       ],
       "headers": [

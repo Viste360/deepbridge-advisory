@@ -34,7 +34,7 @@ const portalPathPrefixes = [
 
 export default function App() {
   const portalHostname =
-    window.location.hostname === "portal.deepbridgeadvisory.co.uk" ||
+    window.location.hostname === "portal.deepbridgeadvisory.com" ||
     window.location.hostname.startsWith("portal.");
   const portalPath = portalPathPrefixes.some(
     (path) =>
