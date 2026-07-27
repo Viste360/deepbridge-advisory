@@ -43,4 +43,15 @@ describe("consultant portal data contract", () => {
       ]),
     );
   });
+
+  it("gives administrators consultant context for each compliance record", () => {
+    expect(
+      adminSnapshot.compliance.every(
+        (requirement) =>
+          requirement.consultantId === "demo-consultant" &&
+          requirement.consultantName === "Roland Schneider" &&
+          requirement.consultantEmail === "roland.schneider@example.de",
+      ),
+    ).toBe(true);
+  });
 });

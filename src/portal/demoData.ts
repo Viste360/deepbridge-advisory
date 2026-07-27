@@ -340,6 +340,16 @@ export const adminSnapshot: PortalSnapshot = {
     phone: "",
     role: "admin",
   },
+  compliance: consultantSnapshot.compliance.map((requirement) => ({
+    ...requirement,
+    consultantId: "demo-consultant",
+    consultantName: "Roland Schneider",
+    consultantEmail: "roland.schneider@example.de",
+    originalFilename: requirement.submissionId
+      ? `${requirement.id}.pdf`
+      : undefined,
+    mimeType: requirement.submissionId ? "application/pdf" : undefined,
+  })),
   tasks: [
     ...consultantSnapshot.tasks,
     {

@@ -63,6 +63,9 @@ export interface PortalDocument {
 
 export interface ComplianceRequirement {
   id: string;
+  consultantId?: string;
+  consultantName?: string;
+  consultantEmail?: string;
   title: string;
   description: string;
   status: ComplianceStatus;
@@ -73,6 +76,9 @@ export interface ComplianceRequirement {
   rejectionReason?: string;
   submissionId?: string;
   scanStatus?: "pending" | "clean" | "infected" | "failed";
+  originalFilename?: string;
+  mimeType?: string;
+  sizeBytes?: number;
 }
 
 export interface OnboardingTask {
