@@ -265,6 +265,7 @@
 
 .portal-form input,
 .portal-form textarea,
+.portal-form select,
 .portal-role-switch select {
   width: 100%;
   min-height: 50px;
@@ -277,6 +278,7 @@
 
 .portal-form input:focus,
 .portal-form textarea:focus,
+.portal-form select:focus,
 .portal-role-switch select:focus {
   border-color: #247a75;
   outline: 3px solid rgba(67, 208, 199, 0.2);
@@ -1616,6 +1618,337 @@
   font-size: 0.68rem;
 }
 
+.portal-organisation-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.portal-organisation-card,
+.portal-contract-card {
+  padding: 26px;
+  border: 1px solid var(--portal-line);
+  background: var(--portal-paper);
+}
+
+.portal-organisation-card > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.portal-organisation-card h2 {
+  margin: 28px 0 5px;
+  font-size: 1.08rem;
+}
+
+.portal-organisation-card > p {
+  min-height: 34px;
+  margin: 0;
+  color: var(--portal-muted);
+  font-size: 0.7rem;
+}
+
+.portal-relationship-tags {
+  display: flex;
+  margin: 18px 0;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.portal-relationship-tags span,
+.portal-contract-meta span {
+  padding: 5px 8px;
+  border: 1px solid #cad7d3;
+  color: #35534f;
+  background: #f1f6f4;
+  font-size: 0.6rem;
+  font-weight: 700;
+}
+
+.portal-mini-details {
+  display: grid;
+  margin: 0 0 18px;
+  gap: 10px;
+}
+
+.portal-mini-details div {
+  display: grid;
+  gap: 2px;
+}
+
+.portal-mini-details dt {
+  color: var(--portal-muted);
+  font-size: 0.58rem;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.portal-mini-details dd {
+  margin: 0;
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+.portal-text-button,
+.portal-contract-actions button,
+.portal-danger-link {
+  padding: 0;
+  border: 0;
+  color: #247a75;
+  background: transparent;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.portal-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.portal-choice-grid label,
+.portal-inline-choice {
+  display: flex;
+  padding: 10px 12px;
+  align-items: flex-start;
+  grid-template-columns: none;
+  gap: 9px;
+  border: 1px solid var(--portal-line);
+  background: #fafbf9;
+}
+
+.portal-choice-grid input,
+.portal-inline-choice input {
+  width: 16px;
+  min-height: 16px;
+  margin: 1px 0 0;
+}
+
+.portal-choice-grid span,
+.portal-inline-choice span {
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+.portal-contract-assurance {
+  display: grid;
+  margin-bottom: 18px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--portal-line);
+  background: var(--portal-paper);
+}
+
+.portal-contract-assurance > div {
+  display: grid;
+  min-height: 96px;
+  padding: 18px 20px;
+  align-content: center;
+  gap: 6px;
+  border-right: 1px solid var(--portal-line);
+}
+
+.portal-contract-assurance > div:last-child {
+  border-right: 0;
+}
+
+.portal-contract-assurance .ready {
+  border-top: 3px solid #2f9b75;
+}
+
+.portal-contract-assurance .attention {
+  border-top: 3px solid #c78c21;
+}
+
+.portal-contract-assurance strong {
+  font-size: 0.7rem;
+}
+
+.portal-contract-assurance span {
+  color: var(--portal-muted);
+  font-size: 0.64rem;
+  line-height: 1.45;
+}
+
+.portal-contract-list {
+  display: grid;
+  gap: 14px;
+}
+
+.portal-contract-card {
+  display: grid;
+  gap: 20px;
+}
+
+.portal-contract-card > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.portal-contract-card h2 {
+  margin: 7px 0 4px;
+  font-size: 1.05rem;
+}
+
+.portal-contract-card header p {
+  margin: 0;
+  color: var(--portal-muted);
+  font-size: 0.7rem;
+}
+
+.portal-contract-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.portal-contract-pipeline {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  list-style: none;
+}
+
+.portal-contract-pipeline li {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  color: #7a8582;
+  text-align: center;
+}
+
+.portal-contract-pipeline li::before {
+  position: absolute;
+  z-index: 0;
+  top: 12px;
+  right: 50%;
+  left: -50%;
+  height: 2px;
+  background: #d8dfdc;
+  content: "";
+}
+
+.portal-contract-pipeline li:first-child::before {
+  display: none;
+}
+
+.portal-contract-pipeline li > span {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 2px solid #d1d9d6;
+  border-radius: 50%;
+  background: var(--portal-paper);
+  font-size: 0.65rem;
+  font-weight: 900;
+}
+
+.portal-contract-pipeline li.complete {
+  color: #1b7659;
+}
+
+.portal-contract-pipeline li.complete::before,
+.portal-contract-pipeline li.complete > span {
+  border-color: #2f9b75;
+  background: #2f9b75;
+  color: #fff;
+}
+
+.portal-contract-pipeline li.complete::before {
+  background: #2f9b75;
+}
+
+.portal-contract-pipeline li.current {
+  color: #9b6915;
+}
+
+.portal-contract-pipeline li.current > span {
+  border-color: #d5a445;
+  background: #fff7e6;
+}
+
+.portal-contract-pipeline li.blocked {
+  color: #9a3030;
+}
+
+.portal-contract-pipeline li.blocked > span {
+  border-color: #bd4747;
+  color: #9a3030;
+  background: #fff0f0;
+}
+
+.portal-contract-pipeline small {
+  font-size: 0.58rem;
+  font-weight: 750;
+}
+
+.portal-contract-actions {
+  display: flex;
+  padding-top: 15px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  border-top: 1px solid var(--portal-line);
+}
+
+.portal-contract-actions .portal-table-primary-action {
+  padding: 8px 11px;
+  color: #fff;
+  background: var(--portal-ink);
+  text-decoration: none;
+}
+
+.portal-contract-actions .portal-danger-link {
+  color: #9a3030;
+}
+
+.portal-contract-actions button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.portal-empty-contracts {
+  display: flex;
+  min-height: 170px;
+  align-items: center;
+  gap: 20px;
+}
+
+.portal-empty-contracts > span {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  place-items: center;
+  border-radius: 50%;
+  color: #247a75;
+  background: #e5f4ef;
+  font-size: 1.3rem;
+}
+
+.portal-empty-contracts h2 {
+  margin: 0 0 6px;
+}
+
+.portal-empty-contracts p {
+  margin: 0;
+  color: var(--portal-muted);
+  font-size: 0.72rem;
+}
+
 .portal-table-wrap {
   overflow-x: auto;
 }
@@ -2502,6 +2835,50 @@
   .portal-compliance-grid,
   .portal-support-grid,
   .portal-admin-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .portal-organisation-grid,
+  .portal-contract-assurance {
+    grid-template-columns: 1fr;
+  }
+
+  .portal-contract-assurance > div {
+    border-right: 0;
+    border-bottom: 1px solid var(--portal-line);
+  }
+
+  .portal-contract-card {
+    padding: 22px 18px;
+  }
+
+  .portal-contract-card > header {
+    flex-direction: column;
+  }
+
+  .portal-contract-pipeline {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .portal-contract-pipeline li {
+    min-height: 30px;
+    justify-items: flex-start;
+    align-items: center;
+    grid-template-columns: 30px minmax(0, 1fr);
+    text-align: left;
+  }
+
+  .portal-contract-pipeline li::before {
+    top: -10px;
+    right: auto;
+    bottom: 20px;
+    left: 12px;
+    width: 2px;
+    height: auto;
+  }
+
+  .portal-choice-grid {
     grid-template-columns: 1fr;
   }
 
