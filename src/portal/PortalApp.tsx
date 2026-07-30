@@ -2735,6 +2735,25 @@ function AdminSigningPage() {
     };
   }, [demo, snapshot.documents]);
 
+  const signingScanPending = items.some(
+    (item) =>
+      item.providerStatus === "security_review" ||
+      item.providerStatus === "countersign_source_security_review" ||
+      item.providerStatus === "consultant_upload_security_review" ||
+      item.finalScanStatus === "pending" ||
+      item.certificateScanStatus === "pending",
+  );
+
+  useEffect(() => {
+    if (demo || !signingScanPending) return;
+    const timer = window.setInterval(() => {
+      void listAdminSigningItems()
+        .then(setItems)
+        .catch(() => undefined);
+    }, 3_000);
+    return () => window.clearInterval(timer);
+  }, [demo, signingScanPending]);
+
   async function recordStep(
     item: AdminSigningItem,
     action: "request_sent" | "consultant_signed",
