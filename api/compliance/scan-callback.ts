@@ -86,6 +86,38 @@ export default async function handler(
         : envelope.assigned_documents;
 
       if (
+        envelope.provider_status === "countersign_source_security_review"
+      ) {
+        const nextProviderStatus =
+          status === "clean"
+            ? "consultant_signed"
+            : "countersign_source_security_review_failed";
+        const { error: sourceStatusError } = await admin
+          .from("signature_envelopes")
+          .update({ provider_status: nextProviderStatus })
+          .eq("id", envelope.id);
+        if (sourceStatusError) throw sourceStatusError;
+
+        await admin.from("audit_events").insert({
+          actor_label: "Malware scanning service",
+          action:
+            status === "clean"
+              ? "countersign_source_scan_passed"
+              : "countersign_source_scan_not_cleared",
+          object_type: "signature_envelope",
+          object_id: envelope.id,
+          assignment_id: assigned?.assignment_id,
+          consultant_id: assigned?.consultant_id,
+          metadata: {
+            status,
+            artifact_kind: artifactKind,
+            purpose: "deepbridge_countersignature_source",
+          },
+        });
+        return json(response, 200, { received: true });
+      }
+
+      if (
         envelope.provider === "manual_upload" &&
         envelope.provider_status === "consultant_upload_security_review"
       ) {

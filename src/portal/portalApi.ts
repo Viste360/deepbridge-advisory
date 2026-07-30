@@ -750,7 +750,7 @@ export async function recordGoogleSigningStep(
 
 async function uploadSigningArtifact(
   assignedDocumentId: string,
-  kind: "final" | "certificate",
+  kind: "final" | "certificate" | "countersign_source",
   file: File,
 ) {
   if (!storageClient) throw new Error("Portal storage is not configured.");
@@ -775,6 +775,38 @@ async function uploadSigningArtifact(
     });
   if (error) throw error;
   return { path: upload.path, sha256: await sha256(file) };
+}
+
+export async function prepareCountersignSource(input: {
+  assignedDocumentId: string;
+  consultantSignedPdf: File;
+}) {
+  const source = await uploadSigningArtifact(
+    input.assignedDocumentId,
+    "countersign_source",
+    input.consultantSignedPdf,
+  );
+  return post<{ envelopeId: string; status: string }>(
+    "/api/admin/signing/countersign-source",
+    {
+      assignedDocumentId: input.assignedDocumentId,
+      sourcePath: source.path,
+      sourceSha256: source.sha256,
+    },
+  );
+}
+
+export async function createPortalCountersignature(input: {
+  assignedDocumentId: string;
+  signerName: string;
+  signerTitle: string;
+  signatureImageDataUrl: string;
+  confirmed: boolean;
+}) {
+  return post<{ envelopeId: string; status: string }>(
+    "/api/admin/signing/countersign",
+    input,
+  );
 }
 
 export async function uploadCompletedSigningPack(input: {
