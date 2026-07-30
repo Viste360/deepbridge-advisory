@@ -6,7 +6,6 @@ import {
   createCountersignedPdf,
   locateDeepBridgeSignatureBlock,
 } from "./countersign";
-import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 
 const transparentPng = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+X1VnWQAAAABJRU5ErkJggg==",
@@ -65,6 +64,9 @@ describe("portal countersignature PDFs", () => {
     expect(finalDocument.getPageCount()).toBe(2);
     expect(finalDocument.getTitle()).toBe(
       "Professional Consulting Services Framework Agreement - countersigned",
+    );
+    const { getDocument } = await import(
+      "pdfjs-dist/legacy/build/pdf.mjs"
     );
     const extracted = await getDocument({
       data: finalBytes.slice(),
