@@ -3287,8 +3287,10 @@ function AdminCountersignDialog({
         <h2 id="countersign-title">{item.title}</h2>
         <p>
           Review the consultant-signed agreement, then sign it electronically
-          for DeepBridge. The portal will append a tamper-evident
-          countersignature page and create a separate audit certificate.
+          for DeepBridge. The portal will place your signature and today&apos;s
+          date in the agreement&apos;s DeepBridge execution block, append a
+          tamper-evident countersignature page, and create a separate audit
+          certificate.
         </p>
         <form className="portal-form" onSubmit={submit}>
           <div className="portal-signing-step">
@@ -3362,6 +3364,16 @@ function AdminCountersignDialog({
                 <small>Electronic signature preview</small>
                 <span>{signerName || "Your name"}</span>
                 <p>{signerTitle || "Signing authority"}</p>
+                <p>
+                  Signing date:{" "}
+                  {new Intl.DateTimeFormat("en-GB", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                    timeZone: "UTC",
+                  }).format(new Date())}
+                  {" (UTC)"}
+                </p>
               </div>
             </div>
           </div>

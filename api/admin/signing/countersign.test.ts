@@ -4,7 +4,9 @@ import { describe, expect, it } from "vitest";
 import {
   createAuditCertificate,
   createCountersignedPdf,
+  locateDeepBridgeSignatureBlock,
 } from "./countersign";
+import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 
 const transparentPng = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+X1VnWQAAAABJRU5ErkJggg==",
@@ -22,7 +24,24 @@ describe("portal countersignature PDFs", () => {
       size: 18,
       font: sourceFont,
     });
+    sourcePage.drawText("Signature:", {
+      x: 62,
+      y: 220,
+      size: 9,
+      font: sourceFont,
+    });
+    sourcePage.drawText("Date:", {
+      x: 62,
+      y: 195,
+      size: 9,
+      font: sourceFont,
+    });
     const sourceBytes = await source.save();
+    expect(await locateDeepBridgeSignatureBlock(sourceBytes)).toMatchObject({
+      pageIndex: 0,
+      signature: { x: 62, y: 220 },
+      date: { x: 62, y: 195 },
+    });
     const sourceHash = createHash("sha256")
       .update(sourceBytes)
       .digest("hex");
@@ -47,6 +66,18 @@ describe("portal countersignature PDFs", () => {
     expect(finalDocument.getTitle()).toBe(
       "Professional Consulting Services Framework Agreement - countersigned",
     );
+    const extracted = await getDocument({
+      data: finalBytes.slice(),
+      useSystemFonts: true,
+    }).promise;
+    const executionPage = await extracted.getPage(1);
+    const executionText = await executionPage.getTextContent();
+    expect(
+      executionText.items
+        .map((item) => ("str" in item ? item.str : ""))
+        .join(" "),
+    ).toContain("30 July 2026");
+    await extracted.destroy();
 
     const finalHash = createHash("sha256").update(finalBytes).digest("hex");
     const certificateBytes = await createAuditCertificate({
