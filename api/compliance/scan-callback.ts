@@ -7,6 +7,10 @@ import {
   PortalHttpError,
   readJsonBody,
 } from "../_lib/server.js";
+import {
+  archivePdfToGoogleDrive,
+  googleDriveArchiveConfigured,
+} from "../_lib/googleDrive.js";
 
 function validSecret(request: IncomingMessage) {
   const expected = process.env.MALWARE_SCAN_CALLBACK_SECRET?.trim();
@@ -44,6 +48,10 @@ export default async function handler(
         ? "document_version"
         : body.objectType === "signature_artifact"
           ? "signature_artifact"
+          : body.objectType === "contract_version"
+            ? "contract_version"
+            : body.objectType === "contract_artifact"
+              ? "contract_artifact"
           : "compliance_submission";
     const artifactKind =
       body.artifactKind === "certificate" ? "certificate" : "final";
@@ -58,6 +66,236 @@ export default async function handler(
 
     const admin = getSupabaseAdmin();
     const now = new Date().toISOString();
+
+    if (objectType === "contract_artifact") {
+      const statusColumn =
+        artifactKind === "certificate"
+          ? "certificate_scan_status"
+          : "final_scan_status";
+      const driveColumn =
+        artifactKind === "certificate"
+          ? "drive_certificate_file_id"
+          : "drive_final_file_id";
+      const { data: version, error: versionError } = await admin
+        .from("contract_versions")
+        .update({ [statusColumn]: status, updated_at: now })
+        .eq("id", objectId)
+        .select(
+          "id, contract_id, version_label, pending_final_storage_path, pending_certificate_storage_path, final_scan_status, certificate_scan_status, drive_source_file_id, drive_final_file_id, drive_certificate_file_id, contracts!inner(reference, title, requires_signature)",
+        )
+        .single();
+      if (versionError || !version)
+        throw new PortalHttpError(404, "Contract artifact not found.");
+      const contract = Array.isArray(version.contracts)
+        ? version.contracts[0]
+        : version.contracts;
+      const storagePath =
+        artifactKind === "certificate"
+          ? version.pending_certificate_storage_path
+          : version.pending_final_storage_path;
+      let driveFileId: string | null = null;
+      let driveFailed = false;
+      if (
+        status === "clean" &&
+        storagePath &&
+        googleDriveArchiveConfigured()
+      ) {
+        try {
+          const { data: file, error: downloadError } = await admin.storage
+            .from("contract-documents")
+            .download(storagePath);
+          if (downloadError || !file)
+            throw downloadError || new Error("Contract file was unavailable.");
+          driveFileId = await archivePdfToGoogleDrive({
+            filename: `${contract?.reference || "CONTRACT"}-${artifactKind}.pdf`,
+            data: Buffer.from(await file.arrayBuffer()),
+            description: `${contract?.title || "DeepBridge contract"} — ${artifactKind}`,
+            appProperties: {
+              deepbridgeContractId: version.contract_id,
+              deepbridgeContractVersionId: version.id,
+              artifactKind,
+            },
+          });
+        } catch {
+          driveFailed = true;
+        }
+      }
+      if (driveFileId || driveFailed) {
+        const { error: driveUpdateError } = await admin
+          .from("contract_versions")
+          .update({
+            ...(driveFileId ? { [driveColumn]: driveFileId } : {}),
+            drive_sync_status: driveFailed ? "failed" : "pending",
+            updated_at: now,
+          })
+          .eq("id", version.id);
+        if (driveUpdateError) throw driveUpdateError;
+      }
+      const finalStatus =
+        artifactKind === "final" ? status : version.final_scan_status;
+      const certificateStatus =
+        artifactKind === "certificate"
+          ? status
+          : version.certificate_scan_status;
+      const finalDriveId =
+        artifactKind === "final" && driveFileId
+          ? driveFileId
+          : version.drive_final_file_id;
+      const certificateDriveId =
+        artifactKind === "certificate" && driveFileId
+          ? driveFileId
+          : version.drive_certificate_file_id;
+      if (
+        finalStatus === "clean" &&
+        certificateStatus === "clean" &&
+        version.pending_final_storage_path &&
+        version.pending_certificate_storage_path
+      ) {
+        const driveConfigured = googleDriveArchiveConfigured();
+        const [versionUpdate, contractUpdate] = await Promise.all([
+          admin
+            .from("contract_versions")
+            .update({
+              final_storage_path: version.pending_final_storage_path,
+              certificate_storage_path:
+                version.pending_certificate_storage_path,
+              signed_at: now,
+              drive_sync_status: driveConfigured
+                ? finalDriveId && certificateDriveId && version.drive_source_file_id
+                  ? "synced"
+                  : driveFailed
+                    ? "failed"
+                    : "pending"
+                : "not_configured",
+              drive_synced_at:
+                driveConfigured &&
+                finalDriveId &&
+                certificateDriveId &&
+                version.drive_source_file_id
+                  ? now
+                  : null,
+              updated_at: now,
+            })
+            .eq("id", version.id),
+          admin
+            .from("contracts")
+            .update({ status: "completed", updated_at: now })
+            .eq("id", version.contract_id),
+        ]);
+        if (versionUpdate.error) throw versionUpdate.error;
+        if (contractUpdate.error) throw contractUpdate.error;
+      } else if (status !== "clean") {
+        const { error: contractUpdateError } = await admin
+          .from("contracts")
+          .update({ status: "blocked", updated_at: now })
+          .eq("id", version.contract_id);
+        if (contractUpdateError) throw contractUpdateError;
+      }
+      await admin.from("audit_events").insert({
+        actor_label: "Malware scanning service",
+        action:
+          status === "clean"
+            ? "contract_artifact_scan_passed"
+            : "contract_artifact_scan_not_cleared",
+        object_type: "contract_version",
+        object_id: version.id,
+        metadata: {
+          contract_id: version.contract_id,
+          artifact_kind: artifactKind,
+          status,
+          drive_archived: Boolean(driveFileId),
+        },
+      });
+      return json(response, 200, { received: true });
+    }
+
+    if (objectType === "contract_version") {
+      const driveConfigured = googleDriveArchiveConfigured();
+      const { data: version, error: versionError } = await admin
+        .from("contract_versions")
+        .update({
+          malware_scan_status: status,
+          malware_scanned_at: now,
+          locked_at: status === "clean" ? now : null,
+          drive_sync_status:
+            status === "clean"
+              ? driveConfigured
+                ? "pending"
+                : "not_configured"
+              : "failed",
+          updated_at: now,
+        })
+        .eq("id", objectId)
+        .select(
+          "id, contract_id, version_label, source_storage_path, original_filename, contracts!inner(reference, title, requires_signature)",
+        )
+        .single();
+      if (versionError || !version)
+        throw new PortalHttpError(404, "Contract version not found.");
+      const contract = Array.isArray(version.contracts)
+        ? version.contracts[0]
+        : version.contracts;
+      let driveFileId: string | null = null;
+      let driveFailed = false;
+      if (status === "clean" && driveConfigured) {
+        try {
+          const { data: file, error: downloadError } = await admin.storage
+            .from("contract-documents")
+            .download(version.source_storage_path);
+          if (downloadError || !file)
+            throw downloadError || new Error("Contract file was unavailable.");
+          driveFileId = await archivePdfToGoogleDrive({
+            filename: `${contract?.reference || "CONTRACT"}-v${version.version_label}.pdf`,
+            data: Buffer.from(await file.arrayBuffer()),
+            description: contract?.title || "DeepBridge contract",
+            appProperties: {
+              deepbridgeContractId: version.contract_id,
+              deepbridgeContractVersionId: version.id,
+              artifactKind: "source",
+            },
+          });
+        } catch {
+          driveFailed = true;
+        }
+        const { error: driveUpdateError } = await admin
+          .from("contract_versions")
+          .update({
+            drive_source_file_id: driveFileId,
+            drive_sync_status: driveFileId ? "synced" : "failed",
+            drive_synced_at: driveFileId ? now : null,
+            updated_at: now,
+          })
+          .eq("id", version.id);
+        if (driveUpdateError) throw driveUpdateError;
+      }
+      const nextStatus =
+        status === "clean"
+          ? contract?.requires_signature
+            ? "ready_to_sign"
+            : "completed"
+          : "blocked";
+      const { error: contractUpdateError } = await admin
+        .from("contracts")
+        .update({ status: nextStatus, updated_at: now })
+        .eq("id", version.contract_id);
+      if (contractUpdateError) throw contractUpdateError;
+      await admin.from("audit_events").insert({
+        actor_label: "Malware scanning service",
+        action:
+          status === "clean"
+            ? "contract_version_published"
+            : "contract_scan_not_cleared",
+        object_type: "contract_version",
+        object_id: version.id,
+        metadata: {
+          contract_id: version.contract_id,
+          status,
+          drive_archived: Boolean(driveFileId),
+          drive_failed: driveFailed,
+        },
+      });
+      return json(response, 200, { received: true });
+    }
 
     if (objectType === "signature_artifact") {
       const statusColumn =

@@ -26,9 +26,12 @@ import {
   getComplianceSubmissionAccess,
   getConsultantSignedUpload,
   getDocumentAccess,
+  getAdminContractAccess,
   getPortalSession,
+  listAdminContracts,
   listAdminConsultants,
   listAdminDocumentCatalogue,
+  listAdminOrganisations,
   listAdminSigningItems,
   loadPortalSnapshot,
   onPortalSessionChange,
@@ -36,20 +39,28 @@ import {
   portalDemoEnabled,
   prepareCountersignSource,
   recordGoogleSigningStep,
+  removeAdminContractVersion,
   removeAdminDocumentVersion,
+  retryAdminContractDriveArchive,
   reviewComplianceSubmission,
+  saveAdminOrganisation,
   sendConsultantPortalLink,
   sendMagicLink,
   signInWithGoogle,
   signOutPortal,
   updateAdminConsultant,
+  updateAdminContractStatus,
   uploadComplianceFile,
   uploadComplianceFileAsAdmin,
   uploadCompletedSigningPack,
   uploadAdminDocumentVersion,
+  uploadAdminContract,
+  uploadAdminContractSignedPack,
   uploadManualSignedDocument,
+  type AdminContract,
   type AdminDocumentCatalogueItem,
   type AdminConsultant,
+  type AdminOrganisation,
   type AdminSigningItem,
   type PortalBrowserSession,
   type UploadProgress,
@@ -106,7 +117,7 @@ function Brand() {
       </span>
       <span className="portal-brand-name">
         <strong>DeepBridge</strong>
-        <span>Consultant portal</span>
+        <span>Portal</span>
       </span>
     </span>
   );
@@ -173,11 +184,10 @@ function LoginPage({
         <Brand />
         <div className="portal-login-copy">
           <p className="portal-kicker">Private &amp; secure</p>
-          <h1>Your assignment, documents and onboarding in one place.</h1>
+          <h1>Your contracts, assignments and documents in one secure place.</h1>
           <p>
-            Review your DeepBridge engagement, sign agreements through Google
-            Workspace and upload compliance documents through a protected
-            workspace.
+            Manage DeepBridge relationships and agreements, complete signing
+            and keep controlled documents in one protected workspace.
           </p>
         </div>
         <div className="portal-security-points" aria-label="Security features">
@@ -353,7 +363,7 @@ function PortalLegalPage({ kind }: { kind: "privacy" | "terms" }) {
         <h1>
           {kind === "privacy"
             ? "How portal information is handled"
-            : "Using the DeepBridge Consultant Portal"}
+            : "Using the DeepBridge Portal"}
         </h1>
         {kind === "privacy" ? (
           <>
@@ -426,6 +436,8 @@ const consultantNavigation = [
 
 const adminNavigation = [
   ["Overview", "/admin"],
+  ["Organisations", "/admin/organisations"],
+  ["Contracts", "/admin/contracts"],
   ["Consultants", "/admin/consultants"],
   ["Assignments", "/admin/assignments"],
   ["Documents", "/admin/documents"],
@@ -448,7 +460,7 @@ function PortalShell({
     snapshot.profile.role === "admin" ? adminNavigation : consultantNavigation;
 
   useEffect(() => {
-    document.title = `DeepBridge Consultant Portal`;
+    document.title = `DeepBridge Portal`;
     document
       .querySelector('meta[name="robots"]')
       ?.setAttribute("content", "noindex, nofollow, noarchive");
@@ -516,7 +528,7 @@ function PortalShell({
             <span />
             <span />
           </button>
-          <span className="portal-mobile-title">Consultant portal</span>
+          <span className="portal-mobile-title">DeepBridge portal</span>
           <div className="portal-account">
             {demo ? (
               <label className="portal-role-switch">
@@ -1694,14 +1706,14 @@ function AdminDashboard() {
     <>
       <PageHeader
         eyebrow="Administration"
-        title="Consultant onboarding"
-        description="Manage invitations, documents, compliance review and the audit history."
+        title="DeepBridge operations"
+        description="Manage organisations, contracts, consultants, documents, signing, compliance and the audit history."
         action={
           <Link
             className="portal-button portal-button-primary"
-            to="/admin/consultants"
+            to="/admin/contracts"
           >
-            Invite consultant
+            Open contract register
           </Link>
         }
       />
@@ -1790,6 +1802,1383 @@ function AdminDashboard() {
         </div>
       </section>
     </>
+  );
+}
+
+const organisationRelationshipLabels: Record<string, string> = {
+  deepbridge_entity: "DeepBridge entity",
+  client: "Client",
+  end_customer: "End customer",
+  consultant_supplier: "Consultant company",
+  partner: "Partner",
+  affiliate: "Intercompany / affiliate",
+};
+
+const contractTypeLabels: Record<AdminContract["contractType"], string> = {
+  client_services: "Client services",
+  consultant_supply: "Consultant supply",
+  partnership: "Partnership",
+  intercompany: "Intercompany",
+  nda: "NDA",
+  other: "Other",
+};
+
+const contractStatusLabels: Record<string, string> = {
+  draft: "Draft",
+  security_review: "Security scan",
+  ready_to_sign: "Ready to sign",
+  out_for_signature: "Out for signature",
+  partially_signed: "Signed pack scanning",
+  completed: "Completed",
+  blocked: "Blocked",
+  superseded: "Superseded",
+  archived: "Archived",
+};
+
+function demoOrganisations(): AdminOrganisation[] {
+  return [
+    {
+      id: "demo-deepbridge-uk",
+      legalName: "DUSTDEEP LTD",
+      tradingName: "DeepBridge Advisory",
+      companyNumber: "16775578",
+      countryCode: "GB",
+      relationshipTypes: ["deepbridge_entity"],
+      registeredAddress: "London, United Kingdom",
+      website: "https://deepbridgeadvisory.com",
+      taxNumber: "",
+      notes: "",
+      active: true,
+    },
+    {
+      id: "demo-hs-consulting",
+      legalName: "Roland Schneider trading as HS Consulting",
+      tradingName: "HS Consulting",
+      companyNumber: "",
+      countryCode: "DE",
+      relationshipTypes: ["consultant_supplier"],
+      registeredAddress: "Germany",
+      website: "",
+      taxNumber: "",
+      notes: "Independent consultant supplier.",
+      active: true,
+    },
+    {
+      id: "demo-sneci",
+      legalName: "SNECI",
+      tradingName: "SNECI",
+      companyNumber: "",
+      countryCode: "FR",
+      relationshipTypes: ["client"],
+      registeredAddress: "France",
+      website: "",
+      taxNumber: "",
+      notes: "Contracting client.",
+      active: true,
+    },
+  ];
+}
+
+function AdminOrganisationsPage() {
+  const { demo } = usePortal();
+  const [organisations, setOrganisations] = useState<AdminOrganisation[]>(
+    demo ? demoOrganisations() : [],
+  );
+  const [selected, setSelected] = useState<AdminOrganisation | null | undefined>(
+    undefined,
+  );
+  const [loading, setLoading] = useState(!demo);
+  const [message, setMessage] = useState("");
+
+  const refresh = useCallback(async () => {
+    if (demo) {
+      setLoading(false);
+      return;
+    }
+    try {
+      setOrganisations(await listAdminOrganisations());
+    } catch (loadError) {
+      setMessage(
+        loadError instanceof Error
+          ? loadError.message
+          : "Organisations could not be loaded.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [demo]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void refresh(), 0);
+    return () => window.clearTimeout(timer);
+  }, [refresh]);
+
+  async function save(input: Omit<AdminOrganisation, "id"> & { id?: string }) {
+    if (demo) {
+      setOrganisations((current) => {
+        const item = { ...input, id: input.id || `demo-${crypto.randomUUID()}` };
+        return input.id
+          ? current.map((existing) =>
+              existing.id === input.id ? item : existing,
+            )
+          : [...current, item];
+      });
+    } else {
+      await saveAdminOrganisation({
+        organisationId: input.id,
+        legalName: input.legalName,
+        tradingName: input.tradingName,
+        companyNumber: input.companyNumber,
+        countryCode: input.countryCode,
+        relationshipTypes: input.relationshipTypes,
+        registeredAddress: input.registeredAddress,
+        website: input.website,
+        taxNumber: input.taxNumber,
+        notes: input.notes,
+        active: input.active,
+      });
+      await refresh();
+    }
+    setSelected(undefined);
+    setMessage(`${input.tradingName || input.legalName} is saved.`);
+  }
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Relationship register"
+        title="Organisations"
+        description="Keep every DeepBridge entity, client, consultant company, partner and intercompany relationship in one controlled register."
+        action={
+          <button
+            className="portal-button portal-button-primary"
+            type="button"
+            onClick={() => setSelected(null)}
+          >
+            Add organisation
+          </button>
+        }
+      />
+      <div className="portal-privacy-callout">
+        <span aria-hidden="true">i</span>
+        <p>
+          Organisation records are internal. Adding a client or partner here
+          does not grant them portal access; access remains invitation-only and
+          role-controlled.
+        </p>
+      </div>
+      {message ? (
+        <p className="portal-form-message success" role="status">
+          {message}
+        </p>
+      ) : null}
+      <section className="portal-organisation-grid">
+        {organisations.map((organisation) => (
+          <article className="portal-organisation-card" key={organisation.id}>
+            <div>
+              <span className="portal-card-label">
+                {organisation.countryCode || "International"}
+              </span>
+              <span
+                className={`portal-status ${
+                  organisation.active ? "status-active" : "status-revoked"
+                }`}
+              >
+                <span aria-hidden="true" />
+                {organisation.active ? "Active" : "Inactive"}
+              </span>
+            </div>
+            <h2>{organisation.tradingName || organisation.legalName}</h2>
+            {organisation.tradingName &&
+            organisation.tradingName !== organisation.legalName ? (
+              <p>{organisation.legalName}</p>
+            ) : null}
+            <div className="portal-relationship-tags">
+              {organisation.relationshipTypes.map((type) => (
+                <span key={type}>
+                  {organisationRelationshipLabels[type] || type}
+                </span>
+              ))}
+            </div>
+            <dl className="portal-mini-details">
+              <div>
+                <dt>Company number</dt>
+                <dd>{organisation.companyNumber || "Not recorded"}</dd>
+              </div>
+              <div>
+                <dt>Registered address</dt>
+                <dd>{organisation.registeredAddress || "Not recorded"}</dd>
+              </div>
+            </dl>
+            <button
+              type="button"
+              className="portal-text-button"
+              onClick={() => setSelected(organisation)}
+            >
+              Edit organisation
+            </button>
+          </article>
+        ))}
+        {!loading && !organisations.length ? (
+          <article className="portal-panel">
+            <h2>No organisations yet</h2>
+            <p>Add the contracting entities before uploading a contract.</p>
+          </article>
+        ) : null}
+      </section>
+      {selected !== undefined ? (
+        <AdminOrganisationDialog
+          organisation={selected}
+          onClose={() => setSelected(undefined)}
+          onSave={save}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function AdminOrganisationDialog({
+  organisation,
+  onClose,
+  onSave,
+}: {
+  organisation: AdminOrganisation | null;
+  onClose: () => void;
+  onSave: (
+    input: Omit<AdminOrganisation, "id"> & { id?: string },
+  ) => Promise<void>;
+}) {
+  const [legalName, setLegalName] = useState(organisation?.legalName || "");
+  const [tradingName, setTradingName] = useState(
+    organisation?.tradingName || "",
+  );
+  const [companyNumber, setCompanyNumber] = useState(
+    organisation?.companyNumber || "",
+  );
+  const [countryCode, setCountryCode] = useState(
+    organisation?.countryCode || "",
+  );
+  const [registeredAddress, setRegisteredAddress] = useState(
+    organisation?.registeredAddress || "",
+  );
+  const [website, setWebsite] = useState(organisation?.website || "");
+  const [taxNumber, setTaxNumber] = useState(organisation?.taxNumber || "");
+  const [notes, setNotes] = useState(organisation?.notes || "");
+  const [active, setActive] = useState(organisation?.active !== false);
+  const [relationshipTypes, setRelationshipTypes] = useState<string[]>(
+    organisation?.relationshipTypes || [],
+  );
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  function toggleRelationship(type: string) {
+    setRelationshipTypes((current) =>
+      current.includes(type)
+        ? current.filter((value) => value !== type)
+        : [...current, type],
+    );
+  }
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!relationshipTypes.length) {
+      setError("Select at least one relationship type.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      await onSave({
+        id: organisation?.id,
+        legalName,
+        tradingName,
+        companyNumber,
+        countryCode: countryCode.toUpperCase(),
+        relationshipTypes,
+        registeredAddress,
+        website,
+        taxNumber,
+        notes,
+        active,
+      });
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "The organisation could not be saved.",
+      );
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="portal-modal-backdrop" role="presentation">
+      <div
+        className="portal-modal portal-consultant-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="organisation-dialog-title"
+      >
+        <button
+          type="button"
+          className="portal-modal-close"
+          onClick={onClose}
+          disabled={busy}
+          aria-label="Close organisation form"
+        >
+          ×
+        </button>
+        <p className="portal-kicker">Relationship register</p>
+        <h2 id="organisation-dialog-title">
+          {organisation ? "Edit organisation" : "Add organisation"}
+        </h2>
+        <form className="portal-form" onSubmit={submit}>
+          <div className="portal-consultant-fields">
+            <label>
+              Legal name
+              <input
+                value={legalName}
+                onChange={(event) => setLegalName(event.target.value)}
+                required
+                maxLength={240}
+              />
+            </label>
+            <label>
+              Trading name
+              <input
+                value={tradingName}
+                onChange={(event) => setTradingName(event.target.value)}
+                maxLength={240}
+              />
+            </label>
+            <label>
+              Company / registration number
+              <input
+                value={companyNumber}
+                onChange={(event) => setCompanyNumber(event.target.value)}
+                maxLength={80}
+              />
+            </label>
+            <label>
+              Country code
+              <input
+                value={countryCode}
+                onChange={(event) => setCountryCode(event.target.value)}
+                maxLength={2}
+                placeholder="GB"
+              />
+            </label>
+            <label>
+              Tax / VAT number
+              <input
+                value={taxNumber}
+                onChange={(event) => setTaxNumber(event.target.value)}
+                maxLength={100}
+              />
+            </label>
+            <label>
+              Website
+              <input
+                value={website}
+                onChange={(event) => setWebsite(event.target.value)}
+                type="url"
+                maxLength={300}
+                placeholder="https://"
+              />
+            </label>
+          </div>
+          <label>
+            Registered address
+            <textarea
+              value={registeredAddress}
+              onChange={(event) => setRegisteredAddress(event.target.value)}
+              rows={3}
+              maxLength={800}
+            />
+          </label>
+          <fieldset className="portal-package-picker">
+            <legend>Relationship with DeepBridge</legend>
+            <div className="portal-choice-grid">
+              {Object.entries(organisationRelationshipLabels).map(
+                ([type, label]) => (
+                  <label key={type}>
+                    <input
+                      type="checkbox"
+                      checked={relationshipTypes.includes(type)}
+                      onChange={() => toggleRelationship(type)}
+                    />
+                    <span>{label}</span>
+                  </label>
+                ),
+              )}
+            </div>
+          </fieldset>
+          <label>
+            Internal notes
+            <textarea
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              rows={3}
+              maxLength={2_000}
+            />
+          </label>
+          <label className="portal-inline-choice">
+            <input
+              type="checkbox"
+              checked={active}
+              onChange={(event) => setActive(event.target.checked)}
+            />
+            <span>Active organisation</span>
+          </label>
+          {error ? (
+            <p className="portal-form-message error" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <div className="portal-modal-actions">
+            <button
+              type="button"
+              className="portal-button portal-button-secondary"
+              onClick={onClose}
+              disabled={busy}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="portal-button portal-button-primary"
+              disabled={busy}
+            >
+              {busy ? "Saving…" : "Save organisation"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function contractPipeline(
+  contract: AdminContract,
+  driveConfigured: boolean,
+): Array<{ label: string; state: "complete" | "current" | "waiting" | "blocked" }> {
+  const version = contract.versions[0];
+  const sourceClean = version?.scanStatus === "clean";
+  const signed = Boolean(version?.finalAvailable && version?.certificateAvailable);
+  const isBlocked =
+    contract.status === "blocked" ||
+    version?.scanStatus === "failed" ||
+    version?.scanStatus === "infected";
+  const signatureCurrent = [
+    "ready_to_sign",
+    "out_for_signature",
+    "partially_signed",
+  ].includes(contract.status);
+  return [
+    {
+      label: "Uploaded",
+      state: version ? "complete" : "waiting",
+    },
+    {
+      label: "Security scan",
+      state: isBlocked
+        ? "blocked"
+        : sourceClean
+          ? "complete"
+          : version
+            ? "current"
+            : "waiting",
+    },
+    {
+      label: driveConfigured ? "Drive archive" : "Drive setup",
+      state: !sourceClean
+        ? "waiting"
+        : !driveConfigured
+          ? "current"
+          : version.driveSyncStatus === "synced"
+            ? "complete"
+            : version.driveSyncStatus === "failed"
+              ? "blocked"
+              : "current",
+    },
+    {
+      label: contract.requiresSignature ? "Signature" : "Approval",
+      state: contract.status === "completed"
+        ? "complete"
+        : signatureCurrent
+          ? "current"
+          : sourceClean && !contract.requiresSignature
+            ? "complete"
+            : "waiting",
+    },
+    {
+      label: "Completed",
+      state: contract.status === "completed" && (!contract.requiresSignature || signed)
+        ? "complete"
+        : "waiting",
+    },
+  ];
+}
+
+function AdminContractsPage() {
+  const { snapshot, demo } = usePortal();
+  const [contracts, setContracts] = useState<AdminContract[]>([]);
+  const [organisations, setOrganisations] = useState<AdminOrganisation[]>(
+    demo ? demoOrganisations() : [],
+  );
+  const [driveConfigured, setDriveConfigured] = useState(false);
+  const [uploadTarget, setUploadTarget] = useState<
+    AdminContract | null | undefined
+  >(undefined);
+  const [signedTarget, setSignedTarget] = useState<AdminContract | null>(null);
+  const [loading, setLoading] = useState(!demo);
+  const [busyId, setBusyId] = useState("");
+  const [message, setMessage] = useState("");
+
+  const refresh = useCallback(async () => {
+    if (demo) {
+      setLoading(false);
+      return;
+    }
+    try {
+      const [contractResult, organisationResult] = await Promise.all([
+        listAdminContracts(),
+        listAdminOrganisations(),
+      ]);
+      setContracts(contractResult.contracts);
+      setDriveConfigured(contractResult.driveConfigured);
+      setOrganisations(organisationResult);
+    } catch (loadError) {
+      setMessage(
+        loadError instanceof Error
+          ? loadError.message
+          : "The contract register could not be loaded.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [demo]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void refresh(), 0);
+    return () => window.clearTimeout(timer);
+  }, [refresh]);
+
+  useEffect(() => {
+    if (
+      demo ||
+      !contracts.some((contract) => {
+        const version = contract.versions[0];
+        return (
+          contract.status === "security_review" ||
+          contract.status === "partially_signed" ||
+          version?.driveSyncStatus === "pending"
+        );
+      })
+    )
+      return;
+    const timer = window.setInterval(() => void refresh(), 8_000);
+    return () => window.clearInterval(timer);
+  }, [contracts, demo, refresh]);
+
+  async function openContract(
+    contract: AdminContract,
+    kind: "source" | "final" | "certificate",
+  ) {
+    const version = contract.versions[0];
+    if (!version) return;
+    setBusyId(`${version.id}-${kind}`);
+    try {
+      if (demo) {
+        setMessage("File access is simulated in local review mode.");
+      } else {
+        const { url } = await getAdminContractAccess(version.id, kind);
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+    } catch (accessError) {
+      setMessage(
+        accessError instanceof Error
+          ? accessError.message
+          : "The contract could not be opened.",
+      );
+    } finally {
+      setBusyId("");
+    }
+  }
+
+  async function changeStatus(contract: AdminContract, status: string) {
+    setBusyId(contract.id);
+    try {
+      if (!demo) await updateAdminContractStatus(contract.id, status);
+      setMessage(
+        status === "out_for_signature"
+          ? `${contract.reference} is marked as sent for signature.`
+          : `${contract.reference} was updated.`,
+      );
+      if (!demo) await refresh();
+      else
+        setContracts((current) =>
+          current.map((item) =>
+            item.id === contract.id ? { ...item, status } : item,
+          ),
+        );
+    } catch (statusError) {
+      setMessage(
+        statusError instanceof Error
+          ? statusError.message
+          : "The contract status could not be updated.",
+      );
+    } finally {
+      setBusyId("");
+    }
+  }
+
+  async function removeVersion(contract: AdminContract) {
+    const version = contract.versions[0];
+    if (!version) return;
+    setBusyId(version.id);
+    try {
+      if (!demo) await removeAdminContractVersion(version.id);
+      setMessage(
+        `${contract.reference} was removed from private quarantine. You can upload the corrected PDF now.`,
+      );
+      if (!demo) await refresh();
+      else
+        setContracts((current) =>
+          current.filter((item) => item.id !== contract.id),
+        );
+    } catch (removeError) {
+      setMessage(
+        removeError instanceof Error
+          ? removeError.message
+          : "The quarantined upload could not be removed.",
+      );
+    } finally {
+      setBusyId("");
+    }
+  }
+
+  async function retryDrive(contract: AdminContract) {
+    const version = contract.versions[0];
+    if (!version) return;
+    setBusyId(version.id);
+    try {
+      if (!demo) await retryAdminContractDriveArchive(version.id);
+      setMessage(`${contract.reference} was queued for Google Drive archival.`);
+      if (!demo) await refresh();
+    } catch (driveError) {
+      setMessage(
+        driveError instanceof Error
+          ? driveError.message
+          : "Google Drive archival could not be retried.",
+      );
+    } finally {
+      setBusyId("");
+    }
+  }
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Contract register"
+        title="Contracts"
+        description="Control client, consultant, partner and intercompany agreements from upload through security checks, signature and archive."
+        action={
+          <button
+            className="portal-button portal-button-primary"
+            type="button"
+            onClick={() => setUploadTarget(null)}
+            disabled={organisations.length < 2}
+          >
+            Upload contract
+          </button>
+        }
+      />
+      <div className="portal-contract-assurance">
+        <div>
+          <strong>Private storage</strong>
+          <span>PDFs stay inaccessible until the security scan passes.</span>
+        </div>
+        <div>
+          <strong>Audit trail</strong>
+          <span>Views, downloads, status changes and signing packs are recorded.</span>
+        </div>
+        <div className={driveConfigured ? "ready" : "attention"}>
+          <strong>{driveConfigured ? "Google Drive connected" : "Google Drive setup required"}</strong>
+          <span>
+            {driveConfigured
+              ? "Clean contract files are copied automatically."
+              : "Portal storage remains protected; automatic Drive copying is paused."}
+          </span>
+        </div>
+      </div>
+      {message ? (
+        <p className="portal-form-message neutral" role="status">
+          {message}
+        </p>
+      ) : null}
+      <section className="portal-contract-list">
+        {contracts.map((contract) => {
+          const version = contract.versions[0];
+          const removable =
+            version &&
+            !version.locked &&
+            version.scanStatus !== "clean" &&
+            !version.finalAvailable;
+          return (
+            <article className="portal-contract-card" key={contract.id}>
+              <header>
+                <div>
+                  <span className="portal-card-label">{contract.reference}</span>
+                  <h2>{contract.title}</h2>
+                  <p>
+                    {contract.owner.name} <span aria-hidden="true">↔</span>{" "}
+                    {contract.counterparty.name}
+                  </p>
+                </div>
+                <span
+                  className={`portal-status ${
+                    contract.status === "completed"
+                      ? "status-completed"
+                      : contract.status === "blocked"
+                        ? "status-rejected"
+                        : "status-under_review"
+                  }`}
+                >
+                  <span aria-hidden="true" />
+                  {contractStatusLabels[contract.status] || contract.status}
+                </span>
+              </header>
+              <div className="portal-contract-meta">
+                <span>{contractTypeLabels[contract.contractType]}</span>
+                <span>Version {version?.versionLabel || "—"}</span>
+                <span>
+                  {contract.requiresSignature
+                    ? "Signature required"
+                    : "No signature required"}
+                </span>
+                {contract.effectiveDate ? (
+                  <span>Effective {contract.effectiveDate}</span>
+                ) : null}
+              </div>
+              <ol className="portal-contract-pipeline" aria-label="Contract progress">
+                {contractPipeline(contract, driveConfigured).map((step) => (
+                  <li className={step.state} key={step.label}>
+                    <span aria-hidden="true">
+                      {step.state === "complete"
+                        ? "✓"
+                        : step.state === "blocked"
+                          ? "!"
+                          : ""}
+                    </span>
+                    <small>{step.label}</small>
+                  </li>
+                ))}
+              </ol>
+              <div className="portal-contract-actions">
+                {version?.scanStatus === "clean" ? (
+                  <button
+                    type="button"
+                    onClick={() => void openContract(contract, "source")}
+                    disabled={Boolean(busyId)}
+                  >
+                    View source
+                  </button>
+                ) : null}
+                {contract.status === "ready_to_sign" ? (
+                  <button
+                    type="button"
+                    className="portal-table-primary-action"
+                    onClick={() => void changeStatus(contract, "out_for_signature")}
+                    disabled={Boolean(busyId)}
+                  >
+                    Mark sent for signature
+                  </button>
+                ) : null}
+                {version?.scanStatus === "clean" &&
+                contract.requiresSignature &&
+                ["ready_to_sign", "out_for_signature", "partially_signed"].includes(
+                  contract.status,
+                ) ? (
+                  <button
+                    type="button"
+                    className="portal-table-primary-action"
+                    onClick={() => setSignedTarget(contract)}
+                    disabled={Boolean(busyId)}
+                  >
+                    Upload signed pack
+                  </button>
+                ) : null}
+                {version?.finalAvailable ? (
+                  <button
+                    type="button"
+                    onClick={() => void openContract(contract, "final")}
+                    disabled={Boolean(busyId)}
+                  >
+                    Download signed PDF
+                  </button>
+                ) : null}
+                {version?.certificateAvailable ? (
+                  <button
+                    type="button"
+                    onClick={() => void openContract(contract, "certificate")}
+                    disabled={Boolean(busyId)}
+                  >
+                    Download audit certificate
+                  </button>
+                ) : null}
+                {driveConfigured && version?.driveSyncStatus === "failed" ? (
+                  <button
+                    type="button"
+                    onClick={() => void retryDrive(contract)}
+                    disabled={Boolean(busyId)}
+                  >
+                    Retry Drive archive
+                  </button>
+                ) : null}
+                {removable ? (
+                  <button
+                    type="button"
+                    className="portal-danger-link"
+                    onClick={() => void removeVersion(contract)}
+                    disabled={Boolean(busyId)}
+                  >
+                    Remove quarantined upload
+                  </button>
+                ) : null}
+                {version?.locked ? (
+                  <button
+                    type="button"
+                    onClick={() => setUploadTarget(contract)}
+                    disabled={Boolean(busyId)}
+                  >
+                    Add version
+                  </button>
+                ) : null}
+              </div>
+            </article>
+          );
+        })}
+        {!loading && !contracts.length ? (
+          <section className="portal-panel portal-empty-contracts">
+            <span aria-hidden="true">↗</span>
+            <div>
+              <h2>Start the contract register</h2>
+              <p>
+                Add at least two organisations, then upload a client,
+                consultant, partner or intercompany agreement.
+              </p>
+            </div>
+          </section>
+        ) : null}
+      </section>
+      {uploadTarget !== undefined ? (
+        <AdminContractUploadDialog
+          contract={uploadTarget}
+          organisations={organisations}
+          assignmentId={snapshot.assignment.id}
+          demo={demo}
+          onClose={() => setUploadTarget(undefined)}
+          onUploaded={async (notice) => {
+            setUploadTarget(undefined);
+            setMessage(notice);
+            await refresh();
+          }}
+        />
+      ) : null}
+      {signedTarget ? (
+        <AdminContractSignedPackDialog
+          contract={signedTarget}
+          demo={demo}
+          onClose={() => setSignedTarget(null)}
+          onUploaded={async () => {
+            setSignedTarget(null);
+            setMessage(
+              `${signedTarget.reference} signed pack uploaded. Both PDFs are being scanned before completion.`,
+            );
+            await refresh();
+          }}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function AdminContractUploadDialog({
+  contract,
+  organisations,
+  assignmentId,
+  demo,
+  onClose,
+  onUploaded,
+}: {
+  contract: AdminContract | null;
+  organisations: AdminOrganisation[];
+  assignmentId: string;
+  demo: boolean;
+  onClose: () => void;
+  onUploaded: (notice: string) => Promise<void>;
+}) {
+  const deepBridge =
+    organisations.find((item) =>
+      item.relationshipTypes.includes("deepbridge_entity"),
+    ) || organisations[0];
+  const defaultCounterparty =
+    organisations.find((item) => item.id !== deepBridge?.id) || organisations[1];
+  const currentVersion = contract?.versions[0]?.versionLabel;
+  const versionMatch = currentVersion?.match(/^(\d+)\.(\d+)$/);
+  const [reference, setReference] = useState(contract?.reference || "");
+  const [title, setTitle] = useState(contract?.title || "");
+  const [contractType, setContractType] = useState<AdminContract["contractType"]>(
+    contract?.contractType || "client_services",
+  );
+  const [ownerOrganisationId, setOwnerOrganisationId] = useState(
+    contract?.owner.id || deepBridge?.id || "",
+  );
+  const [counterpartyOrganisationId, setCounterpartyOrganisationId] = useState(
+    contract?.counterparty.id || defaultCounterparty?.id || "",
+  );
+  const [versionLabel, setVersionLabel] = useState(
+    versionMatch
+      ? `${versionMatch[1]}.${Number(versionMatch[2]) + 1}`
+      : currentVersion
+        ? `${currentVersion}.1`
+        : "1.0",
+  );
+  const [description, setDescription] = useState(contract?.description || "");
+  const [requiresSignature, setRequiresSignature] = useState(
+    contract?.requiresSignature !== false,
+  );
+  const [linkAssignment, setLinkAssignment] = useState(
+    Boolean(contract?.assignmentId),
+  );
+  const [effectiveDate, setEffectiveDate] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
+  const [currency, setCurrency] = useState(contract?.currency || "EUR");
+  const [contractValue, setContractValue] = useState("");
+  const [ownerSignatoryName, setOwnerSignatoryName] = useState("");
+  const [ownerSignatoryEmail, setOwnerSignatoryEmail] = useState("");
+  const [counterpartySignatoryName, setCounterpartySignatoryName] = useState("");
+  const [counterpartySignatoryEmail, setCounterpartySignatoryEmail] =
+    useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [progress, setProgress] = useState<UploadProgress | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!file) return;
+    if (ownerOrganisationId === counterpartyOrganisationId) {
+      setError("Select two different contracting organisations.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    setProgress({ phase: "preparing", percent: 0 });
+    try {
+      if (!demo)
+        await uploadAdminContract({
+          contractId: contract?.id,
+          reference,
+          title,
+          contractType,
+          ownerOrganisationId,
+          counterpartyOrganisationId,
+          assignmentId: linkAssignment ? assignmentId : undefined,
+          description,
+          versionLabel,
+          requiresSignature,
+          effectiveDate,
+          expiryDate,
+          currency,
+          contractValue: contractValue ? Number(contractValue) : undefined,
+          ownerSignatoryName,
+          ownerSignatoryEmail,
+          counterpartySignatoryName,
+          counterpartySignatoryEmail,
+          file,
+          onProgress: setProgress,
+        });
+      await onUploaded(
+        `${reference.toUpperCase()} v${versionLabel} uploaded. Security scanning has started and the register will refresh automatically.`,
+      );
+    } catch (uploadError) {
+      setError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : "The contract could not be uploaded.",
+      );
+      setBusy(false);
+      setProgress(null);
+    }
+  }
+
+  return (
+    <div className="portal-modal-backdrop" role="presentation">
+      <div
+        className="portal-modal portal-consultant-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="contract-upload-title"
+      >
+        <button
+          type="button"
+          className="portal-modal-close"
+          onClick={onClose}
+          disabled={busy}
+          aria-label="Close contract upload"
+        >
+          ×
+        </button>
+        <p className="portal-kicker">Controlled contract upload</p>
+        <h2 id="contract-upload-title">
+          {contract ? `Add version · ${contract.reference}` : "Upload contract"}
+        </h2>
+        <p>
+          The PDF is checksummed, quarantined and scanned. Only a clean version
+          can be opened, signed, archived to Drive or downloaded.
+        </p>
+        <form className="portal-form" onSubmit={submit}>
+          <div className="portal-consultant-fields">
+            <label>
+              Contract reference
+              <input
+                value={reference}
+                onChange={(event) => setReference(event.target.value)}
+                required
+                maxLength={80}
+                disabled={Boolean(contract)}
+                placeholder="DBA-CLIENT-2026-001"
+              />
+            </label>
+            <label>
+              Contract type
+              <select
+                value={contractType}
+                onChange={(event) =>
+                  setContractType(
+                    event.target.value as AdminContract["contractType"],
+                  )
+                }
+              >
+                {Object.entries(contractTypeLabels).map(([value, label]) => (
+                  <option value={value} key={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <label>
+            Contract title
+            <input
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              required
+              maxLength={240}
+            />
+          </label>
+          <div className="portal-consultant-fields">
+            <label>
+              DeepBridge / owning entity
+              <select
+                value={ownerOrganisationId}
+                onChange={(event) => setOwnerOrganisationId(event.target.value)}
+                required
+              >
+                {organisations.map((organisation) => (
+                  <option value={organisation.id} key={organisation.id}>
+                    {organisation.tradingName || organisation.legalName}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Counterparty
+              <select
+                value={counterpartyOrganisationId}
+                onChange={(event) =>
+                  setCounterpartyOrganisationId(event.target.value)
+                }
+                required
+              >
+                {organisations.map((organisation) => (
+                  <option value={organisation.id} key={organisation.id}>
+                    {organisation.tradingName || organisation.legalName}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="portal-consultant-fields">
+            <label>
+              Version
+              <input
+                value={versionLabel}
+                onChange={(event) => setVersionLabel(event.target.value)}
+                required
+                maxLength={40}
+              />
+            </label>
+            <label>
+              Currency
+              <input
+                value={currency}
+                onChange={(event) => setCurrency(event.target.value.toUpperCase())}
+                maxLength={3}
+                placeholder="EUR"
+              />
+            </label>
+            <label>
+              Effective date
+              <input
+                type="date"
+                value={effectiveDate}
+                onChange={(event) => setEffectiveDate(event.target.value)}
+              />
+            </label>
+            <label>
+              Expiry date
+              <input
+                type="date"
+                value={expiryDate}
+                onChange={(event) => setExpiryDate(event.target.value)}
+              />
+            </label>
+            <label>
+              Contract value (optional)
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={contractValue}
+                onChange={(event) => setContractValue(event.target.value)}
+              />
+            </label>
+          </div>
+          <label>
+            Internal description
+            <textarea
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              rows={3}
+              maxLength={1_000}
+            />
+          </label>
+          <div className="portal-consultant-fields">
+            <label>
+              DeepBridge signatory
+              <input
+                value={ownerSignatoryName}
+                onChange={(event) => setOwnerSignatoryName(event.target.value)}
+                maxLength={160}
+                placeholder="Yon Wallace"
+              />
+            </label>
+            <label>
+              DeepBridge signatory email
+              <input
+                type="email"
+                value={ownerSignatoryEmail}
+                onChange={(event) => setOwnerSignatoryEmail(event.target.value)}
+                maxLength={254}
+                placeholder="hello@deepbridgeadvisory.co.uk"
+              />
+            </label>
+            <label>
+              Counterparty signatory
+              <input
+                value={counterpartySignatoryName}
+                onChange={(event) =>
+                  setCounterpartySignatoryName(event.target.value)
+                }
+                maxLength={160}
+              />
+            </label>
+            <label>
+              Counterparty signatory email
+              <input
+                type="email"
+                value={counterpartySignatoryEmail}
+                onChange={(event) =>
+                  setCounterpartySignatoryEmail(event.target.value)
+                }
+                maxLength={254}
+              />
+            </label>
+          </div>
+          <label className="portal-inline-choice">
+            <input
+              type="checkbox"
+              checked={requiresSignature}
+              onChange={(event) => setRequiresSignature(event.target.checked)}
+            />
+            <span>This contract requires signatures</span>
+          </label>
+          <label className="portal-inline-choice">
+            <input
+              type="checkbox"
+              checked={linkAssignment}
+              onChange={(event) => setLinkAssignment(event.target.checked)}
+            />
+            <span>Link to the current consultant assignment</span>
+          </label>
+          <label>
+            Approved contract PDF
+            <input
+              type="file"
+              accept=".pdf,application/pdf"
+              required
+              onChange={(event) => setFile(event.target.files?.[0] || null)}
+            />
+          </label>
+          <small>PDF only · maximum 25 MB · version history is retained</small>
+          {progress ? <UploadProgressIndicator progress={progress} /> : null}
+          {error ? (
+            <p className="portal-form-message error" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <div className="portal-modal-actions">
+            <button
+              type="button"
+              className="portal-button portal-button-secondary"
+              onClick={onClose}
+              disabled={busy}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="portal-button portal-button-primary"
+              disabled={busy || !file}
+            >
+              {busy ? "Uploading securely…" : "Upload and begin security scan"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function AdminContractSignedPackDialog({
+  contract,
+  demo,
+  onClose,
+  onUploaded,
+}: {
+  contract: AdminContract;
+  demo: boolean;
+  onClose: () => void;
+  onUploaded: () => Promise<void>;
+}) {
+  const version = contract.versions[0];
+  const [finalPdf, setFinalPdf] = useState<File | null>(null);
+  const [certificatePdf, setCertificatePdf] = useState<File | null>(null);
+  const [progress, setProgress] = useState<UploadProgress | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!version || !finalPdf || !certificatePdf) return;
+    setBusy(true);
+    setError("");
+    setProgress({ phase: "preparing", percent: 0 });
+    try {
+      if (!demo)
+        await uploadAdminContractSignedPack({
+          contractId: contract.id,
+          versionId: version.id,
+          finalPdf,
+          certificatePdf,
+          onProgress: setProgress,
+        });
+      await onUploaded();
+    } catch (uploadError) {
+      setError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : "The signed pack could not be uploaded.",
+      );
+      setBusy(false);
+      setProgress(null);
+    }
+  }
+
+  return (
+    <div className="portal-modal-backdrop" role="presentation">
+      <div
+        className="portal-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="signed-pack-title"
+      >
+        <button
+          type="button"
+          className="portal-modal-close"
+          onClick={onClose}
+          disabled={busy}
+          aria-label="Close signed pack upload"
+        >
+          ×
+        </button>
+        <p className="portal-kicker">Final signing evidence</p>
+        <h2 id="signed-pack-title">{contract.reference}</h2>
+        <p>
+          Upload the final fully signed contract and its signing certificate or
+          audit trail. Both files are scanned before the contract is marked
+          complete.
+        </p>
+        <form className="portal-form" onSubmit={submit}>
+          <label>
+            Final signed PDF
+            <input
+              type="file"
+              accept=".pdf,application/pdf"
+              required
+              onChange={(event) => setFinalPdf(event.target.files?.[0] || null)}
+            />
+          </label>
+          <label>
+            Signing certificate / audit trail PDF
+            <input
+              type="file"
+              accept=".pdf,application/pdf"
+              required
+              onChange={(event) =>
+                setCertificatePdf(event.target.files?.[0] || null)
+              }
+            />
+          </label>
+          {progress ? <UploadProgressIndicator progress={progress} /> : null}
+          {error ? (
+            <p className="portal-form-message error" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <div className="portal-modal-actions">
+            <button
+              type="button"
+              className="portal-button portal-button-secondary"
+              onClick={onClose}
+              disabled={busy}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="portal-button portal-button-primary"
+              disabled={busy || !finalPdf || !certificatePdf}
+            >
+              {busy ? "Uploading signed pack…" : "Upload and verify signed pack"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }
 
@@ -4446,6 +5835,26 @@ export function PortalApp() {
           <Route
             path="/admin"
             element={!consultant ? <AdminDashboard /> : <Navigate to="/dashboard" />}
+          />
+          <Route
+            path="/admin/organisations"
+            element={
+              !consultant ? (
+                <AdminOrganisationsPage />
+              ) : (
+                <Navigate to="/dashboard" />
+              )
+            }
+          />
+          <Route
+            path="/admin/contracts"
+            element={
+              !consultant ? (
+                <AdminContractsPage />
+              ) : (
+                <Navigate to="/dashboard" />
+              )
+            }
           />
           <Route
             path="/admin/consultants"

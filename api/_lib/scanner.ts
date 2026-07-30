@@ -3,7 +3,9 @@ import { PortalHttpError } from "./server.js";
 export type ScanObjectType =
   | "document_version"
   | "compliance_submission"
-  | "signature_artifact";
+  | "signature_artifact"
+  | "contract_version"
+  | "contract_artifact";
 
 export interface ScanRequest {
   objectType: ScanObjectType;

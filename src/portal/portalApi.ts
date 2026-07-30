@@ -47,6 +47,67 @@ export interface UploadProgress {
   estimatedSecondsRemaining?: number;
 }
 
+export interface AdminOrganisation {
+  id: string;
+  legalName: string;
+  tradingName: string;
+  companyNumber: string;
+  countryCode: string;
+  relationshipTypes: string[];
+  registeredAddress: string;
+  website: string;
+  taxNumber: string;
+  notes: string;
+  active: boolean;
+}
+
+export interface AdminContract {
+  id: string;
+  reference: string;
+  title: string;
+  contractType:
+    | "client_services"
+    | "consultant_supply"
+    | "partnership"
+    | "intercompany"
+    | "nda"
+    | "other";
+  description: string;
+  status: string;
+  requiresSignature: boolean;
+  effectiveDate: string;
+  expiryDate: string;
+  currency: string;
+  contractValue?: number;
+  assignmentId: string;
+  owner: { id: string; name: string };
+  counterparty: { id: string; name: string };
+  parties: Array<{
+    id: string;
+    organisationId: string;
+    role: string;
+    signatoryName: string;
+    signatoryEmail: string;
+    signatureRequired: boolean;
+    signingOrder: number;
+  }>;
+  versions: Array<{
+    id: string;
+    versionLabel: string;
+    originalFilename: string;
+    sizeBytes: number;
+    scanStatus: "pending" | "clean" | "infected" | "failed";
+    locked: boolean;
+    driveSyncStatus: "not_configured" | "pending" | "synced" | "failed";
+    finalScanStatus: "pending" | "clean" | "infected" | "failed";
+    certificateScanStatus: "pending" | "clean" | "infected" | "failed";
+    finalAvailable: boolean;
+    certificateAvailable: boolean;
+    signedAt: string;
+    createdAt: string;
+  }>;
+}
+
 export interface AdminSigningItem {
   id: string;
   consultantId: string;
@@ -641,6 +702,348 @@ export async function listAdminDocumentCatalogue(): Promise<AdminDocumentCatalog
       })),
     })),
   };
+}
+
+export async function listAdminOrganisations(): Promise<
+  AdminOrganisation[]
+> {
+  const result = await apiRequest<{ organisations: unknown }>(
+    "/api/admin/organisations/list",
+  );
+  return records(result.organisations).map((row) => ({
+    id: text(row.id),
+    legalName: text(row.legal_name),
+    tradingName: text(row.trading_name),
+    companyNumber: text(row.company_number),
+    countryCode: text(row.country_code),
+    relationshipTypes: Array.isArray(row.relationship_types)
+      ? row.relationship_types.filter(
+          (value): value is string => typeof value === "string",
+        )
+      : [],
+    registeredAddress: text(row.registered_address),
+    website: text(row.website),
+    taxNumber: text(row.tax_number),
+    notes: text(row.notes),
+    active: row.active !== false,
+  }));
+}
+
+export async function saveAdminOrganisation(input: {
+  organisationId?: string;
+  legalName: string;
+  tradingName: string;
+  companyNumber: string;
+  countryCode: string;
+  relationshipTypes: string[];
+  registeredAddress: string;
+  website: string;
+  taxNumber: string;
+  notes: string;
+  active: boolean;
+}) {
+  return post<{ organisationId: string }>(
+    "/api/admin/organisations/save",
+    input,
+  );
+}
+
+export async function listAdminContracts(): Promise<{
+  contracts: AdminContract[];
+  driveConfigured: boolean;
+}> {
+  const result = await apiRequest<{
+    contracts: unknown;
+    driveConfigured?: boolean;
+  }>("/api/admin/contracts/list");
+  return {
+    driveConfigured: result.driveConfigured === true,
+    contracts: records(result.contracts).map((row) => {
+      const owner = record(row.owner);
+      const counterparty = record(row.counterparty);
+      return {
+        id: text(row.id),
+        reference: text(row.reference),
+        title: text(row.title),
+        contractType: text(row.contract_type, "other") as AdminContract["contractType"],
+        description: text(row.description),
+        status: text(row.status),
+        requiresSignature: row.requires_signature !== false,
+        effectiveDate: displayDate(row.effective_date),
+        expiryDate: displayDate(row.expiry_date),
+        currency: text(row.currency),
+        contractValue:
+          typeof row.contract_value === "number"
+            ? row.contract_value
+            : undefined,
+        assignmentId: text(row.assignment_id),
+        owner: {
+          id: text(owner.id),
+          name: text(owner.trading_name) || text(owner.legal_name),
+        },
+        counterparty: {
+          id: text(counterparty.id),
+          name:
+            text(counterparty.trading_name) ||
+            text(counterparty.legal_name),
+        },
+        parties: records(row.contract_parties).map((party) => ({
+          id: text(party.id),
+          organisationId: text(party.organisation_id),
+          role: text(party.party_role),
+          signatoryName: text(party.signatory_name),
+          signatoryEmail: text(party.signatory_email),
+          signatureRequired: party.signature_required !== false,
+          signingOrder: Number(party.signing_order) || 1,
+        })),
+        versions: records(row.contract_versions).map((version) => ({
+          id: text(version.id),
+          versionLabel: text(version.version_label),
+          originalFilename: text(version.original_filename),
+          sizeBytes: Number(version.size_bytes) || 0,
+          scanStatus: text(
+            version.malware_scan_status,
+            "pending",
+          ) as AdminContract["versions"][number]["scanStatus"],
+          locked: Boolean(version.locked_at),
+          driveSyncStatus: text(
+            version.drive_sync_status,
+            "not_configured",
+          ) as AdminContract["versions"][number]["driveSyncStatus"],
+          finalScanStatus: text(
+            version.final_scan_status,
+            "pending",
+          ) as AdminContract["versions"][number]["finalScanStatus"],
+          certificateScanStatus: text(
+            version.certificate_scan_status,
+            "pending",
+          ) as AdminContract["versions"][number]["certificateScanStatus"],
+          finalAvailable: Boolean(version.final_storage_path),
+          certificateAvailable: Boolean(version.certificate_storage_path),
+          signedAt: displayDateTime(version.signed_at),
+          createdAt: text(version.created_at),
+        })),
+      };
+    }),
+  };
+}
+
+export async function uploadAdminContract(input: {
+  contractId?: string;
+  reference: string;
+  title: string;
+  contractType: AdminContract["contractType"];
+  ownerOrganisationId: string;
+  counterpartyOrganisationId: string;
+  assignmentId?: string;
+  description: string;
+  versionLabel: string;
+  requiresSignature: boolean;
+  effectiveDate: string;
+  expiryDate: string;
+  currency: string;
+  contractValue?: number;
+  ownerSignatoryName: string;
+  ownerSignatoryEmail: string;
+  counterpartySignatoryName: string;
+  counterpartySignatoryEmail: string;
+  file: File;
+  onProgress?: (progress: UploadProgress) => void;
+}) {
+  if (!storageClient)
+    throw new Error("Portal storage is not configured.");
+  if (input.file.type !== "application/pdf")
+    throw new Error("Only PDF contracts are accepted.");
+  if (input.file.size > 25 * 1024 * 1024)
+    throw new Error("The maximum contract size is 25 MB.");
+  input.onProgress?.({ phase: "preparing", percent: 0 });
+  const contentSha256 = await sha256(input.file);
+  const upload = await post<{ path: string; token: string }>(
+    "/api/admin/contracts/upload-url",
+    { mimeType: input.file.type, sizeBytes: input.file.size },
+  );
+  await uploadSignedStorageFile({
+    bucket: "contract-documents",
+    path: upload.path,
+    token: upload.token,
+    file: input.file,
+    onProgress: input.onProgress,
+  });
+  input.onProgress?.({ phase: "finalising", percent: 100 });
+  return post<{ contractId: string; versionId: string; status: string }>(
+    "/api/admin/contracts/upload-finalize",
+    {
+      ...input,
+      file: undefined,
+      onProgress: undefined,
+      storagePath: upload.path,
+      originalFilename: input.file.name,
+      mimeType: input.file.type,
+      sizeBytes: input.file.size,
+      contentSha256,
+    },
+  );
+}
+
+export async function uploadAdminContractSignedPack(input: {
+  contractId: string;
+  versionId: string;
+  finalPdf: File;
+  certificatePdf: File;
+  onProgress?: (progress: UploadProgress) => void;
+}) {
+  if (!storageClient)
+    throw new Error("Portal storage is not configured.");
+  const upload = await post<{
+    final: { path: string; token: string };
+    certificate: { path: string; token: string };
+  }>("/api/admin/contracts/signing-upload-url", {
+    contractId: input.contractId,
+    versionId: input.versionId,
+    finalMimeType: input.finalPdf.type,
+    finalSizeBytes: input.finalPdf.size,
+    certificateMimeType: input.certificatePdf.type,
+    certificateSizeBytes: input.certificatePdf.size,
+  });
+  input.onProgress?.({ phase: "preparing", percent: 0 });
+  await uploadSignedStorageFile({
+    bucket: "contract-documents",
+    path: upload.final.path,
+    token: upload.final.token,
+    file: input.finalPdf,
+    progressStart: 0,
+    progressShare: 50,
+    onProgress: input.onProgress,
+  });
+  await uploadSignedStorageFile({
+    bucket: "contract-documents",
+    path: upload.certificate.path,
+    token: upload.certificate.token,
+    file: input.certificatePdf,
+    progressStart: 50,
+    progressShare: 50,
+    onProgress: input.onProgress,
+  });
+  input.onProgress?.({ phase: "finalising", percent: 100 });
+  return post<{ status: string }>(
+    "/api/admin/contracts/signing-upload-finalize",
+    {
+      contractId: input.contractId,
+      versionId: input.versionId,
+      finalPath: upload.final.path,
+      certificatePath: upload.certificate.path,
+    },
+  );
+}
+
+async function uploadSignedStorageFile(input: {
+  bucket: string;
+  path: string;
+  token: string;
+  file: File;
+  progressStart?: number;
+  progressShare?: number;
+  onProgress?: (progress: UploadProgress) => void;
+}) {
+  if (!supabaseUrl || !supabaseAnonKey)
+    throw new Error("Portal storage is not configured.");
+  const encodedPath = input.path
+    .split("/")
+    .map((part) => encodeURIComponent(part))
+    .join("/");
+  const uploadUrl = new URL(
+    `${supabaseUrl}/storage/v1/object/upload/sign/${encodeURIComponent(input.bucket)}/${encodedPath}`,
+  );
+  uploadUrl.searchParams.set("token", input.token);
+  await new Promise<void>((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    const startedAt = performance.now();
+    request.open("PUT", uploadUrl.toString());
+    request.setRequestHeader("apikey", supabaseAnonKey);
+    request.setRequestHeader("Authorization", `Bearer ${supabaseAnonKey}`);
+    request.setRequestHeader("x-upsert", "false");
+    request.upload.addEventListener("progress", (event) => {
+      const total = event.lengthComputable ? event.total : input.file.size;
+      const elapsedSeconds = Math.max(
+        (performance.now() - startedAt) / 1000,
+        0.1,
+      );
+      const bytesPerSecond = event.loaded / elapsedSeconds;
+      const estimatedSecondsRemaining =
+        bytesPerSecond > 0
+          ? Math.max(0, Math.ceil((total - event.loaded) / bytesPerSecond))
+          : undefined;
+      const localPercent = Math.min(
+        99,
+        Math.round((event.loaded / total) * 100),
+      );
+      const overallPercent = Math.round(
+        (input.progressStart ?? 0) +
+          localPercent * ((input.progressShare ?? 100) / 100),
+      );
+      input.onProgress?.({
+        phase: "uploading",
+        percent: overallPercent,
+        estimatedSecondsRemaining,
+      });
+    });
+    request.addEventListener("load", () => {
+      if (request.status >= 200 && request.status < 300) resolve();
+      else {
+        let message = "The private upload could not be completed.";
+        try {
+          const result = JSON.parse(request.responseText) as {
+            message?: string;
+            error?: string;
+          };
+          message = result.message || result.error || message;
+        } catch {
+          // Supabase may return a non-JSON gateway error.
+        }
+        reject(new Error(message));
+      }
+    });
+    request.addEventListener("error", () =>
+      reject(new Error("The private upload connection was interrupted.")),
+    );
+    const form = new FormData();
+    form.append("cacheControl", "3600");
+    form.append("", input.file);
+    request.send(form);
+  });
+}
+
+export async function getAdminContractAccess(
+  versionId: string,
+  kind: "source" | "final" | "certificate",
+) {
+  return post<{ url: string }>("/api/admin/contracts/access", {
+    versionId,
+    kind,
+  });
+}
+
+export async function updateAdminContractStatus(
+  contractId: string,
+  status: string,
+) {
+  return post<{ updated: true }>("/api/admin/contracts/update-status", {
+    contractId,
+    status,
+  });
+}
+
+export async function removeAdminContractVersion(versionId: string) {
+  return post<{ removed: true }>("/api/admin/contracts/remove-version", {
+    versionId,
+  });
+}
+
+export async function retryAdminContractDriveArchive(versionId: string) {
+  return post<{ synced: boolean; copiedFiles: number }>(
+    "/api/admin/contracts/retry-drive",
+    { versionId },
+  );
 }
 
 async function sha256(file: File) {
