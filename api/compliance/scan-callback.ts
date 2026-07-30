@@ -86,17 +86,31 @@ export default async function handler(
         : envelope.assigned_documents;
 
       if (
-        envelope.provider_status === "countersign_source_security_review"
+        envelope.provider_status === "countersign_source_security_review" ||
+        envelope.provider_status ===
+          "countersign_reissue_source_security_review"
       ) {
+        const isReissue =
+          envelope.provider_status ===
+          "countersign_reissue_source_security_review";
         const nextProviderStatus =
           status === "clean"
             ? "consultant_signed"
-            : "countersign_source_security_review_failed";
+            : isReissue
+              ? "countersign_reissue_source_security_review_failed"
+              : "countersign_source_security_review_failed";
         const { error: sourceStatusError } = await admin
           .from("signature_envelopes")
           .update({ provider_status: nextProviderStatus })
           .eq("id", envelope.id);
         if (sourceStatusError) throw sourceStatusError;
+        if (isReissue && status !== "clean") {
+          const { error: restoreError } = await admin
+            .from("assigned_documents")
+            .update({ status: "completed" })
+            .eq("id", envelope.assigned_document_id);
+          if (restoreError) throw restoreError;
+        }
 
         await admin.from("audit_events").insert({
           actor_label: "Malware scanning service",
@@ -112,6 +126,7 @@ export default async function handler(
             status,
             artifact_kind: artifactKind,
             purpose: "deepbridge_countersignature_source",
+            reissue: isReissue,
           },
         });
         return json(response, 200, { received: true });

@@ -2883,6 +2883,7 @@ function AdminSigningPage() {
         await prepareCountersignSource({
           assignedDocumentId: input.item.id,
           consultantSignedPdf: input.consultantSignedPdf,
+          reissue: input.item.status === "completed",
         });
 
         let sourceReady = false;
@@ -3131,6 +3132,13 @@ function AdminSigningPage() {
                         >
                           Download audit certificate
                         </button>
+                        <button
+                          type="button"
+                          disabled={busyId === item.id}
+                          onClick={() => setCountersignSelected(item)}
+                        >
+                          Reissue corrected copy
+                        </button>
                       </div>
                     ) : null}
                   </td>
@@ -3219,7 +3227,11 @@ function AdminCountersignDialog({
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
-  const usesStoredConsultantPdf = item.provider === "manual_upload";
+  const isReissue = item.status === "completed";
+  const usesStoredConsultantPdf =
+    !isReissue &&
+    item.providerStatus === "consultant_signed" &&
+    item.finalScanStatus === "clean";
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -3286,11 +3298,12 @@ function AdminCountersignDialog({
         <p className="portal-kicker">DeepBridge countersignature</p>
         <h2 id="countersign-title">{item.title}</h2>
         <p>
-          Review the consultant-signed agreement, then sign it electronically
-          for DeepBridge. The portal will place your signature and today&apos;s
-          date in the agreement&apos;s DeepBridge execution block, append a
-          tamper-evident countersignature page, and create a separate audit
-          certificate.
+          {isReissue
+            ? "Create a corrected final copy without altering the completed record. Upload the same consultant-signed source, review it, and sign again for DeepBridge."
+            : "Review the consultant-signed agreement, then sign it electronically for DeepBridge."}{" "}
+          The portal will place your signature and today&apos;s date in the
+          agreement&apos;s DeepBridge execution block, append a tamper-evident
+          countersignature page, and create a separate audit certificate.
         </p>
         <form className="portal-form" onSubmit={submit}>
           <div className="portal-signing-step">
@@ -3316,7 +3329,11 @@ function AdminCountersignDialog({
                 <>
                   <p>
                     Choose the PDF downloaded from Google or returned by the
-                    consultant. It will be scanned before DeepBridge signs it.
+                    consultant.{" "}
+                    {isReissue
+                      ? "Use the same consultant-signed source as the completed record. "
+                      : ""}
+                    It will be scanned before DeepBridge signs it.
                   </p>
                   <label htmlFor="consultant-signed-source">
                     Consultant-signed PDF
@@ -3427,7 +3444,11 @@ function AdminCountersignDialog({
                 (!usesStoredConsultantPdf && !consultantSignedPdf)
               }
             >
-              {busy ? "Signing securely…" : "Sign for DeepBridge"}
+              {busy
+                ? "Signing securely…"
+                : isReissue
+                  ? "Sign & create corrected copy"
+                  : "Sign for DeepBridge"}
             </button>
           </div>
         </form>
