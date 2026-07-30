@@ -158,9 +158,27 @@ async function apiRequest<T>(
       ...(init?.headers || {}),
     },
   });
-  const result = (await response.json()) as T & { error?: string };
+  const responseText = await response.text();
+  const result = (() => {
+    if (!responseText) return null;
+    try {
+      return JSON.parse(responseText) as T & { error?: string };
+    } catch {
+      if (!response.ok) {
+        throw new Error(
+          response.status >= 500
+            ? "The secure service encountered a temporary error. Please try again."
+            : "The secure request could not complete.",
+        );
+      }
+      throw new Error("The secure service returned an invalid response.");
+    }
+  })();
   if (!response.ok)
-    throw new Error(result.error || "The secure request could not complete.");
+    throw new Error(
+      result?.error || "The secure request could not complete.",
+    );
+  if (!result) throw new Error("The secure service returned an empty response.");
   return result;
 }
 

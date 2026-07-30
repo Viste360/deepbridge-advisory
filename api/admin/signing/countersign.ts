@@ -9,7 +9,6 @@ import {
   type PDFFont,
   rgb,
 } from "pdf-lib";
-import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import {
   enforceRateLimit,
   getSupabaseAdmin,
@@ -124,9 +123,45 @@ type SignatureBlockPlacement = {
   date: { x: number; y: number; width: number };
 };
 
+let pdfJsPromise:
+  | Promise<typeof import("pdfjs-dist/legacy/build/pdf.mjs")>
+  | undefined;
+
+function ensurePdfJsTextExtractionGlobals() {
+  // PDF.js initialises browser rendering helpers even though this endpoint
+  // only extracts text. Vercel does not bundle the optional native canvas
+  // package, so provide inert constructors before the dynamic import. None of
+  // these rendering APIs are used by getTextContent().
+  if (!globalThis.DOMMatrix) {
+    Object.defineProperty(globalThis, "DOMMatrix", {
+      configurable: true,
+      value: class TextExtractionDOMMatrix {},
+    });
+  }
+  if (!globalThis.ImageData) {
+    Object.defineProperty(globalThis, "ImageData", {
+      configurable: true,
+      value: class TextExtractionImageData {},
+    });
+  }
+  if (!globalThis.Path2D) {
+    Object.defineProperty(globalThis, "Path2D", {
+      configurable: true,
+      value: class TextExtractionPath2D {},
+    });
+  }
+}
+
+function loadPdfJs() {
+  ensurePdfJsTextExtractionGlobals();
+  pdfJsPromise ??= import("pdfjs-dist/legacy/build/pdf.mjs");
+  return pdfJsPromise;
+}
+
 export async function locateDeepBridgeSignatureBlock(
   sourceBytes: Uint8Array,
 ): Promise<SignatureBlockPlacement | null> {
+  const { getDocument } = await loadPdfJs();
   const source = await getDocument({
     data: sourceBytes.slice(),
     useSystemFonts: true,
