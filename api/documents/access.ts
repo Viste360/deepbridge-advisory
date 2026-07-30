@@ -44,6 +44,11 @@ export default async function handler(
     const { data: assigned, error } = await query.single();
     if (error || !assigned)
       throw new PortalHttpError(404, "Assigned document not found.");
+    if (
+      actor.profile.role !== "admin" &&
+      assigned.status === "superseded"
+    )
+      throw new PortalHttpError(404, "Assigned document not found.");
 
     const version = Array.isArray(assigned.document_versions)
       ? assigned.document_versions[0]
