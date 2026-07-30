@@ -46,7 +46,7 @@ describe("portal countersignature PDFs", () => {
       .digest("hex");
     const signedAt = new Date("2026-07-30T10:30:00.000Z");
 
-    const finalBytes = await createCountersignedPdf({
+    const countersigned = await createCountersignedPdf({
       sourceBytes,
       signatureBytes: transparentPng,
       title: "Professional Consulting Services Framework Agreement",
@@ -60,6 +60,10 @@ describe("portal countersignature PDFs", () => {
       envelopeId: "22222222-2222-4222-8222-222222222222",
       sourceHash,
     });
+    const finalBytes = countersigned.bytes;
+    expect(countersigned.signaturePlacement).toBe(
+      "original_execution_block_and_appended_countersignature_record",
+    );
     const finalDocument = await PDFDocument.load(finalBytes);
     expect(finalDocument.getPageCount()).toBe(2);
     expect(finalDocument.getTitle()).toBe(
@@ -94,11 +98,47 @@ describe("portal countersignature PDFs", () => {
       envelopeId: "22222222-2222-4222-8222-222222222222",
       sourceHash,
       finalHash,
+      signaturePlacement: countersigned.signaturePlacement,
     });
     const certificateDocument = await PDFDocument.load(certificateBytes);
     expect(certificateDocument.getPageCount()).toBe(1);
     expect(certificateDocument.getTitle()).toBe(
       "DeepBridge electronic signing audit certificate",
     );
+  });
+
+  it("uses the appended record when the source has no readable execution block", async () => {
+    const source = await PDFDocument.create();
+    const sourcePage = source.addPage([595.28, 841.89]);
+    sourcePage.drawText("Scanned consultant-signed agreement", {
+      x: 54,
+      y: 760,
+      size: 18,
+    });
+    const sourceBytes = await source.save();
+    const sourceHash = createHash("sha256")
+      .update(sourceBytes)
+      .digest("hex");
+
+    const countersigned = await createCountersignedPdf({
+      sourceBytes,
+      signatureBytes: transparentPng,
+      title: "Professional Consulting Services Framework Agreement",
+      versionLabel: "1.1",
+      consultantName: "Test Consultant",
+      consultantEmail: "consultant@example.com",
+      signerName: "Yon Wallace",
+      signerTitle: "Director, DeepBridge Advisory",
+      signedAt: new Date("2026-07-30T10:30:00.000Z"),
+      assignedDocumentId: "11111111-1111-4111-8111-111111111111",
+      envelopeId: "22222222-2222-4222-8222-222222222222",
+      sourceHash,
+    });
+
+    expect(countersigned.signaturePlacement).toBe(
+      "appended_countersignature_record_only",
+    );
+    const finalDocument = await PDFDocument.load(countersigned.bytes);
+    expect(finalDocument.getPageCount()).toBe(2);
   });
 });

@@ -4753,6 +4753,28 @@ function AdminSigningPage() {
           </p>
         </article>
       </section>
+      <details className="portal-signing-help">
+        <summary>How to use document signing</summary>
+        <ol>
+          <li>
+            When a record says <strong>Awaiting DeepBridge</strong>, select{" "}
+            <strong>Review &amp; sign</strong>, review every page, then sign.
+          </li>
+          <li>
+            When it says <strong>Completed</strong>, download the signed PDF and
+            audit certificate. They are the permanent completion record.
+          </li>
+          <li>
+            Use <strong>Correct or reissue signed copy</strong> only when the
+            wrong consultant-signed source was used. The previous record remains
+            in the audit history.
+          </li>
+          <li>
+            Use <strong>Upload externally signed pack</strong> when signing was
+            completed in Google Workspace or another approved provider.
+          </li>
+        </ol>
+      </details>
       <div className="portal-privacy-callout">
         <span aria-hidden="true">i</span>
         <p>
@@ -4882,7 +4904,7 @@ function AdminSigningPage() {
                           disabled={busyId === item.id}
                           onClick={() => setCountersignSelected(item)}
                         >
-                          Reissue corrected copy
+                          Correct or reissue signed copy
                         </button>
                       </div>
                     ) : null}
@@ -5023,6 +5045,13 @@ function AdminCountersignDialog({
     }
   }
 
+  function reviewSelectedPdf() {
+    if (!consultantSignedPdf) return;
+    const previewUrl = URL.createObjectURL(consultantSignedPdf);
+    window.open(previewUrl, "_blank", "noopener,noreferrer");
+    window.setTimeout(() => URL.revokeObjectURL(previewUrl), 60_000);
+  }
+
   return (
     <div className="portal-modal-backdrop" role="presentation">
       <div
@@ -5044,11 +5073,12 @@ function AdminCountersignDialog({
         <h2 id="countersign-title">{item.title}</h2>
         <p>
           {isReissue
-            ? "Create a corrected final copy without altering the completed record. Upload the same consultant-signed source, review it, and sign again for DeepBridge."
+            ? "Create a corrected final copy without deleting or altering the completed audit record. Upload the correct consultant-signed source, review it, and sign again for DeepBridge."
             : "Review the consultant-signed agreement, then sign it electronically for DeepBridge."}{" "}
           The portal will place your signature and today&apos;s date in the
-          agreement&apos;s DeepBridge execution block, append a tamper-evident
-          countersignature page, and create a separate audit certificate.
+          agreement&apos;s DeepBridge execution block when it can identify that
+          field safely. It always appends a tamper-evident countersignature page
+          and creates a separate audit certificate.
         </p>
         <form className="portal-form" onSubmit={submit}>
           <div className="portal-signing-step">
@@ -5093,6 +5123,16 @@ function AdminCountersignDialog({
                       setConsultantSignedPdf(event.target.files?.[0] ?? null)
                     }
                   />
+                  {consultantSignedPdf ? (
+                    <button
+                      className="portal-button portal-button-secondary"
+                      type="button"
+                      disabled={busy}
+                      onClick={reviewSelectedPdf}
+                    >
+                      Review selected PDF
+                    </button>
+                  ) : null}
                 </>
               )}
             </div>

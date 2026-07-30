@@ -2544,6 +2544,29 @@
   line-height: 1.55;
 }
 
+.portal-signing-help {
+  margin: -8px 0 24px;
+  padding: 16px 20px;
+  border: 1px solid var(--portal-line);
+  border-radius: 12px;
+  background: var(--portal-surface);
+}
+
+.portal-signing-help summary {
+  color: var(--portal-teal-dark);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.portal-signing-help ol {
+  margin: 16px 0 0;
+  padding-left: 22px;
+}
+
+.portal-signing-help li + li {
+  margin-top: 8px;
+}
+
 .portal-signing-steps ol {
   display: grid;
   gap: 18px;
