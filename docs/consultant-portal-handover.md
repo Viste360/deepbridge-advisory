@@ -17,6 +17,8 @@ The portal includes:
 - a consultant dashboard with assignment details and progress;
 - separate agreements, acknowledgements and informational documents;
 - administrator-recorded Google Workspace eSignature requests;
+- authenticated in-portal DeepBridge electronic countersignatures with a
+  branded signature page, document hashes and a separate audit certificate;
 - a quarantined consultant signed-PDF fallback when Google signing is
   unavailable;
 - completed Google PDF and audit-trail import with a dual security-scan gate;
@@ -151,11 +153,31 @@ Google does not currently provide a public embedded eSignature API. The portal
 therefore keeps the Google event and Drive archive operationally separate from
 its access-controlled delivery copies.
 
+When the consultant has already signed, the administrator may instead choose
+**Review & sign** in **Administration → Signing**. The portal requires the
+administrator to:
+
+1. supply the consultant-signed PDF when it is not already held by the manual
+   fallback workflow;
+2. wait for that PDF to pass malware scanning;
+3. sign using the authenticated administrator's own name and recorded
+   authority; and
+4. explicitly confirm review, authority and signing intent.
+
+The portal appends a branded DeepBridge countersignature page, records the
+consultant-source and final SHA-256 hashes, creates a separate audit
+certificate and scans both final artifacts. The final PDF and certificate
+become downloadable by the administrator and assigned consultant only after
+both scans pass. This is a standard electronic signature; use Google Workspace
+or an approved qualified trust provider when the contract requires a qualified
+electronic signature.
+
 If Google signing is unavailable, the consultant can download the approved PDF
 and upload a signed PDF back to the portal. The upload remains quarantined
 until the malware scanner clears it. DeepBridge then downloads, reviews and
-countersigns it, and uploads the final PDF plus signing evidence. The
-consultant upload alone never completes the agreement.
+countersigns it in the portal, or signs externally and uploads the final PDF
+plus signing evidence. The consultant upload alone never completes the
+agreement.
 
 ### 4. Malware scanning
 

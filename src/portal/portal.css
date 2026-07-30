@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "AlluraSignature";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/Allura-Regular.ttf") format("truetype");
+}
+
 .portal-app-shell,
 .portal-login,
 .portal-legal,
@@ -1655,6 +1663,19 @@
   gap: 8px;
 }
 
+.portal-table .portal-table-primary-action {
+  padding: 8px 11px;
+  border: 1px solid var(--portal-ink);
+  border-radius: 2px;
+  color: #fff;
+  background: var(--portal-ink);
+  text-decoration: none;
+}
+
+.portal-table .portal-table-primary-action:not(:disabled):hover {
+  background: #163844;
+}
+
 .portal-upload-progress {
   display: grid;
   min-height: 92px;
@@ -1767,6 +1788,117 @@
   overflow-y: auto;
   background: var(--portal-paper);
   box-shadow: 0 30px 90px rgba(0, 0, 0, 0.3);
+}
+
+.portal-signature-modal {
+  width: min(100%, 760px);
+}
+
+.portal-signature-modal .portal-form {
+  gap: 18px;
+}
+
+.portal-signing-step {
+  display: grid;
+  padding: 20px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 16px;
+  border: 1px solid var(--portal-line);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.portal-signing-step > span {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--portal-ink);
+  background: var(--portal-aqua-soft);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.portal-signing-step > div {
+  display: grid;
+  gap: 9px;
+}
+
+.portal-signing-step > div > strong {
+  font-size: 0.88rem;
+}
+
+.portal-signing-step p {
+  margin: 0 0 4px;
+  color: var(--portal-muted);
+  font-size: 0.73rem;
+  line-height: 1.55;
+}
+
+.portal-signing-step .portal-button {
+  width: fit-content;
+}
+
+.portal-signature-preview {
+  display: grid;
+  min-height: 170px;
+  margin-top: 5px;
+  padding: 18px 24px;
+  align-content: center;
+  border: 1px solid #b8c9c5;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.93), rgba(255, 255, 255, 0.93)),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 27px,
+      #e5ece9 28px
+    );
+}
+
+.portal-signature-preview small {
+  margin: 0;
+  color: #6d7c78;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.portal-signature-preview > span {
+  color: #0b3c43;
+  font-family: "AlluraSignature", "Brush Script MT", cursive;
+  font-size: clamp(3rem, 8vw, 5.2rem);
+  line-height: 0.95;
+}
+
+.portal-signature-preview p {
+  margin: 5px 0 0;
+  color: var(--portal-muted);
+  font-size: 0.68rem;
+}
+
+.portal-signature-consent {
+  display: grid;
+  padding: 17px 18px;
+  align-items: flex-start;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 12px;
+  border: 1px solid #9bc7bf;
+  background: #e6f4f0;
+  cursor: pointer;
+}
+
+.portal-signature-consent input {
+  width: 18px;
+  min-height: 18px;
+  margin-top: 2px;
+}
+
+.portal-signature-consent span {
+  color: #244a47;
+  font-size: 0.75rem;
+  line-height: 1.55;
 }
 
 .portal-modal > p:not(.portal-kicker) {

@@ -27,7 +27,12 @@ export default async function handler(
       typeof body.assignedDocumentId === "string"
         ? body.assignedDocumentId
         : "";
-    const kind = body.kind === "certificate" ? "certificate" : "final";
+    const kind =
+      body.kind === "certificate"
+        ? "certificate"
+        : body.kind === "countersign_source"
+          ? "countersign_source"
+          : "final";
     const sizeBytes =
       typeof body.sizeBytes === "number" ? Math.round(body.sizeBytes) : 0;
     if (!/^[0-9a-f-]{36}$/i.test(assignedDocumentId))

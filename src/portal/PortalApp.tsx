@@ -21,6 +21,7 @@ import { adminSnapshot, consultantSnapshot } from "./demoData";
 import {
   acknowledgeDocument,
   completeAuthCallback,
+  createPortalCountersignature,
   createInvitation,
   getComplianceSubmissionAccess,
   getConsultantSignedUpload,
@@ -33,6 +34,7 @@ import {
   onPortalSessionChange,
   portalConfigured,
   portalDemoEnabled,
+  prepareCountersignSource,
   recordGoogleSigningStep,
   removeAdminDocumentVersion,
   reviewComplianceSubmission,
@@ -2695,6 +2697,8 @@ function AdminSigningPage() {
   const { snapshot, demo } = usePortal();
   const [items, setItems] = useState<AdminSigningItem[]>([]);
   const [selected, setSelected] = useState<AdminSigningItem | null>(null);
+  const [countersignSelected, setCountersignSelected] =
+    useState<AdminSigningItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState("");
   const [message, setMessage] = useState("");
@@ -2835,6 +2839,106 @@ function AdminSigningPage() {
     );
   }
 
+  async function countersign(input: {
+    item: AdminSigningItem;
+    consultantSignedPdf: File | null;
+    signerName: string;
+    signerTitle: string;
+    signatureImageDataUrl: string;
+  }) {
+    if (demo) {
+      setItems((current) =>
+        current.map((candidate) =>
+          candidate.id === input.item.id
+            ? {
+                ...candidate,
+                providerStatus: "security_review",
+                finalScanStatus: "pending",
+                certificateScanStatus: "pending",
+              }
+            : candidate,
+        ),
+      );
+    } else {
+      if (input.consultantSignedPdf) {
+        await prepareCountersignSource({
+          assignedDocumentId: input.item.id,
+          consultantSignedPdf: input.consultantSignedPdf,
+        });
+
+        let sourceReady = false;
+        for (let attempt = 0; attempt < 80; attempt += 1) {
+          await new Promise((resolve) => window.setTimeout(resolve, 1_500));
+          const nextItems = await listAdminSigningItems();
+          const current = nextItems.find(
+            (candidate) => candidate.id === input.item.id,
+          );
+          if (
+            current?.finalScanStatus === "infected" ||
+            current?.finalScanStatus === "failed"
+          ) {
+            throw new Error(
+              "The consultant-signed PDF did not pass security review.",
+            );
+          }
+          if (
+            current?.finalScanStatus === "clean" &&
+            current.providerStatus === "consultant_signed"
+          ) {
+            sourceReady = true;
+            break;
+          }
+        }
+        if (!sourceReady) {
+          throw new Error(
+            "The source PDF is still being scanned. Close this message and try Review & sign again shortly.",
+          );
+        }
+      }
+
+      await createPortalCountersignature({
+        assignedDocumentId: input.item.id,
+        signerName: input.signerName,
+        signerTitle: input.signerTitle,
+        signatureImageDataUrl: input.signatureImageDataUrl,
+        confirmed: true,
+      });
+      await refreshItems();
+    }
+    setMessage(
+      "DeepBridge signed the agreement. The final PDF and its audit certificate are undergoing the final security scan and will become downloadable automatically.",
+    );
+  }
+
+  async function downloadCompleted(
+    item: AdminSigningItem,
+    kind: "final" | "certificate",
+  ) {
+    setBusyId(item.id);
+    setMessage("");
+    try {
+      if (demo) {
+        setMessage(
+          kind === "final"
+            ? "Final signed PDF download requested."
+            : "Audit certificate download requested.",
+        );
+      } else {
+        const result = await getDocumentAccess(item.id, kind);
+        if (result.url)
+          window.open(result.url, "_blank", "noopener,noreferrer");
+      }
+    } catch (downloadError) {
+      setMessage(
+        downloadError instanceof Error
+          ? downloadError.message
+          : "The completed document is not available.",
+      );
+    } finally {
+      setBusyId("");
+    }
+  }
+
   return (
     <>
       <PageHeader
@@ -2856,30 +2960,30 @@ function AdminSigningPage() {
         <article>
           <span>1</span>
           <p>
-            <strong>Send from Drive</strong>
+            <strong>Receive consultant signature</strong>
             <small>
-              Open the approved PDF, add consultant and DeepBridge signature
-              fields, then request signatures.
+              Use Google Workspace or let the consultant return the complete
+              signed PDF through the protected portal.
             </small>
           </p>
         </article>
         <article>
           <span>2</span>
           <p>
-            <strong>Record progress</strong>
+            <strong>Review &amp; sign</strong>
             <small>
-              Confirm here when Google sends the request and when the consultant
-              has signed.
+              Review every page, confirm your signing authority and add the
+              DeepBridge electronic countersignature.
             </small>
           </p>
         </article>
         <article>
           <span>3</span>
           <p>
-            <strong>Import completion</strong>
+            <strong>Download completion</strong>
             <small>
-              Upload the completed PDF and Google audit trail. Both remain
-              quarantined until clean.
+              After the final scan, download the countersigned PDF and its audit
+              certificate whenever needed.
             </small>
           </p>
         </article>
@@ -2965,8 +3069,16 @@ function AdminSigningPage() {
                         Record consultant signed
                       </button>
                     ) : item.status === "awaiting_deepbridge" ? (
-                      item.provider === "manual_upload" ? (
-                        <div className="portal-table-actions">
+                      <div className="portal-table-actions">
+                        <button
+                          className="portal-table-primary-action"
+                          type="button"
+                          disabled={busyId === item.id}
+                          onClick={() => setCountersignSelected(item)}
+                        >
+                          Review &amp; sign
+                        </button>
+                        {item.provider === "manual_upload" ? (
                           <button
                             type="button"
                             disabled={busyId === item.id}
@@ -2974,22 +3086,33 @@ function AdminSigningPage() {
                               void downloadConsultantUpload(item)
                             }
                           >
-                            Download signed PDF
+                            Download consultant PDF
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => setSelected(item)}
-                          >
-                            Upload countersigned pack
-                          </button>
-                        </div>
-                      ) : (
+                        ) : null}
                         <button type="button" onClick={() => setSelected(item)}>
-                          Upload completed pack
+                          Upload externally signed pack
                         </button>
-                      )
+                      </div>
                     ) : item.status === "completed" ? (
-                      <span className="portal-table-complete">Complete</span>
+                      <div className="portal-table-actions">
+                        <button
+                          className="portal-table-primary-action"
+                          type="button"
+                          disabled={busyId === item.id}
+                          onClick={() => void downloadCompleted(item, "final")}
+                        >
+                          Download signed PDF
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busyId === item.id}
+                          onClick={() =>
+                            void downloadCompleted(item, "certificate")
+                          }
+                        >
+                          Download audit certificate
+                        </button>
+                      </div>
                     ) : null}
                   </td>
                 </tr>
@@ -3010,7 +3133,275 @@ function AdminSigningPage() {
           onUpload={uploadPack}
         />
       ) : null}
+      {countersignSelected ? (
+        <AdminCountersignDialog
+          item={countersignSelected}
+          defaultSignerName={snapshot.profile.fullName}
+          onClose={() => setCountersignSelected(null)}
+          onReviewConsultantPdf={downloadConsultantUpload}
+          onSign={countersign}
+        />
+      ) : null}
     </>
+  );
+}
+
+async function typedSignatureImage(name: string) {
+  if ("fonts" in document)
+    await document.fonts.load("116px AlluraSignature");
+  const canvas = document.createElement("canvas");
+  canvas.width = 1_200;
+  canvas.height = 300;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("The signature preview is not available.");
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "#0b3c43";
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  let size = 152;
+  do {
+    context.font = `${size}px AlluraSignature, "Brush Script MT", cursive`;
+    if (context.measureText(name).width <= 1_070) break;
+    size -= 6;
+  } while (size > 66);
+  context.fillText(name, canvas.width / 2, canvas.height / 2 + 8);
+  return canvas.toDataURL("image/png");
+}
+
+function AdminCountersignDialog({
+  item,
+  defaultSignerName,
+  onClose,
+  onReviewConsultantPdf,
+  onSign,
+}: {
+  item: AdminSigningItem;
+  defaultSignerName: string;
+  onClose: () => void;
+  onReviewConsultantPdf: (item: AdminSigningItem) => Promise<void>;
+  onSign: (input: {
+    item: AdminSigningItem;
+    consultantSignedPdf: File | null;
+    signerName: string;
+    signerTitle: string;
+    signatureImageDataUrl: string;
+  }) => Promise<void>;
+}) {
+  const [consultantSignedPdf, setConsultantSignedPdf] = useState<File | null>(
+    null,
+  );
+  const [signerName, setSignerName] = useState(
+    defaultSignerName || "Yon Wallace",
+  );
+  const [signerTitle, setSignerTitle] = useState(
+    "Director, DeepBridge Advisory",
+  );
+  const [confirmed, setConfirmed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState("");
+  const [error, setError] = useState("");
+  const usesStoredConsultantPdf = item.provider === "manual_upload";
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!usesStoredConsultantPdf && !consultantSignedPdf) {
+      setError("Choose the PDF that already contains the consultant signature.");
+      return;
+    }
+    if (consultantSignedPdf) {
+      if (consultantSignedPdf.type !== "application/pdf") {
+        setError("Choose a PDF document.");
+        return;
+      }
+      if (consultantSignedPdf.size > 25 * 1024 * 1024) {
+        setError("The PDF must be 25 MB or smaller.");
+        return;
+      }
+    }
+    if (!confirmed) return;
+    setBusy(true);
+    setError("");
+    setProgress(
+      consultantSignedPdf
+        ? "Scanning the consultant-signed PDF before signing…"
+        : "Creating the DeepBridge countersignature…",
+    );
+    try {
+      const signatureImageDataUrl = await typedSignatureImage(signerName.trim());
+      await onSign({
+        item,
+        consultantSignedPdf,
+        signerName: signerName.trim(),
+        signerTitle: signerTitle.trim(),
+        signatureImageDataUrl,
+      });
+      onClose();
+    } catch (signError) {
+      setError(
+        signError instanceof Error
+          ? signError.message
+          : "The agreement could not be countersigned.",
+      );
+      setProgress("");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="portal-modal-backdrop" role="presentation">
+      <div
+        className="portal-modal portal-signature-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="countersign-title"
+      >
+        <button
+          type="button"
+          className="portal-modal-close"
+          onClick={onClose}
+          aria-label="Close countersignature"
+          disabled={busy}
+        >
+          ×
+        </button>
+        <p className="portal-kicker">DeepBridge countersignature</p>
+        <h2 id="countersign-title">{item.title}</h2>
+        <p>
+          Review the consultant-signed agreement, then sign it electronically
+          for DeepBridge. The portal will append a tamper-evident
+          countersignature page and create a separate audit certificate.
+        </p>
+        <form className="portal-form" onSubmit={submit}>
+          <div className="portal-signing-step">
+            <span>1</span>
+            <div>
+              <strong>Consultant-signed PDF</strong>
+              {usesStoredConsultantPdf ? (
+                <>
+                  <p>
+                    The consultant upload is stored privately and has passed
+                    security review.
+                  </p>
+                  <button
+                    className="portal-button portal-button-secondary"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void onReviewConsultantPdf(item)}
+                  >
+                    Review consultant PDF
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p>
+                    Choose the PDF downloaded from Google or returned by the
+                    consultant. It will be scanned before DeepBridge signs it.
+                  </p>
+                  <label htmlFor="consultant-signed-source">
+                    Consultant-signed PDF
+                  </label>
+                  <input
+                    id="consultant-signed-source"
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    required
+                    disabled={busy}
+                    onChange={(event) =>
+                      setConsultantSignedPdf(event.target.files?.[0] ?? null)
+                    }
+                  />
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="portal-signing-step">
+            <span>2</span>
+            <div>
+              <strong>DeepBridge signatory</strong>
+              <label htmlFor="deepbridge-signer-name">Full name</label>
+              <input
+                id="deepbridge-signer-name"
+                value={signerName}
+                required
+                minLength={2}
+                maxLength={100}
+                disabled={busy}
+                onChange={(event) => setSignerName(event.target.value)}
+              />
+              <label htmlFor="deepbridge-signer-title">Title / authority</label>
+              <input
+                id="deepbridge-signer-title"
+                value={signerTitle}
+                required
+                minLength={2}
+                maxLength={120}
+                disabled={busy}
+                onChange={(event) => setSignerTitle(event.target.value)}
+              />
+              <div className="portal-signature-preview" aria-label="Signature preview">
+                <small>Electronic signature preview</small>
+                <span>{signerName || "Your name"}</span>
+                <p>{signerTitle || "Signing authority"}</p>
+              </div>
+            </div>
+          </div>
+
+          <label className="portal-signature-consent">
+            <input
+              type="checkbox"
+              checked={confirmed}
+              disabled={busy}
+              onChange={(event) => setConfirmed(event.target.checked)}
+            />
+            <span>
+              I have reviewed the complete consultant-signed agreement, I am
+              authorised to sign for DeepBridge Advisory, and I intend this
+              electronic signature to bind DeepBridge to this document.
+            </span>
+          </label>
+
+          <p className="portal-form-message neutral">
+            This is a standard electronic signature with an audit record. Use
+            Google Workspace or a qualified trust provider if a qualified
+            electronic signature is contractually required.
+          </p>
+          {progress ? (
+            <p className="portal-form-message success" role="status">
+              {progress}
+            </p>
+          ) : null}
+          {error ? (
+            <p className="portal-form-message error" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <div className="portal-modal-actions">
+            <button
+              className="portal-button portal-button-secondary"
+              type="button"
+              onClick={onClose}
+              disabled={busy}
+            >
+              Cancel
+            </button>
+            <button
+              className="portal-button portal-button-primary"
+              type="submit"
+              disabled={
+                busy ||
+                !confirmed ||
+                !signerName.trim() ||
+                !signerTitle.trim() ||
+                (!usesStoredConsultantPdf && !consultantSignedPdf)
+              }
+            >
+              {busy ? "Signing securely…" : "Sign for DeepBridge"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }
 

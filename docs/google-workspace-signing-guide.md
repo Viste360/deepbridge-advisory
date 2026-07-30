@@ -134,11 +134,15 @@ Use this only when the Google Workspace request cannot be completed.
    scan reports `clean`.
 4. In **Administration → Signing**, DeepBridge downloads the cleared
    consultant-signed PDF, reviews it and countersigns outside the portal.
-5. DeepBridge uploads the final countersigned PDF together with a PDF audit
-   note or signing evidence.
-6. The portal marks the agreement complete only after both final files pass
-   their security scans. The consultant can then download the locked final PDF
-   and audit evidence.
+5. DeepBridge can now choose **Review & sign** to countersign inside the portal.
+   The authenticated administrator confirms their own name, signing authority
+   and intent. The portal appends a branded countersignature record and creates
+   the audit certificate automatically.
+6. Alternatively, DeepBridge may sign outside the portal and upload the final
+   countersigned PDF together with a PDF audit note or signing evidence.
+7. The portal marks the agreement complete only after both final files pass
+   their security scans. The administrator and consultant can then download the
+   locked final PDF and audit evidence.
 
 The consultant upload never completes the agreement by itself and cannot
 replace the approved source version.
