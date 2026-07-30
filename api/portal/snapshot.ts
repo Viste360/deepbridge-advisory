@@ -31,7 +31,11 @@ export default async function handler(
         .eq("id", actor.user.id)
         .single(),
       supabase.from("portal_assignment_summary").select("*").limit(1).single(),
-      supabase.from("portal_document_summary").select("*").order("sort_order"),
+      supabase
+        .from("portal_document_summary")
+        .select("*")
+        .neq("status", "superseded")
+        .order("sort_order"),
       supabase
         .from("portal_compliance_summary")
         .select("*")
