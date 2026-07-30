@@ -1,4 +1,5 @@
 import { createSign, randomUUID } from "node:crypto";
+import { getVercelOidcToken } from "@vercel/oidc";
 
 function base64Url(value: string | Buffer) {
   return Buffer.from(value)
@@ -14,15 +15,43 @@ function driveConfiguration() {
     ?.replace(/\\n/g, "\n")
     .trim();
   const folderId = process.env.GOOGLE_DRIVE_CONTRACTS_FOLDER_ID?.trim();
-  return { clientEmail, privateKey, folderId };
+  const projectNumber = process.env.GCP_PROJECT_NUMBER?.trim();
+  const workloadIdentityPoolId =
+    process.env.GCP_WORKLOAD_IDENTITY_POOL_ID?.trim();
+  const workloadIdentityProviderId =
+    process.env.GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID?.trim();
+  return {
+    clientEmail,
+    privateKey,
+    folderId,
+    projectNumber,
+    workloadIdentityPoolId,
+    workloadIdentityProviderId,
+  };
 }
 
 export function googleDriveArchiveConfigured() {
-  const { clientEmail, privateKey, folderId } = driveConfiguration();
-  return Boolean(clientEmail && privateKey && folderId);
+  const {
+    clientEmail,
+    privateKey,
+    folderId,
+    projectNumber,
+    workloadIdentityPoolId,
+    workloadIdentityProviderId,
+  } = driveConfiguration();
+  const keyAuthentication = Boolean(clientEmail && privateKey);
+  const workloadIdentityAuthentication = Boolean(
+    clientEmail &&
+      projectNumber &&
+      workloadIdentityPoolId &&
+      workloadIdentityProviderId,
+  );
+  return Boolean(
+    folderId && (keyAuthentication || workloadIdentityAuthentication),
+  );
 }
 
-async function getAccessToken() {
+async function getServiceAccountKeyAccessToken() {
   const { clientEmail, privateKey } = driveConfiguration();
   if (!clientEmail || !privateKey)
     throw new Error("Google Drive archive credentials are not configured.");
@@ -59,6 +88,83 @@ async function getAccessToken() {
       result.error_description || "Google Drive authentication failed.",
     );
   return result.access_token;
+}
+
+async function getWorkloadIdentityAccessToken() {
+  const {
+    clientEmail,
+    projectNumber,
+    workloadIdentityPoolId,
+    workloadIdentityProviderId,
+  } = driveConfiguration();
+  if (
+    !clientEmail ||
+    !projectNumber ||
+    !workloadIdentityPoolId ||
+    !workloadIdentityProviderId
+  ) {
+    throw new Error("Google Drive workload identity is not configured.");
+  }
+  const audience = `//iam.googleapis.com/projects/${projectNumber}/locations/global/workloadIdentityPools/${workloadIdentityPoolId}/providers/${workloadIdentityProviderId}`;
+  const subjectToken = await getVercelOidcToken();
+  const exchangeResponse = await fetch(
+    "https://sts.googleapis.com/v1/token",
+    {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        audience,
+        grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
+        requested_token_type: "urn:ietf:params:oauth:token-type:access_token",
+        scope: "https://www.googleapis.com/auth/cloud-platform",
+        subject_token: subjectToken,
+        subject_token_type: "urn:ietf:params:oauth:token-type:jwt",
+      }),
+    },
+  );
+  const exchangeResult = (await exchangeResponse.json()) as {
+    access_token?: string;
+    error_description?: string;
+  };
+  if (!exchangeResponse.ok || !exchangeResult.access_token) {
+    throw new Error(
+      exchangeResult.error_description ||
+        "Google workload identity exchange failed.",
+    );
+  }
+
+  const impersonationResponse = await fetch(
+    `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${encodeURIComponent(clientEmail)}:generateAccessToken`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${exchangeResult.access_token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        scope: ["https://www.googleapis.com/auth/drive.file"],
+        lifetime: "3600s",
+      }),
+    },
+  );
+  const impersonationResult = (await impersonationResponse.json()) as {
+    accessToken?: string;
+    error?: { message?: string };
+  };
+  if (!impersonationResponse.ok || !impersonationResult.accessToken) {
+    throw new Error(
+      impersonationResult.error?.message ||
+        "Google service account impersonation failed.",
+    );
+  }
+  return impersonationResult.accessToken;
+}
+
+async function getAccessToken() {
+  const { privateKey } = driveConfiguration();
+  return privateKey
+    ? getServiceAccountKeyAccessToken()
+    : getWorkloadIdentityAccessToken();
 }
 
 export async function archivePdfToGoogleDrive(input: {
