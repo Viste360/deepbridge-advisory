@@ -38,9 +38,11 @@ import {
   recordGoogleSigningStep,
   removeAdminDocumentVersion,
   reviewComplianceSubmission,
+  sendConsultantPortalLink,
   sendMagicLink,
   signInWithGoogle,
   signOutPortal,
+  updateAdminConsultant,
   uploadComplianceFile,
   uploadComplianceFileAsAdmin,
   uploadCompletedSigningPack,
@@ -285,6 +287,7 @@ function AuthCallbackPage() {
     const code = search.get("code") || undefined;
     const tokenHash = search.get("token_hash") || undefined;
     const type = search.get("type") || undefined;
+    const notice = search.get("notice") || undefined;
     const hasVerification = Boolean(code || (tokenHash && type));
     const complete = hasVerification
       ? completeAuthCallback({ code, tokenHash, type }).then(() =>
@@ -296,7 +299,9 @@ function AuthCallbackPage() {
         if (!active) return;
         if (session)
           window.location.replace(
-            session.role === "admin" ? "/admin" : "/dashboard",
+            session.role === "admin"
+              ? "/admin"
+              : `/dashboard${notice ? `?notice=${encodeURIComponent(notice)}` : ""}`,
           );
         else setError("The secure link could not create a portal session.");
       })
@@ -635,6 +640,7 @@ function ProgressRing({ complete, total }: { complete: number; total: number }) 
 
 function ConsultantDashboard() {
   const { snapshot } = usePortal();
+  const notice = new URLSearchParams(window.location.search).get("notice");
   const visibleTasks = snapshot.tasks.filter((task) => !task.internal);
   const completedTasks = visibleTasks.filter((task) => task.complete).length;
   const outstandingDocs = snapshot.documents.filter(
@@ -655,6 +661,15 @@ function ConsultantDashboard() {
         title={`Good morning, ${snapshot.profile.fullName.split(" ")[0]}.`}
         description="Here is what needs your attention before the assignment begins."
       />
+
+      {notice === "documents-ready" ? (
+        <div className="portal-form-message success portal-dashboard-notice">
+          <strong>Your DeepBridge documents are ready.</strong>{" "}
+          Open Agreements and guidance to review or download your signed
+          contract and consultant pack.{" "}
+          <Link to="/documents">View documents</Link>
+        </div>
+      ) : null}
 
       <section className="portal-welcome-grid">
         <article className="portal-feature-card">
@@ -1645,6 +1660,7 @@ function AdminDashboard() {
             accessStatus: "active",
             onboardingComplete: 1,
             onboardingTotal: 14,
+            documents: [],
           },
         ]
       : [],
@@ -1780,6 +1796,11 @@ function AdminDashboard() {
 function AdminConsultantsPage() {
   const { snapshot, demo } = usePortal();
   const [showInvite, setShowInvite] = useState(false);
+  const [selectedConsultant, setSelectedConsultant] =
+    useState<AdminConsultant | null>(null);
+  const [documentCatalogue, setDocumentCatalogue] = useState<
+    AdminDocumentCatalogueItem[]
+  >([]);
   const [consultants, setConsultants] = useState<AdminConsultant[]>(
     demo
       ? [
@@ -1799,6 +1820,16 @@ function AdminConsultantsPage() {
             onboardingComplete: snapshot.tasks.filter((task) => task.complete)
               .length,
             onboardingTotal: snapshot.tasks.length,
+            documents: snapshot.documents.map((document) => ({
+              assignedDocumentId: document.id,
+              documentId: document.id,
+              slug: document.id,
+              title: document.title,
+              category: document.category,
+              status: document.status,
+              versionLabel: document.version,
+              selected: true,
+            })),
           },
         ]
       : [],
@@ -1824,9 +1855,12 @@ function AdminConsultantsPage() {
   useEffect(() => {
     if (demo) return;
     let active = true;
-    void listAdminConsultants()
-      .then((items) => {
-        if (active) setConsultants(items);
+    void Promise.all([listAdminConsultants(), listAdminDocumentCatalogue()])
+      .then(([items, catalogue]) => {
+        if (active) {
+          setConsultants(items);
+          setDocumentCatalogue(catalogue.documents);
+        }
       })
       .catch((loadError: unknown) => {
         if (!active) return;
@@ -1895,11 +1929,17 @@ function AdminConsultantsPage() {
                   {consultant.onboardingTotal}
                 </td>
                 <td>
-                  {consultant.lastLoginAt ? (
-                    <span>Last login {consultant.lastLoginAt}</span>
-                  ) : (
-                    <span>Awaiting first sign-in</span>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedConsultant(consultant)}
+                  >
+                    Manage consultant
+                  </button>
+                  <span>
+                    {consultant.lastLoginAt
+                      ? `Last login ${consultant.lastLoginAt}`
+                      : "Awaiting first sign-in"}
+                  </span>
                 </td>
               </tr>
             ))}
@@ -1928,7 +1968,323 @@ function AdminConsultantsPage() {
           onInvited={refreshConsultants}
         />
       ) : null}
+      {selectedConsultant ? (
+        <ManageConsultantDialog
+          consultant={selectedConsultant}
+          catalogue={
+            demo
+              ? createDemoDocumentCatalogue(snapshot.documents)
+              : documentCatalogue
+          }
+          demo={demo}
+          onClose={() => setSelectedConsultant(null)}
+          onUpdated={async () => {
+            await refreshConsultants();
+          }}
+        />
+      ) : null}
     </>
+  );
+}
+
+function ManageConsultantDialog({
+  consultant,
+  catalogue,
+  demo,
+  onClose,
+  onUpdated,
+}: {
+  consultant: AdminConsultant;
+  catalogue: AdminDocumentCatalogueItem[];
+  demo: boolean;
+  onClose: () => void;
+  onUpdated: () => Promise<void>;
+}) {
+  const [fullName, setFullName] = useState(consultant.fullName);
+  const [businessName, setBusinessName] = useState(consultant.businessName);
+  const [email, setEmail] = useState(consultant.email);
+  const [selectedIds, setSelectedIds] = useState(
+    () =>
+      new Set(
+        consultant.documents
+          .filter((document) => document.selected)
+          .map((document) => document.documentId),
+      ),
+  );
+  const [savedDetails, setSavedDetails] = useState(() => ({
+    fullName: consultant.fullName,
+    businessName: consultant.businessName,
+    email: consultant.email.toLowerCase(),
+    documentIds: new Set(
+      consultant.documents
+        .filter((document) => document.selected)
+        .map((document) => document.documentId),
+    ),
+  }));
+  const [message, setMessage] = useState(
+    `Hello ${consultant.fullName.split(" ")[0]}, your signed DeepBridge contract and consultant documents are ready in the secure portal. Use the secure link in this email to sign in and download them.`,
+  );
+  const [feedback, setFeedback] = useState<{
+    tone: "success" | "error" | "warning";
+    message: string;
+  } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [sending, setSending] = useState(false);
+  const completedByDocumentId = new Map(
+    consultant.documents
+      .filter(
+        (document) => document.selected && document.status === "completed",
+      )
+      .map((document) => [document.documentId, document]),
+  );
+  const dirty =
+    fullName.trim() !== savedDetails.fullName ||
+    businessName.trim() !== savedDetails.businessName ||
+    email.trim().toLowerCase() !== savedDetails.email ||
+    [...savedDetails.documentIds].some(
+      (documentId) => !selectedIds.has(documentId),
+    ) ||
+    [...selectedIds].some(
+      (documentId) => !savedDetails.documentIds.has(documentId),
+    );
+
+  function toggleDocument(documentId: string) {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(documentId)) next.delete(documentId);
+      else next.add(documentId);
+      return next;
+    });
+    setFeedback(null);
+  }
+
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setFeedback(null);
+    try {
+      if (!demo) {
+        const result = await updateAdminConsultant({
+          consultantId: consultant.id,
+          fullName,
+          businessName,
+          email,
+          includedDocumentIds: [...selectedIds],
+        });
+        setFeedback({
+          tone: result.retainedCompletedDocuments.length
+            ? "warning"
+            : "success",
+          message: result.retainedCompletedDocuments.length
+            ? `Saved. Completed documents were retained for the audit record: ${result.retainedCompletedDocuments.join(", ")}.`
+            : "Consultant details and document access have been saved.",
+        });
+      } else {
+        setFeedback({
+          tone: "success",
+          message: "Preview saved. No live records were changed.",
+        });
+      }
+      setSavedDetails({
+        fullName: fullName.trim(),
+        businessName: businessName.trim(),
+        email: email.trim().toLowerCase(),
+        documentIds: new Set(selectedIds),
+      });
+      await onUpdated();
+    } catch (saveError) {
+      setFeedback({
+        tone: "error",
+        message:
+          saveError instanceof Error
+            ? saveError.message
+            : "The consultant could not be updated.",
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function sendPortalEmail() {
+    setSending(true);
+    setFeedback(null);
+    try {
+      if (dirty)
+        throw new Error(
+          "Save the consultant details and document selection before sending the email.",
+        );
+      const result = demo
+        ? { message: "Preview complete. No email was sent." }
+        : await sendConsultantPortalLink({
+            consultantId: consultant.id,
+            message,
+          });
+      setFeedback({ tone: "success", message: result.message });
+    } catch (sendError) {
+      setFeedback({
+        tone: "error",
+        message:
+          sendError instanceof Error
+            ? sendError.message
+            : "The secure portal email could not be sent.",
+      });
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div className="portal-modal-backdrop" role="presentation">
+      <div
+        className="portal-modal portal-consultant-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="manage-consultant-title"
+      >
+        <button
+          type="button"
+          className="portal-modal-close"
+          onClick={onClose}
+          aria-label="Close consultant manager"
+        >
+          ×
+        </button>
+        <p className="portal-kicker">Consultant access</p>
+        <h2 id="manage-consultant-title">Manage {consultant.fullName}</h2>
+        <p>
+          Update the sign-in email, choose what appears in this consultant’s
+          portal, and send a secure documents-ready message.
+        </p>
+
+        <form className="portal-form" onSubmit={save}>
+          <div className="portal-consultant-fields">
+            <label>
+              Full name
+              <input
+                value={fullName}
+                onChange={(event) => setFullName(event.target.value)}
+                required
+              />
+            </label>
+            <label>
+              Business name
+              <input
+                value={businessName}
+                onChange={(event) => setBusinessName(event.target.value)}
+                required
+              />
+            </label>
+          </div>
+          <label>
+            Consultant sign-in email
+            <input
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              type="email"
+              required
+            />
+          </label>
+          <small>
+            Changing this replaces the existing test login. Save it before
+            sending the secure portal link.
+          </small>
+
+          <fieldset className="portal-package-picker">
+            <legend>Documents included in this consultant’s portal</legend>
+            <p>
+              Unchecking an unfinished document removes it from the active
+              package. Completed records remain locked for audit. Upload or
+              replace master PDFs in <Link to="/admin/documents">Documents</Link>.
+            </p>
+            {catalogue.map((document) => {
+              const completed = completedByDocumentId.get(document.id);
+              const available = document.versions.some(
+                (version) =>
+                  version.locked &&
+                  version.scanStatus === "clean" &&
+                  (!version.assignmentId ||
+                    version.assignmentId === consultant.assignment?.id),
+              );
+              const disabled = Boolean(completed) || !available;
+              return (
+                <label
+                  className={`portal-package-option${disabled ? " disabled" : ""}`}
+                  key={document.id}
+                >
+                  <input
+                    type="checkbox"
+                    checked={
+                      Boolean(completed) || selectedIds.has(document.id)
+                    }
+                    disabled={disabled}
+                    onChange={() => toggleDocument(document.id)}
+                  />
+                  <span>
+                    <strong>{document.title}</strong>
+                    <small>
+                      {completed
+                        ? `Signed ${completed.versionLabel} — retained for audit`
+                        : available
+                          ? `${document.category} · ready to publish`
+                          : "Upload and complete the security scan first"}
+                    </small>
+                  </span>
+                </label>
+              );
+            })}
+          </fieldset>
+
+          <div className="portal-modal-actions">
+            <button
+              className="portal-button portal-button-secondary"
+              type="button"
+              onClick={onClose}
+            >
+              Cancel
+            </button>
+            <button
+              className="portal-button portal-button-primary"
+              type="submit"
+              disabled={saving}
+            >
+              {saving ? "Saving…" : "Save consultant"}
+            </button>
+          </div>
+        </form>
+
+        <div className="portal-consultant-email">
+          <p className="portal-card-label">Secure portal email</p>
+          <label htmlFor="consultant-email-message">Consultant message</label>
+          <textarea
+            id="consultant-email-message"
+            value={message}
+            onChange={(event) => setMessage(event.target.value)}
+            rows={4}
+            maxLength={600}
+          />
+          <small>
+            The secure link is sent to {email.trim()} through the portal’s
+            configured email service and expires automatically.
+          </small>
+          <button
+            className="portal-button portal-button-primary"
+            type="button"
+            onClick={() => void sendPortalEmail()}
+            disabled={sending || dirty}
+          >
+            {sending ? "Sending…" : "Send documents-ready link"}
+          </button>
+        </div>
+        {feedback ? (
+          <p
+            className={`portal-form-message ${feedback.tone}`}
+            role="status"
+          >
+            {feedback.message}
+          </p>
+        ) : null}
+      </div>
+    </div>
   );
 }
 

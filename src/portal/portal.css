@@ -264,6 +264,7 @@
 }
 
 .portal-form input,
+.portal-form textarea,
 .portal-role-switch select {
   width: 100%;
   min-height: 50px;
@@ -275,9 +276,23 @@
 }
 
 .portal-form input:focus,
+.portal-form textarea:focus,
 .portal-role-switch select:focus {
   border-color: #247a75;
   outline: 3px solid rgba(67, 208, 199, 0.2);
+}
+
+.portal-form textarea,
+.portal-consultant-email textarea {
+  width: 100%;
+  padding: 12px 14px;
+  resize: vertical;
+  border: 1px solid #cbd0cc;
+  border-radius: 2px;
+  color: var(--portal-ink);
+  background: #fff;
+  font: inherit;
+  line-height: 1.5;
 }
 
 .portal-form input[type="file"] {
@@ -1794,6 +1809,114 @@
   width: min(100%, 760px);
 }
 
+.portal-consultant-modal {
+  width: min(100%, 880px);
+}
+
+.portal-consultant-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.portal-consultant-fields label,
+.portal-consultant-email {
+  display: grid;
+  gap: 8px;
+}
+
+.portal-package-picker {
+  display: grid;
+  margin: 12px 0 0;
+  padding: 0;
+  gap: 8px;
+  border: 0;
+}
+
+.portal-package-picker legend {
+  margin-bottom: 5px;
+  color: var(--portal-ink);
+  font-size: 0.86rem;
+  font-weight: 850;
+}
+
+.portal-package-picker > p {
+  margin: 0 0 8px;
+  color: var(--portal-muted);
+  font-size: 0.7rem;
+  line-height: 1.55;
+}
+
+.portal-package-picker a,
+.portal-dashboard-notice a {
+  color: #176762;
+  font-weight: 800;
+}
+
+.portal-package-option {
+  display: grid;
+  min-height: 62px;
+  padding: 11px 13px;
+  align-items: center;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 12px;
+  border: 1px solid var(--portal-line);
+  background: rgba(255, 255, 255, 0.65);
+  cursor: pointer;
+}
+
+.portal-package-option.disabled {
+  cursor: default;
+  opacity: 0.66;
+}
+
+.portal-package-option input {
+  width: 18px;
+  min-height: 18px;
+  padding: 0;
+}
+
+.portal-package-option span {
+  display: grid;
+  gap: 3px;
+}
+
+.portal-package-option strong {
+  font-size: 0.75rem;
+}
+
+.portal-package-option small {
+  margin: 0;
+  color: var(--portal-muted);
+  font-size: 0.64rem;
+}
+
+.portal-consultant-email {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--portal-line);
+}
+
+.portal-consultant-email label {
+  color: var(--portal-ink-soft);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.portal-consultant-email small {
+  color: var(--portal-muted);
+  font-size: 0.68rem;
+}
+
+.portal-consultant-email .portal-button {
+  width: fit-content;
+  margin-top: 4px;
+}
+
+.portal-dashboard-notice {
+  margin: -18px 0 34px;
+}
+
 .portal-signature-modal .portal-form {
   gap: 18px;
 }
@@ -2412,6 +2535,14 @@
   }
 
   .portal-modal-actions .portal-button {
+    width: 100%;
+  }
+
+  .portal-consultant-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .portal-consultant-email .portal-button {
     width: 100%;
   }
 }

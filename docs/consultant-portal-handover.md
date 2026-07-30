@@ -111,6 +111,23 @@ an external operational dependency and must be connected before production.
    limits.
 10. Set and test the documented backup, point-in-time recovery and retention
     arrangements.
+11. In **Auth → Email Templates → Magic Link**, set the subject to
+    `Your DeepBridge documents are ready` and use the consultant metadata in
+    the message:
+
+    ```html
+    <h2>Hello {{ .Data.first_name }},</h2>
+    <p>{{ .Data.portal_notice }}</p>
+    <p><a href="{{ .ConfirmationURL }}">Open your secure DeepBridge portal</a></p>
+    <p>This private, one-use sign-in link expires automatically. If you did not
+    expect this email, contact hello@deepbridgeadvisory.co.uk.</p>
+    ```
+
+    Supabase exposes `auth.users.user_metadata` to the template as
+    `{{ .Data }}`. The portal updates this metadata immediately before sending
+    each documents-ready link so the email is addressed to the selected
+    consultant. Confirm the hosted Auth SMTP sender is
+    `hello@deepbridgeadvisory.co.uk`.
 
 The checked-in `supabase/config.toml` contains the local form of the invitation
 hook configuration. Hosted-project configuration should be confirmed in the
@@ -243,6 +260,13 @@ After the production environment is connected:
    tax records.
 6. Send each Google signing request only after its approved source version has
    passed the portal publication checks.
+
+After the test is complete, open **Administration → Consultants → Manage
+consultant**. Replace the test email with Roland's confirmed business email,
+choose only the documents that belong in his active package, save, and use
+**Send documents-ready link**. Unfinished items that are unchecked are removed
+from his active portal package. Completed agreements cannot be deleted or
+detached because their signed copy and audit history must remain intact.
 
 The placeholder email used by the local review data must not be treated as
 Roland's real address.
