@@ -9,6 +9,7 @@ import {
   type PDFFont,
   rgb,
 } from "pdf-lib";
+import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import {
   enforceRateLimit,
   getSupabaseAdmin,
@@ -117,6 +118,128 @@ function drawKeyValue(
   });
 }
 
+type SignatureBlockPlacement = {
+  pageIndex: number;
+  signature: { x: number; y: number; width: number };
+  date: { x: number; y: number; width: number };
+};
+
+export async function locateDeepBridgeSignatureBlock(
+  sourceBytes: Uint8Array,
+): Promise<SignatureBlockPlacement | null> {
+  const source = await getDocument({
+    data: sourceBytes.slice(),
+    useSystemFonts: true,
+  }).promise;
+
+  try {
+    for (let pageNumber = source.numPages; pageNumber >= 1; pageNumber -= 1) {
+      const page = await source.getPage(pageNumber);
+      const viewport = page.getViewport({ scale: 1 });
+      const content = await page.getTextContent();
+      const items = content.items.flatMap((item) =>
+        "str" in item
+          ? [
+              {
+                text: item.str.replace(/\s+/g, " ").trim(),
+                x: item.transform[4],
+                y: item.transform[5],
+                width: item.width,
+                fontSize: Math.hypot(item.transform[0], item.transform[1]),
+              },
+            ]
+          : [],
+      );
+      const signatures = items.filter(
+        (item) =>
+          /^signature\s*:/i.test(item.text) && item.x < viewport.width * 0.52,
+      );
+      const dates = items.filter(
+        (item) =>
+          /^date\s*:/i.test(item.text) && item.x < viewport.width * 0.52,
+      );
+
+      for (const signature of signatures) {
+        const date = dates.find(
+          (candidate) =>
+            candidate.y < signature.y &&
+            signature.y - candidate.y >= 10 &&
+            signature.y - candidate.y <= 70 &&
+            Math.abs(candidate.x - signature.x) <= 45,
+        );
+        if (!date) continue;
+        return {
+          pageIndex: pageNumber - 1,
+          signature: {
+            x: signature.x,
+            y: signature.y,
+            width: Math.min(signature.width, signature.fontSize * 5.1),
+          },
+          date: {
+            x: date.x,
+            y: date.y,
+            width: Math.min(date.width, date.fontSize * 2.7),
+          },
+        };
+      }
+    }
+    return null;
+  } finally {
+    await source.destroy();
+  }
+}
+
+function formatSigningDate(value: Date) {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(value);
+}
+
+function drawSignatureInExecutionBlock(
+  page: PDFPage,
+  placement: SignatureBlockPlacement,
+  signature: Awaited<ReturnType<PDFDocument["embedPng"]>>,
+  regular: PDFFont,
+  signedAt: Date,
+) {
+  const signatureRatio = signature.width / signature.height;
+  const signatureHeight = 34;
+  const startX = placement.signature.x + placement.signature.width + 6;
+  const availableWidth = Math.max(90, page.getWidth() / 2 - startX - 20);
+  const signatureWidth = Math.min(
+    availableWidth,
+    signatureHeight * signatureRatio,
+  );
+  page.drawImage(signature, {
+    x: startX,
+    y: placement.signature.y - 13,
+    width: signatureWidth,
+    height: signatureHeight,
+  });
+
+  const dateText = formatSigningDate(signedAt);
+  const dateX = placement.date.x + placement.date.width + 6;
+  const dateSize = 9.5;
+  const dateWidth = regular.widthOfTextAtSize(dateText, dateSize);
+  page.drawRectangle({
+    x: dateX - 8,
+    y: placement.date.y - 2,
+    width: dateWidth + 12,
+    height: dateSize + 4,
+    color: rgb(1, 1, 1),
+  });
+  page.drawText(dateText, {
+    x: dateX,
+    y: placement.date.y,
+    size: dateSize,
+    font: regular,
+    color: rgb(0.03, 0.11, 0.15),
+  });
+}
+
 export async function createCountersignedPdf(input: {
   sourceBytes: Uint8Array;
   signatureBytes: Uint8Array;
@@ -153,9 +276,32 @@ export async function createCountersignedPdf(input: {
       "This PDF contains a certificate-based digital signature. Countersign it in Google Workspace to preserve that certificate, then upload the completed pack.",
     );
   }
+  let placement: SignatureBlockPlacement | null;
+  try {
+    placement = await locateDeepBridgeSignatureBlock(input.sourceBytes);
+  } catch {
+    throw new PortalHttpError(
+      400,
+      "The DeepBridge signature block could not be read. Use a searchable, unencrypted PDF or complete the countersignature in Google Workspace.",
+    );
+  }
+  if (!placement) {
+    throw new PortalHttpError(
+      409,
+      "The DeepBridge signature and date fields could not be located in this PDF. Use the approved agreement template or complete the countersignature in Google Workspace.",
+    );
+  }
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const signature = await pdf.embedPng(input.signatureBytes);
+  const executionPage = pdf.getPage(placement.pageIndex);
+  drawSignatureInExecutionBlock(
+    executionPage,
+    placement,
+    signature,
+    regular,
+    input.signedAt,
+  );
   const page = pdf.addPage([595.28, 841.89]);
   const ink = rgb(0.03, 0.11, 0.15);
   const teal = rgb(0.19, 0.7, 0.66);
@@ -478,7 +624,7 @@ export async function createAuditCertificate(input: {
     color: rgb(0.88, 0.95, 0.93),
   });
   page.drawText(
-    "The administrator authenticated to the private DeepBridge portal and confirmed both signing authority and intent. The portal appended the countersignature record to the reviewed PDF. Both artifacts are released only after malware scanning.",
+    "The administrator authenticated to the private DeepBridge portal and confirmed both signing authority and intent. The portal placed the signature and date in the original DeepBridge execution block and appended the countersignature record. Both artifacts are released only after malware scanning.",
     {
       x: 68,
       y: 154,
@@ -714,6 +860,9 @@ export default async function handler(
         signer_name: signerName,
         signer_title: signerTitle,
         signed_at: signedAt.toISOString(),
+        visible_signing_date: formatSigningDate(signedAt),
+        signature_placement:
+          "original_execution_block_and_appended_countersignature_record",
         source_storage_path: envelope.pending_final_storage_path,
         source_content_sha256: sourceHash,
         final_content_sha256: finalHash,
