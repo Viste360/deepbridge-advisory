@@ -1659,6 +1659,65 @@ function ProfilePage() {
   );
 }
 
+const adminPortalGuide = [
+  {
+    number: "1",
+    title: "Create organisations",
+    description:
+      "Add each legal entity once, then identify it as a client, consultant company, partner, end customer or DeepBridge entity.",
+    to: "/admin/organisations",
+    action: "Open organisations",
+  },
+  {
+    number: "2",
+    title: "Prepare the consultant",
+    description:
+      "Check the consultant's legal name, company and email. Keep the test email until the pack is ready, then change it before inviting them.",
+    to: "/admin/consultants",
+    action: "Open consultants",
+  },
+  {
+    number: "3",
+    title: "Create the assignment",
+    description:
+      "Link the consultant to the project and record the commercial summary, including the agreed day rate and start details.",
+    to: "/admin/assignments",
+    action: "Open assignments",
+  },
+  {
+    number: "4",
+    title: "Publish controlled documents",
+    description:
+      "Upload approved PDFs and use Add version for replacements. Published or signed records remain preserved for the audit trail.",
+    to: "/admin/documents",
+    action: "Open documents",
+  },
+  {
+    number: "5",
+    title: "Complete signing",
+    description:
+      "Review every consultant-signed PDF before countersigning. Download the completed PDF and certificate when the status is Completed.",
+    to: "/admin/signing",
+    action: "Open signing",
+  },
+  {
+    number: "6",
+    title: "Register company contracts",
+    description:
+      "Store client, consultant, partner and intercompany agreements here. Clean completed contracts are copied to the restricted Drive archive.",
+    to: "/admin/contracts",
+    action: "Open contracts",
+  },
+  {
+    number: "7",
+    title: "Close compliance and audit",
+    description:
+      "Approve or reject evidence in Compliance, then use Audit to confirm the recorded history of uploads, reviews, signatures and downloads.",
+    to: "/admin/compliance",
+    action: "Open compliance",
+  },
+] as const;
+
 function AdminDashboard() {
   const { snapshot, demo } = usePortal();
   const [consultants, setConsultants] = useState<AdminConsultant[]>(
@@ -1742,6 +1801,41 @@ function AdminDashboard() {
           <strong className="portal-stat-date">3 Aug</strong>
           <span>2026 · Kleintettau</span>
         </article>
+      </section>
+      <section
+        className="portal-section portal-admin-guide"
+        aria-labelledby="portal-operating-guide"
+      >
+        <div className="portal-section-heading">
+          <div>
+            <p className="portal-card-label">Operating guide</p>
+            <h2 id="portal-operating-guide">How to use the portal</h2>
+          </div>
+          <span>Follow this order for a new relationship or assignment.</span>
+        </div>
+        <div className="portal-admin-guide-grid">
+          {adminPortalGuide.map((step) => (
+            <article key={step.number}>
+              <span aria-hidden="true">{step.number}</span>
+              <div>
+                <h3>{step.title}</h3>
+                <p>{step.description}</p>
+                <Link to={step.to}>
+                  {step.action} <span aria-hidden="true">→</span>
+                </Link>
+              </div>
+            </article>
+          ))}
+        </div>
+        <div className="portal-admin-guide-rules">
+          <strong>Safe record handling</strong>
+          <p>
+            Test with your own email first. Change the consultant email only
+            when the final invitation is ready. Supersede or add a new version
+            instead of deleting completed records, and never share restricted
+            identity, banking or tax folders through a public Drive link.
+          </p>
+        </div>
       </section>
       <section className="portal-section">
         <div className="portal-section-heading">
