@@ -51,11 +51,23 @@ export default async function handler(
       : { data: [], error: null };
     if (membershipsError) throw membershipsError;
 
-    const { data: tasks, error: tasksError } = await admin
-      .from("onboarding_tasks")
-      .select("consultant_id, assignment_id, complete")
-      .in("consultant_id", profileIds);
-    if (tasksError) throw tasksError;
+    const [tasksResult, assignedDocumentsResult] = await Promise.all([
+      admin
+        .from("onboarding_tasks")
+        .select("consultant_id, assignment_id, complete")
+        .in("consultant_id", profileIds),
+      admin
+        .from("assigned_documents")
+        .select(
+          "id, consultant_id, assignment_id, status, assigned_at, superseded_at, document_versions!inner(version_label, documents!inner(id, slug, title, category, sort_order))",
+        )
+        .in("consultant_id", profileIds)
+        .order("assigned_at", { ascending: false }),
+    ]);
+    if (tasksResult.error) throw tasksResult.error;
+    if (assignedDocumentsResult.error) throw assignedDocumentsResult.error;
+    const tasks = tasksResult.data;
+    const assignedDocuments = assignedDocumentsResult.data;
 
     const consultantRecordByUserId = new Map(
       (consultantRecords ?? []).map((consultant) => [
@@ -90,6 +102,37 @@ export default async function handler(
           task.consultant_id === profile.id &&
           (!assignmentId || task.assignment_id === assignmentId),
       );
+      const latestDocumentById = new Map<string, Record<string, unknown>>();
+      for (const assignedDocument of assignedDocuments ?? []) {
+        if (
+          assignedDocument.consultant_id !== profile.id ||
+          (assignmentId &&
+            assignedDocument.assignment_id &&
+            assignedDocument.assignment_id !== assignmentId)
+        )
+          continue;
+        const version = Array.isArray(assignedDocument.document_versions)
+          ? assignedDocument.document_versions[0]
+          : assignedDocument.document_versions;
+        const document = Array.isArray(version?.documents)
+          ? version.documents[0]
+          : version?.documents;
+        if (document?.id && !latestDocumentById.has(document.id)) {
+          latestDocumentById.set(document.id, {
+            assigned_document_id: assignedDocument.id,
+            document_id: document.id,
+            slug: document.slug,
+            title: document.title,
+            category: document.category,
+            sort_order: document.sort_order,
+            status: assignedDocument.status,
+            version_label: version?.version_label,
+            selected:
+              assignedDocument.status !== "superseded" &&
+              !assignedDocument.superseded_at,
+          });
+        }
+      }
 
       return {
         id: profile.id,
@@ -102,6 +145,10 @@ export default async function handler(
         onboarding_complete: consultantTasks.filter((task) => task.complete)
           .length,
         onboarding_total: consultantTasks.length,
+        documents: [...latestDocumentById.values()].sort(
+          (left, right) =>
+            Number(left.sort_order ?? 0) - Number(right.sort_order ?? 0),
+        ),
       };
     });
 

@@ -28,6 +28,7 @@ export interface AdminDocumentCatalogueItem {
     versionLabel: string;
     scanStatus: "pending" | "clean" | "infected" | "failed";
     locked: boolean;
+    assignmentId?: string;
     effectiveAt: string;
     createdAt: string;
     originalFilename: string;
@@ -82,6 +83,16 @@ export interface AdminConsultant {
   };
   onboardingComplete: number;
   onboardingTotal: number;
+  documents: Array<{
+    assignedDocumentId: string;
+    documentId: string;
+    slug: string;
+    title: string;
+    category: "signature" | "acknowledgement" | "information";
+    status: PortalDocument["status"];
+    versionLabel: string;
+    selected: boolean;
+  }>;
 }
 
 export const portalDemoEnabled =
@@ -459,12 +470,14 @@ export async function reviewComplianceSubmission(
   });
 }
 
-async function authorisedRequest(path: string, body: Record<string, unknown>) {
-  return post<{
+async function authorisedRequest<
+  T extends Record<string, unknown> = {
     error?: string;
     url?: string;
     message?: string;
-  }>(path, body);
+  },
+>(path: string, body: Record<string, unknown>) {
+  return post<T>(path, body);
 }
 
 export async function getDocumentAccess(
@@ -480,6 +493,29 @@ export async function createInvitation(input: {
   businessName: string;
 }) {
   return authorisedRequest("/api/invitations/create", input);
+}
+
+export async function updateAdminConsultant(input: {
+  consultantId: string;
+  fullName: string;
+  businessName: string;
+  email: string;
+  includedDocumentIds: string[];
+}) {
+  return authorisedRequest<{
+    updated: true;
+    retainedCompletedDocuments: string[];
+  }>("/api/admin/consultants/update", input);
+}
+
+export async function sendConsultantPortalLink(input: {
+  consultantId: string;
+  message: string;
+}) {
+  return authorisedRequest<{ message: string }>(
+    "/api/admin/consultants/send-portal-link",
+    input,
+  );
 }
 
 export async function uploadManualSignedDocument(input: {
@@ -546,6 +582,22 @@ export async function listAdminConsultants(): Promise<AdminConsultant[]> {
         : undefined,
       onboardingComplete: Number(row.onboarding_complete) || 0,
       onboardingTotal: Number(row.onboarding_total) || 0,
+      documents: records(row.documents).map((document) => ({
+        assignedDocumentId: text(document.assigned_document_id),
+        documentId: text(document.document_id),
+        slug: text(document.slug),
+        title: text(document.title),
+        category: text(
+          document.category,
+          "information",
+        ) as AdminConsultant["documents"][number]["category"],
+        status: text(
+          document.status,
+          "not_reviewed",
+        ) as AdminConsultant["documents"][number]["status"],
+        versionLabel: text(document.version_label),
+        selected: bool(document.selected),
+      })),
     };
   });
 }
@@ -578,6 +630,7 @@ export async function listAdminDocumentCatalogue(): Promise<AdminDocumentCatalog
           "pending",
         ) as AdminDocumentCatalogueItem["versions"][number]["scanStatus"],
         locked: Boolean(version.locked_at),
+        assignmentId: text(version.assignment_id) || undefined,
         effectiveAt: displayDate(version.effective_at),
         createdAt: text(version.created_at),
         originalFilename: text(version.original_filename),
