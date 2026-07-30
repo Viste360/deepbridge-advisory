@@ -33,6 +33,7 @@ export default async function handler(
         : body.kind === "countersign_source"
           ? "countersign_source"
           : "final";
+    const reissue = body.reissue === true && kind === "countersign_source";
     const sizeBytes =
       typeof body.sizeBytes === "number" ? Math.round(body.sizeBytes) : 0;
     if (!/^[0-9a-f-]{36}$/i.test(assignedDocumentId))
@@ -50,7 +51,10 @@ export default async function handler(
       .single();
     if (assignedError || !assigned)
       throw new PortalHttpError(404, "Assigned document not found.");
-    if (assigned.status !== "awaiting_deepbridge")
+    if (
+      assigned.status !== "awaiting_deepbridge" &&
+      !(reissue && assigned.status === "completed")
+    )
       throw new PortalHttpError(
         409,
         "Record the consultant signature before uploading the completed pack.",
@@ -63,17 +67,22 @@ export default async function handler(
       .order("created_at", { ascending: false })
       .limit(1)
       .single();
+    const expectedStatus = reissue ? "completed" : "consultant_signed";
     if (
       envelopeError ||
       !envelope ||
-      envelope.provider_status !== "consultant_signed"
+      envelope.provider_status !== expectedStatus
     )
       throw new PortalHttpError(
         409,
-        "The consultant signature must be verified before uploading the completed pack.",
+        reissue
+          ? "Only a completed portal countersignature can be reissued."
+          : "The consultant signature must be verified before uploading the completed pack.",
       );
 
-    const path = `${assigned.consultant_id}/${assignedDocumentId}/${envelope.id}/${kind}-${randomUUID()}.pdf`;
+    const path = reissue
+      ? `${assigned.consultant_id}/${assignedDocumentId}/reissue-${randomUUID()}.pdf`
+      : `${assigned.consultant_id}/${assignedDocumentId}/${envelope.id}/${kind}-${randomUUID()}.pdf`;
     const { data, error } = await admin.storage
       .from("signed-documents")
       .createSignedUploadUrl(path, { upsert: false });

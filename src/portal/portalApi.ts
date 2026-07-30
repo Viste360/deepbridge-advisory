@@ -752,6 +752,7 @@ async function uploadSigningArtifact(
   assignedDocumentId: string,
   kind: "final" | "certificate" | "countersign_source",
   file: File,
+  reissue = false,
 ) {
   if (!storageClient) throw new Error("Portal storage is not configured.");
   if (file.type !== "application/pdf")
@@ -763,6 +764,7 @@ async function uploadSigningArtifact(
     {
       assignedDocumentId,
       kind,
+      reissue,
       mimeType: file.type,
       sizeBytes: file.size,
     },
@@ -780,11 +782,13 @@ async function uploadSigningArtifact(
 export async function prepareCountersignSource(input: {
   assignedDocumentId: string;
   consultantSignedPdf: File;
+  reissue?: boolean;
 }) {
   const source = await uploadSigningArtifact(
     input.assignedDocumentId,
     "countersign_source",
     input.consultantSignedPdf,
+    input.reissue === true,
   );
   return post<{ envelopeId: string; status: string }>(
     "/api/admin/signing/countersign-source",
@@ -792,6 +796,7 @@ export async function prepareCountersignSource(input: {
       assignedDocumentId: input.assignedDocumentId,
       sourcePath: source.path,
       sourceSha256: source.sha256,
+      reissue: input.reissue === true,
     },
   );
 }
