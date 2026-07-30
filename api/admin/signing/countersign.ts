@@ -288,7 +288,12 @@ export async function createCountersignedPdf(input: {
   assignedDocumentId: string;
   envelopeId: string;
   sourceHash: string;
-}) {
+}): Promise<{
+  bytes: Uint8Array;
+  signaturePlacement:
+    | "original_execution_block_and_appended_countersignature_record"
+    | "appended_countersignature_record_only";
+}> {
   let pdf: PDFDocument;
   try {
     pdf = await PDFDocument.load(input.sourceBytes, {
@@ -315,28 +320,21 @@ export async function createCountersignedPdf(input: {
   try {
     placement = await locateDeepBridgeSignatureBlock(input.sourceBytes);
   } catch {
-    throw new PortalHttpError(
-      400,
-      "The DeepBridge signature block could not be read. Use a searchable, unencrypted PDF or complete the countersignature in Google Workspace.",
-    );
-  }
-  if (!placement) {
-    throw new PortalHttpError(
-      409,
-      "The DeepBridge signature and date fields could not be located in this PDF. Use the approved agreement template or complete the countersignature in Google Workspace.",
-    );
+    placement = null;
   }
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const signature = await pdf.embedPng(input.signatureBytes);
-  const executionPage = pdf.getPage(placement.pageIndex);
-  drawSignatureInExecutionBlock(
-    executionPage,
-    placement,
-    signature,
-    regular,
-    input.signedAt,
-  );
+  if (placement) {
+    const executionPage = pdf.getPage(placement.pageIndex);
+    drawSignatureInExecutionBlock(
+      executionPage,
+      placement,
+      signature,
+      regular,
+      input.signedAt,
+    );
+  }
   const page = pdf.addPage([595.28, 841.89]);
   const ink = rgb(0.03, 0.11, 0.15);
   const teal = rgb(0.19, 0.7, 0.66);
@@ -497,7 +495,9 @@ export async function createCountersignedPdf(input: {
     color: rgb(0.88, 0.95, 0.93),
   });
   page.drawText(
-    "This page forms part of the countersigned agreement. The accompanying audit certificate records the final document hash and authenticated portal event.",
+    placement
+      ? "This page forms part of the countersigned agreement. The accompanying audit certificate records the final document hash and authenticated portal event."
+      : "The source PDF did not expose a safely writable DeepBridge execution field. This dated page forms part of the agreement and records the binding DeepBridge signature.",
     {
       x: 68,
       y: 130,
@@ -523,7 +523,12 @@ export async function createCountersignedPdf(input: {
   pdf.setAuthor("DeepBridge Advisory");
   pdf.setSubject("Electronic countersignature record");
   pdf.setModificationDate(input.signedAt);
-  return pdf.save({ useObjectStreams: true });
+  return {
+    bytes: await pdf.save({ useObjectStreams: true }),
+    signaturePlacement: placement
+      ? "original_execution_block_and_appended_countersignature_record"
+      : "appended_countersignature_record_only",
+  };
 }
 
 export async function createAuditCertificate(input: {
@@ -538,6 +543,9 @@ export async function createAuditCertificate(input: {
   envelopeId: string;
   sourceHash: string;
   finalHash: string;
+  signaturePlacement?:
+    | "original_execution_block_and_appended_countersignature_record"
+    | "appended_countersignature_record_only";
 }) {
   const pdf = await PDFDocument.create();
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
@@ -659,7 +667,9 @@ export async function createAuditCertificate(input: {
     color: rgb(0.88, 0.95, 0.93),
   });
   page.drawText(
-    "The administrator authenticated to the private DeepBridge portal and confirmed both signing authority and intent. The portal placed the signature and date in the original DeepBridge execution block and appended the countersignature record. Both artifacts are released only after malware scanning.",
+    input.signaturePlacement === "appended_countersignature_record_only"
+      ? "The administrator authenticated to the private DeepBridge portal and confirmed both signing authority and intent. The source did not expose a safely writable execution field, so the dated countersignature page forms the binding DeepBridge signature. Both artifacts are released only after malware scanning."
+      : "The administrator authenticated to the private DeepBridge portal and confirmed both signing authority and intent. The portal placed the signature and date in the original DeepBridge execution block and appended the countersignature record. Both artifacts are released only after malware scanning.",
     {
       x: 68,
       y: 154,
@@ -811,7 +821,7 @@ export default async function handler(
     }
 
     const signedAt = new Date();
-    const finalBytes = await createCountersignedPdf({
+    const countersigned = await createCountersignedPdf({
       sourceBytes,
       signatureBytes,
       title: document.title,
@@ -825,6 +835,7 @@ export default async function handler(
       envelopeId: envelope.id,
       sourceHash,
     });
+    const finalBytes = countersigned.bytes;
     const finalHash = sha256(finalBytes);
     const certificateBytes = await createAuditCertificate({
       title: document.title,
@@ -838,6 +849,7 @@ export default async function handler(
       envelopeId: envelope.id,
       sourceHash,
       finalHash,
+      signaturePlacement: countersigned.signaturePlacement,
     });
     const certificateHash = sha256(certificateBytes);
     const prefix = `${assigned.consultant_id}/${assignedDocumentId}/${envelope.id}`;
@@ -896,8 +908,7 @@ export default async function handler(
         signer_title: signerTitle,
         signed_at: signedAt.toISOString(),
         visible_signing_date: formatSigningDate(signedAt),
-        signature_placement:
-          "original_execution_block_and_appended_countersignature_record",
+        signature_placement: countersigned.signaturePlacement,
         source_storage_path: envelope.pending_final_storage_path,
         source_content_sha256: sourceHash,
         final_content_sha256: finalHash,
