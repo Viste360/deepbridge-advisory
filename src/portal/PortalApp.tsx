@@ -42,6 +42,7 @@ import {
   removeAdminContractVersion,
   removeAdminDocumentVersion,
   retryAdminContractDriveArchive,
+  retrySigningSecurityScan,
   reviewComplianceSubmission,
   saveAdminOrganisation,
   sendConsultantPortalLink,
@@ -84,6 +85,29 @@ const ALLOWED_UPLOAD_TYPES = new Set([
   "image/png",
 ]);
 const ALLOWED_UPLOAD_EXTENSIONS = new Set(["pdf", "jpg", "jpeg", "png"]);
+
+async function openSecureUrl(
+  createAccess: () => Promise<{ url?: string }>,
+) {
+  // Reserve the tab while the click is still a direct user gesture. Opening it
+  // after the signed-link request resolves is blocked by several browsers.
+  const preview = window.open("about:blank", "_blank");
+  if (preview) {
+    preview.opener = null;
+    preview.document.title = "Preparing secure document";
+    preview.document.body.textContent = "Preparing secure document…";
+  }
+  try {
+    const result = await createAccess();
+    if (!result.url)
+      throw new Error("The secure viewing link could not be created.");
+    if (preview && !preview.closed) preview.location.replace(result.url);
+    else window.location.assign(result.url);
+  } catch (error) {
+    if (preview && !preview.closed) preview.close();
+    throw error;
+  }
+}
 
 interface PortalContextValue {
   snapshot: PortalSnapshot;
@@ -961,9 +985,9 @@ function DocumentDetailPage() {
           if (demo) {
             setMessage("Completed PDF download requested securely.");
           } else {
-            const result = await getDocumentAccess(selectedDocument.id, "final");
-            if (result.url)
-              window.open(result.url, "_blank", "noopener,noreferrer");
+            await openSecureUrl(() =>
+              getDocumentAccess(selectedDocument.id, "final"),
+            );
           }
         } else if (selectedDocument.status === "ready_to_sign") {
           setMessage(
@@ -992,9 +1016,9 @@ function DocumentDetailPage() {
       } else if (demo) {
         setMessage("Document view recorded.");
       } else {
-        const result = await getDocumentAccess(selectedDocument.id, "source");
-        if (result.url)
-          window.open(result.url, "_blank", "noopener,noreferrer");
+        await openSecureUrl(() =>
+          getDocumentAccess(selectedDocument.id, "source"),
+        );
       }
     } catch (error) {
       setMessage(
@@ -1034,8 +1058,9 @@ function DocumentDetailPage() {
         );
         return;
       }
-      const result = await getDocumentAccess(selectedDocument.id, kind);
-      if (result.url) window.open(result.url, "_blank", "noopener,noreferrer");
+      await openSecureUrl(() =>
+        getDocumentAccess(selectedDocument.id, kind),
+      );
     } catch (accessError) {
       setMessage(
         accessError instanceof Error
@@ -2486,8 +2511,7 @@ function AdminContractsPage() {
       if (demo) {
         setMessage("File access is simulated in local review mode.");
       } else {
-        const { url } = await getAdminContractAccess(version.id, kind);
-        window.open(url, "_blank", "noopener,noreferrer");
+        await openSecureUrl(() => getAdminContractAccess(version.id, kind));
       }
     } catch (accessError) {
       setMessage(
@@ -4532,6 +4556,99 @@ function createDemoSigningItems(
     }));
 }
 
+const SIGNING_SCAN_STALE_MS = 5 * 60 * 1_000;
+
+function isFinalSecurityCheck(item: AdminSigningItem) {
+  if (item.status === "completed" || item.providerStatus === "completed")
+    return false;
+  return (
+    item.providerStatus === "security_review" ||
+    item.providerStatus === "security_review_retry_needed" ||
+    item.providerStatus === "security_review_failed" ||
+    item.certificateScanStatus === "pending" ||
+    item.certificateScanStatus === "failed" ||
+    item.certificateScanStatus === "infected"
+  );
+}
+
+function isSecurityCheckStale(item: AdminSigningItem) {
+  if (item.providerStatus !== "security_review" || !item.scanUpdatedAt)
+    return false;
+  const updatedAt = Date.parse(item.scanUpdatedAt);
+  return Number.isFinite(updatedAt) && Date.now() - updatedAt > SIGNING_SCAN_STALE_MS;
+}
+
+function isSecurityCheckInfected(item: AdminSigningItem) {
+  return (
+    item.finalScanStatus === "infected" ||
+    item.certificateScanStatus === "infected"
+  );
+}
+
+function isSecurityCheckRetryable(item: AdminSigningItem) {
+  if (!isFinalSecurityCheck(item) || isSecurityCheckInfected(item)) return false;
+  return (
+    item.providerStatus === "security_review_retry_needed" ||
+    item.providerStatus === "security_review_failed" ||
+    item.finalScanStatus === "failed" ||
+    item.certificateScanStatus === "failed" ||
+    isSecurityCheckStale(item)
+  );
+}
+
+function SecurityScanProgress({
+  item,
+  busy,
+  onRetry,
+}: {
+  item: AdminSigningItem;
+  busy: boolean;
+  onRetry: () => void;
+}) {
+  const infected = isSecurityCheckInfected(item);
+  const retryable = isSecurityCheckRetryable(item);
+  const cleared = [item.finalScanStatus, item.certificateScanStatus].filter(
+    (status) => status === "clean",
+  ).length;
+  return (
+    <div className="portal-scan-progress">
+      <strong>
+        {infected
+          ? "Security check failed"
+          : retryable
+            ? "Security check paused"
+            : "Security check in progress"}
+      </strong>
+      {!infected && !retryable ? (
+        <div
+          className="portal-scan-bar"
+          role="progressbar"
+          aria-label="Final document security check"
+          aria-valuemin={0}
+          aria-valuemax={2}
+          aria-valuenow={cleared}
+        >
+          <span />
+        </div>
+      ) : null}
+      <small>
+        {infected
+          ? "Replace the signed file before continuing."
+          : retryable
+            ? "Your signature is saved. Restart the file check once."
+            : cleared
+              ? `${cleared} of 2 files checked`
+              : "Checking both signed files…"}
+      </small>
+      {retryable ? (
+        <button type="button" disabled={busy} onClick={onRetry}>
+          {busy ? "Restarting…" : "Retry security check"}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 function AdminSigningPage() {
   const { snapshot, demo } = usePortal();
   const [items, setItems] = useState<AdminSigningItem[]>([]);
@@ -4541,6 +4658,7 @@ function AdminSigningPage() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState("");
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   async function refreshItems() {
     const next = demo
@@ -4560,7 +4678,7 @@ function AdminSigningPage() {
       })
       .catch((loadError) => {
         if (active)
-          setMessage(
+          setError(
             loadError instanceof Error
               ? loadError.message
               : "Signing records could not be loaded.",
@@ -4576,11 +4694,13 @@ function AdminSigningPage() {
 
   const signingScanPending = items.some(
     (item) =>
-      item.providerStatus === "security_review" ||
+      (item.providerStatus === "security_review" &&
+        !isSecurityCheckStale(item)) ||
       item.providerStatus === "countersign_source_security_review" ||
       item.providerStatus === "consultant_upload_security_review" ||
-      item.finalScanStatus === "pending" ||
-      item.certificateScanStatus === "pending",
+      (!isSecurityCheckRetryable(item) &&
+        (item.finalScanStatus === "pending" ||
+          item.certificateScanStatus === "pending")),
   );
 
   useEffect(() => {
@@ -4599,6 +4719,7 @@ function AdminSigningPage() {
   ) {
     setBusyId(item.id);
     setMessage("");
+    setError("");
     try {
       if (demo) {
         setItems((current) =>
@@ -4634,7 +4755,7 @@ function AdminSigningPage() {
           : "The consultant signature is recorded. DeepBridge countersignature is now due.",
       );
     } catch (stepError) {
-      setMessage(
+      setError(
         stepError instanceof Error
           ? stepError.message
           : "The signing record could not be updated.",
@@ -4647,16 +4768,15 @@ function AdminSigningPage() {
   async function downloadConsultantUpload(item: AdminSigningItem) {
     setBusyId(item.id);
     setMessage("");
+    setError("");
     try {
       if (demo) {
         setMessage("Consultant-signed PDF download requested securely.");
       } else {
-        const result = await getConsultantSignedUpload(item.id);
-        if (result.url)
-          window.open(result.url, "_blank", "noopener,noreferrer");
+        await openSecureUrl(() => getConsultantSignedUpload(item.id));
       }
     } catch (downloadError) {
-      setMessage(
+      setError(
         downloadError instanceof Error
           ? downloadError.message
           : "The consultant-signed PDF is not available.",
@@ -4704,6 +4824,8 @@ function AdminSigningPage() {
     signerTitle: string;
     signatureImageDataUrl: string;
   }) {
+    let countersignatureWasAlreadySubmitted = false;
+    let countersignatureNeedsScanRetry = false;
     if (demo) {
       setItems((current) =>
         current.map((candidate) =>
@@ -4755,17 +4877,49 @@ function AdminSigningPage() {
         }
       }
 
-      await createPortalCountersignature({
-        assignedDocumentId: input.item.id,
-        signerName: input.signerName,
-        signerTitle: input.signerTitle,
-        signatureImageDataUrl: input.signatureImageDataUrl,
-        confirmed: true,
-      });
+      try {
+        await createPortalCountersignature({
+          assignedDocumentId: input.item.id,
+          signerName: input.signerName,
+          signerTitle: input.signerTitle,
+          signatureImageDataUrl: input.signatureImageDataUrl,
+          confirmed: true,
+        });
+      } catch (signError) {
+        // The server may have committed the signature even if the browser lost
+        // the success response. Reconcile before presenting a retryable error so
+        // a second click does not misleadingly ask for the source PDF again.
+        try {
+          const latestItems = await listAdminSigningItems();
+          setItems(latestItems);
+          const latest = latestItems.find(
+            (candidate) => candidate.id === input.item.id,
+          );
+          countersignatureWasAlreadySubmitted = Boolean(
+            latest &&
+              (((latest.providerStatus === "security_review" ||
+                latest.providerStatus === "security_review_retry_needed") &&
+                (latest.finalScanStatus === "pending" ||
+                  latest.finalScanStatus === "clean")) ||
+                (latest.status === "completed" &&
+                  latest.providerStatus === "completed")),
+          );
+          countersignatureNeedsScanRetry =
+            latest?.providerStatus === "security_review_retry_needed";
+        } catch {
+          // Preserve the original signing error when reconciliation is
+          // temporarily unavailable.
+        }
+        if (!countersignatureWasAlreadySubmitted) throw signError;
+      }
       await refreshItems();
     }
     setMessage(
-      "DeepBridge signed the agreement. The final PDF and its audit certificate are undergoing the final security scan and will become downloadable automatically.",
+      countersignatureWasAlreadySubmitted
+        ? countersignatureNeedsScanRetry
+          ? "The countersignature is saved. Use Retry security check once; do not sign the agreement again."
+          : "The countersignature was already accepted. Final security checks are in progress; do not sign the agreement again."
+        : "DeepBridge signed the agreement. The final PDF and its audit certificate are undergoing the final security scan and will become downloadable automatically.",
     );
   }
 
@@ -4775,6 +4929,7 @@ function AdminSigningPage() {
   ) {
     setBusyId(item.id);
     setMessage("");
+    setError("");
     try {
       if (demo) {
         setMessage(
@@ -4783,15 +4938,55 @@ function AdminSigningPage() {
             : "Audit certificate download requested.",
         );
       } else {
-        const result = await getDocumentAccess(item.id, kind);
-        if (result.url)
-          window.open(result.url, "_blank", "noopener,noreferrer");
+        await openSecureUrl(() => getDocumentAccess(item.id, kind));
       }
     } catch (downloadError) {
-      setMessage(
+      setError(
         downloadError instanceof Error
           ? downloadError.message
           : "The completed document is not available.",
+      );
+    } finally {
+      setBusyId("");
+    }
+  }
+
+  async function retrySecurityCheck(item: AdminSigningItem) {
+    setBusyId(item.id);
+    setMessage("");
+    setError("");
+    try {
+      if (demo) {
+        setItems((current) =>
+          current.map((candidate) =>
+            candidate.id === item.id
+              ? {
+                  ...candidate,
+                  providerStatus: "security_review",
+                  finalScanStatus: "pending",
+                  certificateScanStatus: "pending",
+                  scanUpdatedAt: new Date().toISOString(),
+                }
+              : candidate,
+          ),
+        );
+      } else {
+        await retrySigningSecurityScan(item.id);
+        await refreshItems();
+      }
+      setMessage(
+        "Security check restarted. Your signature is already saved; no further signing is needed.",
+      );
+    } catch (retryError) {
+      try {
+        if (!demo) await refreshItems();
+      } catch {
+        // Keep the original scanner error visible.
+      }
+      setError(
+        retryError instanceof Error
+          ? retryError.message
+          : "The security check could not be restarted.",
       );
     } finally {
       setBusyId("");
@@ -4882,6 +5077,11 @@ function AdminSigningPage() {
           {message}
         </p>
       ) : null}
+      {error ? (
+        <p className="portal-form-message error" role="alert">
+          {error}
+        </p>
+      ) : null}
       <section className="portal-panel portal-table-wrap">
         <table className="portal-table">
           <thead>
@@ -4895,12 +5095,12 @@ function AdminSigningPage() {
           </thead>
           <tbody>
             {items.map((item) => {
-              const scanning =
-                item.providerStatus === "security_review" ||
+              const finalSecurityCheck = isFinalSecurityCheck(item);
+              const sourceScanning =
                 item.providerStatus ===
                   "consultant_upload_security_review" ||
-                item.finalScanStatus === "pending" ||
-                item.certificateScanStatus === "pending";
+                item.providerStatus === "countersign_source_security_review";
+              const scanning = finalSecurityCheck || sourceScanning;
               return (
                 <tr key={item.id}>
                   <td>
@@ -4929,10 +5129,24 @@ function AdminSigningPage() {
                     </span>
                   </td>
                   <td>
-                    {scanning ? (
-                      <span className="portal-table-complete">
-                        Security scan pending
-                      </span>
+                    {finalSecurityCheck ? (
+                      <SecurityScanProgress
+                        item={item}
+                        busy={busyId === item.id}
+                        onRetry={() => void retrySecurityCheck(item)}
+                      />
+                    ) : sourceScanning ? (
+                      <div className="portal-scan-progress">
+                        <strong>Checking uploaded PDF</strong>
+                        <div
+                          className="portal-scan-bar"
+                          role="progressbar"
+                          aria-label="Uploaded document security check"
+                        >
+                          <span />
+                        </div>
+                        <small>This page updates automatically.</small>
+                      </div>
                     ) : item.status === "not_reviewed" ? (
                       <button
                         type="button"
@@ -5468,6 +5682,7 @@ function AdminCompliancePage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [openingSubmissionId, setOpeningSubmissionId] = useState("");
+  const [reviewingSubmissionId, setReviewingSubmissionId] = useState("");
 
   async function uploadForConsultant(
     requirement: ComplianceRequirement,
@@ -5516,12 +5731,9 @@ function AdminCompliancePage() {
         setMessage("Secure preview is available only in the live portal.");
         return;
       }
-      const result = await getComplianceSubmissionAccess(
-        requirement.submissionId,
+      await openSecureUrl(() =>
+        getComplianceSubmissionAccess(requirement.submissionId!),
       );
-      if (!result.url)
-        throw new Error("The secure viewing link could not be created.");
-      window.open(result.url, "_blank", "noopener,noreferrer");
     } catch (accessError) {
       setError(
         accessError instanceof Error
@@ -5539,6 +5751,8 @@ function AdminCompliancePage() {
   ) {
     if (!requirement.submissionId) return;
     setError("");
+    setMessage("");
+    setReviewingSubmissionId(requirement.submissionId);
     try {
       if (demo) {
         updateCompliance(requirement.id, {
@@ -5567,6 +5781,8 @@ function AdminCompliancePage() {
       setError(
         error instanceof Error ? error.message : "Review could not be saved.",
       );
+    } finally {
+      setReviewingSubmissionId("");
     }
   }
 
@@ -5596,8 +5812,19 @@ function AdminCompliancePage() {
         </p>
       </div>
       <div className="portal-review-list">
-        {snapshot.compliance.map((requirement) => (
-          <article className="portal-panel" key={requirement.id}>
+        {snapshot.compliance.map((requirement) => {
+          const hasSubmission = Boolean(requirement.submissionId);
+          const isClean = requirement.scanStatus === "clean";
+          const isScanPending = requirement.scanStatus === "pending";
+          const scanFailed =
+            requirement.scanStatus === "failed" ||
+            requirement.scanStatus === "infected";
+          const isAccepted = requirement.status === "accepted";
+          const isRejected = requirement.status === "rejected";
+          const reviewing =
+            reviewingSubmissionId === requirement.submissionId;
+          return (
+            <article className="portal-panel" key={requirement.id}>
             <div className="portal-review-heading">
               <div>
                 <p className="portal-card-label">
@@ -5629,61 +5856,90 @@ function AdminCompliancePage() {
                 <dd>
                   {requirement.scanStatus === "clean"
                     ? "Passed"
-                    : requirement.scanStatus
-                      ? "Not cleared"
+                    : requirement.scanStatus === "pending"
+                      ? "Checking…"
+                      : requirement.scanStatus
+                        ? "Needs replacement"
                       : "Not applicable"}
                 </dd>
               </div>
             </dl>
-            <div className="portal-review-actions">
-              <button
-                className="portal-button portal-button-secondary"
-                type="button"
-                disabled={
-                  !requirement.submissionId ||
-                  requirement.scanStatus !== "clean" ||
-                  openingSubmissionId === requirement.submissionId
-                }
-                onClick={() => openSubmission(requirement)}
-              >
-                {openingSubmissionId === requirement.submissionId
-                  ? "Opening…"
-                  : "View securely"}
-              </button>
-              <button
-                className="portal-button portal-button-secondary"
-                type="button"
-                onClick={() => setSelected(requirement)}
-              >
-                {requirement.submissionId
-                  ? "Upload replacement"
-                  : "Upload for consultant"}
-              </button>
-              <button
-                className="portal-button portal-button-danger"
-                type="button"
-                disabled={
-                  !requirement.submissionId ||
-                  requirement.scanStatus !== "clean"
-                }
-                onClick={() => review(requirement, "rejected")}
-              >
-                Reject
-              </button>
-              <button
-                className="portal-button portal-button-primary"
-                type="button"
-                disabled={
-                  !requirement.submissionId ||
-                  requirement.scanStatus !== "clean"
-                }
-                onClick={() => review(requirement, "accepted")}
-              >
-                Accept
-              </button>
-            </div>
-          </article>
-        ))}
+              {hasSubmission && isScanPending ? (
+                <div className="portal-scan-progress portal-compliance-scan">
+                  <strong>Checking uploaded file</strong>
+                  <div
+                    className="portal-scan-bar"
+                    role="progressbar"
+                    aria-label={`${requirement.title} security check`}
+                  >
+                    <span />
+                  </div>
+                  <small>Review actions appear automatically when it passes.</small>
+                </div>
+              ) : null}
+              {hasSubmission && scanFailed ? (
+                <p className="portal-review-rejected" role="alert">
+                  The file could not be cleared. Replace it to continue.
+                </p>
+              ) : null}
+              {isAccepted ? (
+                <p className="portal-review-complete" role="status">
+                  <span aria-hidden="true">✓</span>
+                  Accepted by DeepBridge
+                </p>
+              ) : isRejected ? (
+                <p className="portal-review-rejected" role="status">
+                  Rejected — replace the file or accept it after another review.
+                </p>
+              ) : null}
+              <div className="portal-review-actions">
+                {hasSubmission && isClean ? (
+                  <button
+                    className="portal-button portal-button-secondary"
+                    type="button"
+                    disabled={
+                      openingSubmissionId === requirement.submissionId ||
+                      reviewing
+                    }
+                    onClick={() => void openSubmission(requirement)}
+                  >
+                    {openingSubmissionId === requirement.submissionId
+                      ? "Opening…"
+                      : "Open file"}
+                  </button>
+                ) : null}
+                <button
+                  className="portal-button portal-button-secondary"
+                  type="button"
+                  disabled={reviewing}
+                  onClick={() => setSelected(requirement)}
+                >
+                  {hasSubmission ? "Replace file" : "Upload file"}
+                </button>
+                {hasSubmission && isClean && !isAccepted && !isRejected ? (
+                  <button
+                    className="portal-button portal-button-danger"
+                    type="button"
+                    disabled={reviewing}
+                    onClick={() => void review(requirement, "rejected")}
+                  >
+                    {reviewing ? "Saving…" : "Reject"}
+                  </button>
+                ) : null}
+                {hasSubmission && isClean && !isAccepted ? (
+                  <button
+                    className="portal-button portal-button-primary"
+                    type="button"
+                    disabled={reviewing}
+                    onClick={() => void review(requirement, "accepted")}
+                  >
+                    {reviewing ? "Saving…" : "Accept file"}
+                  </button>
+                ) : null}
+              </div>
+            </article>
+          );
+        })}
       </div>
       {selected ? (
         <UploadDialog

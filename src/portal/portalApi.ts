@@ -124,6 +124,7 @@ export interface AdminSigningItem {
   sentAt?: string;
   consultantSignedAt?: string;
   completedAt?: string;
+  scanUpdatedAt?: string;
   finalScanStatus?: "pending" | "clean" | "infected" | "failed";
   certificateScanStatus?: "pending" | "clean" | "infected" | "failed";
 }
@@ -1198,6 +1199,7 @@ export async function listAdminSigningItems(): Promise<AdminSigningItem[]> {
       consultantSignedAt:
         displayDateTime(envelope.consultant_signed_at) || undefined,
       completedAt: displayDateTime(row.completed_at) || undefined,
+      scanUpdatedAt: text(envelope.updated_at) || undefined,
       finalScanStatus: scanStatus(envelope.final_scan_status),
       certificateScanStatus: scanStatus(envelope.certificate_scan_status),
     };
@@ -1285,6 +1287,13 @@ export async function createPortalCountersignature(input: {
   return post<{ envelopeId: string; status: string }>(
     "/api/admin/signing/countersign",
     input,
+  );
+}
+
+export async function retrySigningSecurityScan(assignedDocumentId: string) {
+  return post<{ envelopeId: string; status: string }>(
+    "/api/admin/signing/retry-scan",
+    { assignedDocumentId },
   );
 }
 

@@ -42,7 +42,7 @@ export default async function handler(
         ? admin
             .from("signature_envelopes")
             .select(
-              "id, assigned_document_id, provider, provider_status, sent_at, consultant_signed_at, completed_at, final_scan_status, certificate_scan_status, created_at",
+              "id, assigned_document_id, provider, provider_status, sent_at, consultant_signed_at, completed_at, final_scan_status, certificate_scan_status, created_at, updated_at",
             )
             .in("assigned_document_id", assignedIds)
             .order("created_at", { ascending: false })

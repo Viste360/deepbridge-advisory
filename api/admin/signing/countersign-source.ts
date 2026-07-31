@@ -116,6 +116,7 @@ export default async function handler(
           pending_final_storage_path: sourcePath,
           final_content_sha256: sourceSha256,
           final_scan_status: "pending",
+          updated_at: new Date().toISOString(),
         })
         .select("id")
         .single();
@@ -170,13 +171,32 @@ export default async function handler(
       },
     });
 
-    await requestMalwareScan({
-      objectType: "signature_artifact",
-      objectId: envelopeId,
-      artifactKind: "final",
-      bucket: "signed-documents",
-      storagePath: sourcePath,
-    });
+    try {
+      await requestMalwareScan({
+        objectType: "signature_artifact",
+        objectId: envelopeId,
+        artifactKind: "final",
+        bucket: "signed-documents",
+        storagePath: sourcePath,
+      });
+    } catch (scanError) {
+      await admin
+        .from("signature_envelopes")
+        .update({
+          provider_status: reissue
+            ? "countersign_reissue_source_security_review_failed"
+            : "countersign_source_security_review_failed",
+          final_scan_status: "failed",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", envelopeId);
+      if (reissue)
+        await admin
+          .from("assigned_documents")
+          .update({ status: "completed" })
+          .eq("id", assignedDocumentId);
+      throw scanError;
+    }
 
     return json(response, 202, {
       envelopeId,

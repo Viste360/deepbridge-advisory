@@ -107,6 +107,7 @@ export default async function handler(
         certificate_content_sha256: certificateSha256,
         final_scan_status: "pending",
         certificate_scan_status: "pending",
+        updated_at: new Date().toISOString(),
       })
       .eq("id", envelope.id);
     if (updateError) throw updateError;
@@ -123,22 +124,33 @@ export default async function handler(
       metadata: { provider: envelope.provider, scan_status: "pending" },
     });
 
-    await Promise.all([
-      requestMalwareScan({
-        objectType: "signature_artifact",
-        objectId: envelope.id,
-        artifactKind: "final",
-        bucket: "signed-documents",
-        storagePath: finalPath,
-      }),
-      requestMalwareScan({
-        objectType: "signature_artifact",
-        objectId: envelope.id,
-        artifactKind: "certificate",
-        bucket: "signed-documents",
-        storagePath: certificatePath,
-      }),
-    ]);
+    try {
+      await Promise.all([
+        requestMalwareScan({
+          objectType: "signature_artifact",
+          objectId: envelope.id,
+          artifactKind: "final",
+          bucket: "signed-documents",
+          storagePath: finalPath,
+        }),
+        requestMalwareScan({
+          objectType: "signature_artifact",
+          objectId: envelope.id,
+          artifactKind: "certificate",
+          bucket: "signed-documents",
+          storagePath: certificatePath,
+        }),
+      ]);
+    } catch (scanError) {
+      await admin
+        .from("signature_envelopes")
+        .update({
+          provider_status: "security_review_retry_needed",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", envelope.id);
+      throw scanError;
+    }
 
     return json(response, 202, {
       envelopeId: envelope.id,

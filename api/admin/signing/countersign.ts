@@ -117,6 +117,100 @@ function drawKeyValue(
   });
 }
 
+const DEEPBRIDGE_COMPANY_NUMBER = "16775578";
+
+function drawCentredText(
+  page: PDFPage,
+  text: string,
+  font: PDFFont,
+  options: {
+    centreX: number;
+    y: number;
+    size: number;
+    color: ReturnType<typeof rgb>;
+  },
+) {
+  page.drawText(text, {
+    x: options.centreX - font.widthOfTextAtSize(text, options.size) / 2,
+    y: options.y,
+    size: options.size,
+    font,
+    color: options.color,
+  });
+}
+
+function drawDeepBridgeCompanySeal(
+  page: PDFPage,
+  fonts: { regular: PDFFont; bold: PDFFont; serif: PDFFont },
+  centreX: number,
+  centreY: number,
+) {
+  const ink = rgb(0.03, 0.11, 0.15);
+  const teal = rgb(0.19, 0.7, 0.66);
+  const white = rgb(0.98, 0.98, 0.95);
+  const muted = rgb(0.36, 0.43, 0.44);
+
+  page.drawCircle({
+    x: centreX,
+    y: centreY,
+    size: 34,
+    color: ink,
+    borderColor: rgb(0.3, 0.56, 0.57),
+    borderWidth: 2,
+  });
+  page.drawCircle({
+    x: centreX,
+    y: centreY,
+    size: 29.5,
+    borderColor: rgb(0.07, 0.2, 0.26),
+    borderWidth: 1,
+  });
+  page.drawText("D", {
+    x: centreX - 20,
+    y: centreY - 12,
+    size: 33,
+    font: fonts.serif,
+    color: white,
+  });
+  page.drawText("B", {
+    x: centreX - 1,
+    y: centreY - 12,
+    size: 33,
+    font: fonts.serif,
+    color: teal,
+  });
+  page.drawLine({
+    start: { x: centreX - 2, y: centreY - 26 },
+    end: { x: centreX + 5, y: centreY + 27 },
+    thickness: 1.4,
+    color: teal,
+  });
+
+  drawCentredText(page, "DEEPBRIDGE ADVISORY", fonts.bold, {
+    centreX,
+    y: centreY - 48,
+    size: 6.3,
+    color: ink,
+  });
+  drawCentredText(page, "DUSTDEEP LTD", fonts.bold, {
+    centreX,
+    y: centreY - 58,
+    size: 5.8,
+    color: muted,
+  });
+  drawCentredText(
+    page,
+    `Company no. ${DEEPBRIDGE_COMPANY_NUMBER}`,
+    fonts.regular,
+    {
+      centreX,
+      y: centreY - 68,
+      size: 5.8,
+      color: muted,
+    },
+  );
+}
+
 type SignatureBlockPlacement = {
   pageIndex: number;
   signature: { x: number; y: number; width: number };
@@ -324,6 +418,7 @@ export async function createCountersignedPdf(input: {
   }
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const serif = await pdf.embedFont(StandardFonts.TimesRoman);
   const signature = await pdf.embedPng(input.signatureBytes);
   if (placement) {
     const executionPage = pdf.getPage(placement.pageIndex);
@@ -442,6 +537,7 @@ export async function createCountersignedPdf(input: {
     font: regular,
     color: muted,
   });
+  drawDeepBridgeCompanySeal(page, { regular, bold, serif }, 462, 435);
 
   const signedAt = input.signedAt.toISOString();
   drawKeyValue(
@@ -884,6 +980,7 @@ export default async function handler(
         certificate_content_sha256: certificateHash,
         final_scan_status: "pending",
         certificate_scan_status: "pending",
+        updated_at: signedAt.toISOString(),
       })
       .eq("id", envelope.id);
     if (updateError) {
@@ -918,22 +1015,33 @@ export default async function handler(
       },
     });
 
-    await Promise.all([
-      requestMalwareScan({
-        objectType: "signature_artifact",
-        objectId: envelope.id,
-        artifactKind: "final",
-        bucket: "signed-documents",
-        storagePath: finalPath,
-      }),
-      requestMalwareScan({
-        objectType: "signature_artifact",
-        objectId: envelope.id,
-        artifactKind: "certificate",
-        bucket: "signed-documents",
-        storagePath: certificatePath,
-      }),
-    ]);
+    try {
+      await Promise.all([
+        requestMalwareScan({
+          objectType: "signature_artifact",
+          objectId: envelope.id,
+          artifactKind: "final",
+          bucket: "signed-documents",
+          storagePath: finalPath,
+        }),
+        requestMalwareScan({
+          objectType: "signature_artifact",
+          objectId: envelope.id,
+          artifactKind: "certificate",
+          bucket: "signed-documents",
+          storagePath: certificatePath,
+        }),
+      ]);
+    } catch (scanError) {
+      await admin
+        .from("signature_envelopes")
+        .update({
+          provider_status: "security_review_retry_needed",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", envelope.id);
+      throw scanError;
+    }
 
     return json(response, 202, {
       envelopeId: envelope.id,

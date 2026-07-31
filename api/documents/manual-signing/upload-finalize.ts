@@ -142,13 +142,25 @@ export default async function handler(
       },
     });
 
-    await requestMalwareScan({
-      objectType: "signature_artifact",
-      objectId: envelope.id,
-      artifactKind: "final",
-      bucket: "signed-documents",
-      storagePath,
-    });
+    try {
+      await requestMalwareScan({
+        objectType: "signature_artifact",
+        objectId: envelope.id,
+        artifactKind: "final",
+        bucket: "signed-documents",
+        storagePath,
+      });
+    } catch (scanError) {
+      await admin
+        .from("signature_envelopes")
+        .update({
+          provider_status: "security_review_failed",
+          final_scan_status: "failed",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", envelope.id);
+      throw scanError;
+    }
 
     return json(response, 202, {
       envelopeId: envelope.id,

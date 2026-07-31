@@ -304,7 +304,7 @@ export default async function handler(
           : "final_scan_status";
       const { data: envelope, error: envelopeError } = await admin
         .from("signature_envelopes")
-        .update({ [statusColumn]: status })
+        .update({ [statusColumn]: status, updated_at: now })
         .eq("id", objectId)
         .select(
           "id, assigned_document_id, provider, provider_status, pending_final_storage_path, pending_certificate_storage_path, final_scan_status, certificate_scan_status, assigned_documents!inner(consultant_id, assignment_id, document_versions!inner(documents!inner(slug)))",
@@ -339,7 +339,7 @@ export default async function handler(
               : "countersign_source_security_review_failed";
         const { error: sourceStatusError } = await admin
           .from("signature_envelopes")
-          .update({ provider_status: nextProviderStatus })
+          .update({ provider_status: nextProviderStatus, updated_at: now })
           .eq("id", envelope.id);
         if (sourceStatusError) throw sourceStatusError;
         if (isReissue && status !== "clean") {
@@ -381,6 +381,7 @@ export default async function handler(
               .update({
                 provider_status: "consultant_signed",
                 consultant_signed_at: now,
+                updated_at: now,
               })
               .eq("id", envelope.id),
             admin
@@ -393,7 +394,10 @@ export default async function handler(
         } else if (status !== "clean") {
           const { error: envelopeStatusError } = await admin
             .from("signature_envelopes")
-            .update({ provider_status: "security_review_failed" })
+            .update({
+              provider_status: "security_review_failed",
+              updated_at: now,
+            })
             .eq("id", envelope.id);
           if (envelopeStatusError) throw envelopeStatusError;
         }
@@ -440,7 +444,11 @@ export default async function handler(
         const [envelopeUpdate, assignedUpdate] = await Promise.all([
           admin
             .from("signature_envelopes")
-            .update({ provider_status: "completed", completed_at: now })
+            .update({
+              provider_status: "completed",
+              completed_at: now,
+              updated_at: now,
+            })
             .eq("id", envelope.id),
           admin
             .from("assigned_documents")
@@ -467,7 +475,10 @@ export default async function handler(
       } else if (status !== "clean") {
         const { error: envelopeStatusError } = await admin
           .from("signature_envelopes")
-          .update({ provider_status: "security_review_failed" })
+          .update({
+            provider_status: "security_review_failed",
+            updated_at: now,
+          })
           .eq("id", envelope.id);
         if (envelopeStatusError) throw envelopeStatusError;
       }

@@ -83,6 +83,14 @@ describe("portal countersignature PDFs", () => {
         .map((item) => ("str" in item ? item.str : ""))
         .join(" "),
     ).toContain("30 July 2026");
+    const countersignaturePage = await extracted.getPage(2);
+    const countersignatureText = await countersignaturePage.getTextContent();
+    const countersignatureRecord = countersignatureText.items
+      .map((item) => ("str" in item ? item.str : ""))
+      .join(" ");
+    expect(countersignatureRecord).toContain("DEEPBRIDGE ADVISORY");
+    expect(countersignatureRecord).toContain("DUSTDEEP LTD");
+    expect(countersignatureRecord).toContain("Company no. 16775578");
     await extracted.destroy();
 
     const finalHash = createHash("sha256").update(finalBytes).digest("hex");
