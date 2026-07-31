@@ -2424,8 +2424,8 @@
   display: grid;
   padding: 12px;
   gap: 5px;
-  border: 1px solid #77a8a2;
-  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(77, 133, 130, 0.78);
+  background: transparent;
 }
 
 .portal-corporate-stamp > div {
@@ -2438,7 +2438,7 @@
 .portal-corporate-stamp > div > p {
   display: grid;
   margin: 0;
-  color: var(--portal-ink);
+  color: rgba(7, 30, 38, 0.78);
   font-size: 0.72rem;
   line-height: 1;
   text-transform: uppercase;
@@ -2446,7 +2446,7 @@
 
 .portal-corporate-stamp > div > p span {
   margin-top: 3px;
-  color: var(--portal-teal);
+  color: rgba(18, 117, 111, 0.78);
   font-size: 0.58rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -2454,14 +2454,14 @@
 
 .portal-corporate-stamp > b {
   padding-top: 6px;
-  border-top: 1px solid #ccd9d6;
-  color: var(--portal-ink);
+  border-top: 1px solid rgba(131, 158, 152, 0.58);
+  color: rgba(7, 30, 38, 0.78);
   font-size: 0.6rem;
 }
 
 .portal-corporate-stamp > p {
   margin: 0;
-  color: var(--portal-muted);
+  color: rgba(72, 89, 89, 0.78);
   font-size: 0.51rem;
   line-height: 1.3;
 }
@@ -2474,10 +2474,10 @@
   flex: 0 0 38px;
   align-items: center;
   justify-content: center;
-  border: 1px solid #4d8582;
+  border: 1px solid rgba(77, 133, 130, 0.78);
   border-radius: 50%;
-  background: var(--portal-ink);
-  color: #fff;
+  background: transparent;
+  color: rgba(7, 30, 38, 0.78);
   font-family: Georgia, serif;
   font-size: 1rem;
 }
@@ -2486,13 +2486,13 @@
   position: absolute;
   width: 1px;
   height: 30px;
-  background: var(--portal-aqua);
+  background: rgba(60, 207, 197, 0.78);
   content: "";
   transform: rotate(13deg);
 }
 
 .portal-stamp-mark > span:last-child {
-  color: var(--portal-aqua);
+  color: rgba(18, 117, 111, 0.78);
 }
 
 .portal-signature-date {

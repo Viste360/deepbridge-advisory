@@ -132,6 +132,7 @@ function drawCentredText(
     y: number;
     size: number;
     color: ReturnType<typeof rgb>;
+    opacity?: number;
   },
 ) {
   page.drawText(text, {
@@ -140,6 +141,7 @@ function drawCentredText(
     size: options.size,
     font,
     color: options.color,
+    opacity: options.opacity,
   });
 }
 
@@ -151,8 +153,8 @@ function drawDeepBridgeCompanySeal(
 ) {
   const ink = rgb(0.03, 0.11, 0.15);
   const teal = rgb(0.19, 0.7, 0.66);
-  const white = rgb(0.98, 0.98, 0.95);
   const muted = rgb(0.36, 0.43, 0.44);
+  const stampOpacity = 0.78;
   const width = 164;
   const height = 142;
   const markX = x + 32;
@@ -163,9 +165,9 @@ function drawDeepBridgeCompanySeal(
     y,
     width,
     height,
-    color: rgb(0.985, 0.992, 0.99),
     borderColor: rgb(0.3, 0.56, 0.57),
     borderWidth: 1.2,
+    borderOpacity: stampOpacity,
   });
   page.drawText("CORPORATE EXECUTION STAMP", {
     x: x + 12,
@@ -173,15 +175,16 @@ function drawDeepBridgeCompanySeal(
     size: 5.3,
     font: fonts.bold,
     color: muted,
+    opacity: stampOpacity,
   });
 
   page.drawCircle({
     x: markX,
     y: markY,
     size: 22,
-    color: ink,
     borderColor: rgb(0.3, 0.56, 0.57),
     borderWidth: 1.4,
+    borderOpacity: stampOpacity,
   });
   page.drawCircle({
     x: markX,
@@ -189,13 +192,15 @@ function drawDeepBridgeCompanySeal(
     size: 19,
     borderColor: rgb(0.07, 0.2, 0.26),
     borderWidth: 0.7,
+    borderOpacity: stampOpacity,
   });
   page.drawText("D", {
     x: markX - 13,
     y: markY - 8,
     size: 21,
     font: fonts.serif,
-    color: white,
+    color: ink,
+    opacity: stampOpacity,
   });
   page.drawText("B", {
     x: markX - 1,
@@ -203,12 +208,14 @@ function drawDeepBridgeCompanySeal(
     size: 21,
     font: fonts.serif,
     color: teal,
+    opacity: stampOpacity,
   });
   page.drawLine({
     start: { x: markX - 1, y: markY - 17 },
     end: { x: markX + 4, y: markY + 18 },
     thickness: 1,
     color: teal,
+    opacity: stampOpacity,
   });
 
   page.drawText("DEEPBRIDGE", {
@@ -217,6 +224,7 @@ function drawDeepBridgeCompanySeal(
     size: 9,
     font: fonts.bold,
     color: ink,
+    opacity: stampOpacity,
   });
   page.drawText("ADVISORY", {
     x: x + 61,
@@ -224,18 +232,21 @@ function drawDeepBridgeCompanySeal(
     size: 7,
     font: fonts.bold,
     color: teal,
+    opacity: stampOpacity,
   });
   page.drawLine({
     start: { x: x + 12, y: y + 74 },
     end: { x: x + width - 12, y: y + 74 },
     thickness: 0.7,
     color: rgb(0.65, 0.75, 0.72),
+    opacity: stampOpacity,
   });
   drawCentredText(page, "DUSTDEEP LTD", fonts.bold, {
     centreX: x + width / 2,
     y: y + 60,
     size: 7,
     color: muted,
+    opacity: stampOpacity,
   });
   drawCentredText(
     page,
@@ -246,6 +257,7 @@ function drawDeepBridgeCompanySeal(
       y: y + 49,
       size: 4.8,
       color: muted,
+      opacity: stampOpacity,
     },
   );
   drawCentredText(page, DEEPBRIDGE_REGISTERED_OFFICE_LINE_1, fonts.regular, {
@@ -253,12 +265,14 @@ function drawDeepBridgeCompanySeal(
     y: y + 32,
     size: 5.2,
     color: ink,
+    opacity: stampOpacity,
   });
   drawCentredText(page, DEEPBRIDGE_REGISTERED_OFFICE_LINE_2, fonts.regular, {
     centreX: x + width / 2,
     y: y + 22,
     size: 5.2,
     color: ink,
+    opacity: stampOpacity,
   });
 }
 
