@@ -437,8 +437,8 @@ function PortalLegalPage({ kind }: { kind: "privacy" | "terms" }) {
           </>
         )}
         <p>
-          DustDeep Ltd · Company number 16775578 · 124–128 City Road, London,
-          EC1V 2NX, United Kingdom
+          DustDeep Ltd · Company number 16775578 · Kemp House, 152–160 City
+          Road, London, EC1V 2NX, United Kingdom
         </p>
         <Link className="portal-text-link" to="/login">
           Return to sign in
@@ -5471,10 +5471,29 @@ function AdminCountersignDialog({
                 onChange={(event) => setSignerTitle(event.target.value)}
               />
               <div className="portal-signature-preview" aria-label="Signature preview">
-                <small>Electronic signature preview</small>
-                <span>{signerName || "Your name"}</span>
-                <p>{signerTitle || "Signing authority"}</p>
-                <p>
+                <div className="portal-signature-person">
+                  <small>Authenticated signatory</small>
+                  <span>{signerName || "Your name"}</span>
+                  <p>{signerTitle || "Signing authority"}</p>
+                </div>
+                <div className="portal-corporate-stamp">
+                  <small>Corporate execution stamp</small>
+                  <div>
+                    <span className="portal-stamp-mark" aria-hidden="true">
+                      <span>D</span>
+                      <span>B</span>
+                    </span>
+                    <p>
+                      <strong>DeepBridge</strong>
+                      <span>Advisory</span>
+                    </p>
+                  </div>
+                  <b>DUSTDEEP LTD</b>
+                  <p>Registered in England and Wales · Company no. 16775578</p>
+                  <p>Kemp House, 152–160 City Road</p>
+                  <p>London, United Kingdom, EC1V 2NX</p>
+                </div>
+                <p className="portal-signature-date">
                   Signing date:{" "}
                   {new Intl.DateTimeFormat("en-GB", {
                     day: "numeric",

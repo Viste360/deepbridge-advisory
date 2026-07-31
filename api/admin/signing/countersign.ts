@@ -118,6 +118,10 @@ function drawKeyValue(
 }
 
 const DEEPBRIDGE_COMPANY_NUMBER = "16775578";
+const DEEPBRIDGE_REGISTERED_OFFICE_LINE_1 =
+  "Kemp House, 152-160 City Road";
+const DEEPBRIDGE_REGISTERED_OFFICE_LINE_2 =
+  "London, United Kingdom, EC1V 2NX";
 
 function drawCentredText(
   page: PDFPage,
@@ -142,73 +146,120 @@ function drawCentredText(
 function drawDeepBridgeCompanySeal(
   page: PDFPage,
   fonts: { regular: PDFFont; bold: PDFFont; serif: PDFFont },
-  centreX: number,
-  centreY: number,
+  x: number,
+  y: number,
 ) {
   const ink = rgb(0.03, 0.11, 0.15);
   const teal = rgb(0.19, 0.7, 0.66);
   const white = rgb(0.98, 0.98, 0.95);
   const muted = rgb(0.36, 0.43, 0.44);
+  const width = 164;
+  const height = 142;
+  const markX = x + 32;
+  const markY = y + 103;
+
+  page.drawRectangle({
+    x,
+    y,
+    width,
+    height,
+    color: rgb(0.985, 0.992, 0.99),
+    borderColor: rgb(0.3, 0.56, 0.57),
+    borderWidth: 1.2,
+  });
+  page.drawText("CORPORATE EXECUTION STAMP", {
+    x: x + 12,
+    y: y + 126,
+    size: 5.3,
+    font: fonts.bold,
+    color: muted,
+  });
 
   page.drawCircle({
-    x: centreX,
-    y: centreY,
-    size: 34,
+    x: markX,
+    y: markY,
+    size: 22,
     color: ink,
     borderColor: rgb(0.3, 0.56, 0.57),
-    borderWidth: 2,
+    borderWidth: 1.4,
   });
   page.drawCircle({
-    x: centreX,
-    y: centreY,
-    size: 29.5,
+    x: markX,
+    y: markY,
+    size: 19,
     borderColor: rgb(0.07, 0.2, 0.26),
-    borderWidth: 1,
+    borderWidth: 0.7,
   });
   page.drawText("D", {
-    x: centreX - 20,
-    y: centreY - 12,
-    size: 33,
+    x: markX - 13,
+    y: markY - 8,
+    size: 21,
     font: fonts.serif,
     color: white,
   });
   page.drawText("B", {
-    x: centreX - 1,
-    y: centreY - 12,
-    size: 33,
+    x: markX - 1,
+    y: markY - 8,
+    size: 21,
     font: fonts.serif,
     color: teal,
   });
   page.drawLine({
-    start: { x: centreX - 2, y: centreY - 26 },
-    end: { x: centreX + 5, y: centreY + 27 },
-    thickness: 1.4,
+    start: { x: markX - 1, y: markY - 17 },
+    end: { x: markX + 4, y: markY + 18 },
+    thickness: 1,
     color: teal,
   });
 
-  drawCentredText(page, "DEEPBRIDGE ADVISORY", fonts.bold, {
-    centreX,
-    y: centreY - 48,
-    size: 6.3,
+  page.drawText("DEEPBRIDGE", {
+    x: x + 61,
+    y: y + 107,
+    size: 9,
+    font: fonts.bold,
     color: ink,
   });
+  page.drawText("ADVISORY", {
+    x: x + 61,
+    y: y + 96,
+    size: 7,
+    font: fonts.bold,
+    color: teal,
+  });
+  page.drawLine({
+    start: { x: x + 12, y: y + 74 },
+    end: { x: x + width - 12, y: y + 74 },
+    thickness: 0.7,
+    color: rgb(0.65, 0.75, 0.72),
+  });
   drawCentredText(page, "DUSTDEEP LTD", fonts.bold, {
-    centreX,
-    y: centreY - 58,
-    size: 5.8,
+    centreX: x + width / 2,
+    y: y + 60,
+    size: 7,
     color: muted,
   });
   drawCentredText(
     page,
-    `Company no. ${DEEPBRIDGE_COMPANY_NUMBER}`,
+    `Registered in England and Wales - Company no. ${DEEPBRIDGE_COMPANY_NUMBER}`,
     fonts.regular,
     {
-      centreX,
-      y: centreY - 68,
-      size: 5.8,
+      centreX: x + width / 2,
+      y: y + 49,
+      size: 4.8,
       color: muted,
     },
   );
+  drawCentredText(page, DEEPBRIDGE_REGISTERED_OFFICE_LINE_1, fonts.regular, {
+    centreX: x + width / 2,
+    y: y + 32,
+    size: 5.2,
+    color: ink,
+  });
+  drawCentredText(page, DEEPBRIDGE_REGISTERED_OFFICE_LINE_2, fonts.regular, {
+    centreX: x + width / 2,
+    y: y + 22,
+    size: 5.2,
+    color: ink,
+  });
 }
 
 type SignatureBlockPlacement = {
@@ -464,10 +515,10 @@ export async function createCountersignedPdf(input: {
     color: rgb(0.68, 0.83, 0.82),
   });
 
-  page.drawText("Signed for DeepBridge", {
+  page.drawText("Signed for and on behalf of DeepBridge Advisory", {
     x: 54,
     y: 657,
-    size: 25,
+    size: 20,
     font: bold,
     color: ink,
   });
@@ -509,35 +560,35 @@ export async function createCountersignedPdf(input: {
     },
   );
   const signatureRatio = signature.width / signature.height;
-  const signatureHeight = 68;
-  const signatureWidth = Math.min(330, signatureHeight * signatureRatio);
+  const signatureHeight = 52;
+  const signatureWidth = Math.min(260, signatureHeight * signatureRatio);
   page.drawImage(signature, {
     x: 76,
-    y: 401,
+    y: 416,
     width: signatureWidth,
     height: signatureHeight,
   });
   page.drawLine({
-    start: { x: 76, y: 396 },
-    end: { x: 390, y: 396 },
+    start: { x: 76, y: 407 },
+    end: { x: 340, y: 407 },
     thickness: 0.8,
     color: rgb(0.45, 0.55, 0.54),
   });
   page.drawText(input.signerName, {
     x: 76,
-    y: 378,
-    size: 10,
+    y: 391,
+    size: 8.5,
     font: bold,
     color: ink,
   });
   page.drawText(input.signerTitle, {
     x: 76,
-    y: 364,
-    size: 8.5,
+    y: 377,
+    size: 7.5,
     font: regular,
     color: muted,
   });
-  drawDeepBridgeCompanySeal(page, { regular, bold, serif }, 462, 435);
+  drawDeepBridgeCompanySeal(page, { regular, bold, serif }, 357, 373);
 
   const signedAt = input.signedAt.toISOString();
   drawKeyValue(

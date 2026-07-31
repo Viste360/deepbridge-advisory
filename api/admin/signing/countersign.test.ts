@@ -91,6 +91,12 @@ describe("portal countersignature PDFs", () => {
     expect(countersignatureRecord).toContain("DEEPBRIDGE ADVISORY");
     expect(countersignatureRecord).toContain("DUSTDEEP LTD");
     expect(countersignatureRecord).toContain("Company no. 16775578");
+    expect(countersignatureRecord).toContain(
+      "Kemp House, 152-160 City Road",
+    );
+    expect(countersignatureRecord).toContain(
+      "London, United Kingdom, EC1V 2NX",
+    );
     await extracted.destroy();
 
     const finalHash = createHash("sha256").update(finalBytes).digest("hex");

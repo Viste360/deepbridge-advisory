@@ -2374,10 +2374,12 @@
 
 .portal-signature-preview {
   display: grid;
-  min-height: 170px;
+  min-height: 230px;
   margin-top: 5px;
   padding: 18px 24px;
-  align-content: center;
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) minmax(210px, 0.85fr);
+  gap: 18px 24px;
   border: 1px solid #b8c9c5;
   background:
     linear-gradient(rgba(255, 255, 255, 0.93), rgba(255, 255, 255, 0.93)),
@@ -2389,7 +2391,8 @@
     );
 }
 
-.portal-signature-preview small {
+.portal-signature-preview small,
+.portal-corporate-stamp > small {
   margin: 0;
   color: #6d7c78;
   font-size: 0.6rem;
@@ -2398,17 +2401,104 @@
   text-transform: uppercase;
 }
 
-.portal-signature-preview > span {
+.portal-signature-person {
+  display: grid;
+  align-content: center;
+}
+
+.portal-signature-person > span {
   color: #0b3c43;
   font-family: "AlluraSignature", "Brush Script MT", cursive;
-  font-size: clamp(3rem, 8vw, 5.2rem);
+  font-size: clamp(2.8rem, 6vw, 4.4rem);
   line-height: 0.95;
 }
 
-.portal-signature-preview p {
+.portal-signature-person p,
+.portal-signature-date {
   margin: 5px 0 0;
   color: var(--portal-muted);
   font-size: 0.68rem;
+}
+
+.portal-corporate-stamp {
+  display: grid;
+  padding: 12px;
+  gap: 5px;
+  border: 1px solid #77a8a2;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.portal-corporate-stamp > div {
+  display: flex;
+  margin: 3px 0 2px;
+  align-items: center;
+  gap: 9px;
+}
+
+.portal-corporate-stamp > div > p {
+  display: grid;
+  margin: 0;
+  color: var(--portal-ink);
+  font-size: 0.72rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.portal-corporate-stamp > div > p span {
+  margin-top: 3px;
+  color: var(--portal-teal);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.portal-corporate-stamp > b {
+  padding-top: 6px;
+  border-top: 1px solid #ccd9d6;
+  color: var(--portal-ink);
+  font-size: 0.6rem;
+}
+
+.portal-corporate-stamp > p {
+  margin: 0;
+  color: var(--portal-muted);
+  font-size: 0.51rem;
+  line-height: 1.3;
+}
+
+.portal-stamp-mark {
+  position: relative;
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #4d8582;
+  border-radius: 50%;
+  background: var(--portal-ink);
+  color: #fff;
+  font-family: Georgia, serif;
+  font-size: 1rem;
+}
+
+.portal-stamp-mark::after {
+  position: absolute;
+  width: 1px;
+  height: 30px;
+  background: var(--portal-aqua);
+  content: "";
+  transform: rotate(13deg);
+}
+
+.portal-stamp-mark > span:last-child {
+  color: var(--portal-aqua);
+}
+
+.portal-signature-date {
+  grid-column: 1 / -1;
+  padding-top: 9px;
+  border-top: 1px solid #d7e0dd;
 }
 
 .portal-signature-consent {
@@ -3109,6 +3199,14 @@
 
   .portal-consultant-email .portal-button {
     width: 100%;
+  }
+
+  .portal-signature-preview {
+    grid-template-columns: 1fr;
+  }
+
+  .portal-signature-date {
+    grid-column: auto;
   }
 }
 
