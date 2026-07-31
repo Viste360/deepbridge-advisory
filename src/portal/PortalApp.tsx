@@ -1,6 +1,7 @@
 import {
   CSSProperties,
   FormEvent,
+  PointerEvent as ReactPointerEvent,
   ReactNode,
   createContext,
   useCallback,
@@ -65,7 +66,9 @@ import {
   type AdminSigningItem,
   type PortalBrowserSession,
   type UploadProgress,
+  type ManualPdfPlacement,
 } from "./portalApi";
+import PdfWorker from "pdfjs-dist/build/pdf.worker.mjs?worker";
 
 const googleSignInEnabled =
   import.meta.env.VITE_GOOGLE_AUTH_ENABLED === "true";
@@ -4823,6 +4826,7 @@ function AdminSigningPage() {
     signerName: string;
     signerTitle: string;
     signatureImageDataUrl: string;
+    placement?: ManualPdfPlacement;
   }) {
     let countersignatureWasAlreadySubmitted = false;
     let countersignatureNeedsScanRetry = false;
@@ -4884,6 +4888,7 @@ function AdminSigningPage() {
           signerTitle: input.signerTitle,
           signatureImageDataUrl: input.signatureImageDataUrl,
           confirmed: true,
+          placement: input.placement,
         });
       } catch (signError) {
         // The server may have committed the signature even if the browser lost
@@ -5270,6 +5275,278 @@ async function typedSignatureImage(name: string) {
   return canvas.toDataURL("image/png");
 }
 
+let sharedPdfPreviewWorker: Worker | null = null;
+
+function initialManualPdfPlacement(title: string): ManualPdfPlacement {
+  if (title.toLowerCase().includes("professional consultant charter")) {
+    return {
+      pageIndex: 0,
+      signature: { x: 0.18, y: 0.315 },
+      stamp: { x: 0.6, y: 0.45, rotation: -3 },
+      date: { x: 0.15, y: 0.36 },
+    };
+  }
+  return {
+    pageIndex: 0,
+    signature: { x: 0.14, y: 0.66 },
+    stamp: { x: 0.58, y: 0.57, rotation: -3 },
+    date: { x: 0.14, y: 0.74 },
+  };
+}
+
+type PdfPlacementTarget = "signature" | "stamp" | "date";
+
+function PdfPlacementEditor({
+  bytes,
+  signerName,
+  placement,
+  onChange,
+  onPageChange,
+}: {
+  bytes: Uint8Array;
+  signerName: string;
+  placement: ManualPdfPlacement;
+  onChange: (placement: ManualPdfPlacement) => void;
+  onPageChange: (pageIndex: number) => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const pageRef = useRef<HTMLDivElement | null>(null);
+  const [pageCount, setPageCount] = useState(0);
+  const [pageRatio, setPageRatio] = useState(595.28 / 841.89);
+  const [rendering, setRendering] = useState(true);
+  const [renderError, setRenderError] = useState("");
+  const [drag, setDrag] = useState<{
+    target: PdfPlacementTarget;
+    offsetX: number;
+    offsetY: number;
+  } | null>(null);
+  const initialPageChosen = useRef(false);
+
+  useEffect(() => {
+    let active = true;
+    let pdfDocument: { destroy: () => Promise<void> } | undefined;
+    void import("pdfjs-dist")
+      .then(async (pdfjs) => {
+        if (!sharedPdfPreviewWorker)
+          sharedPdfPreviewWorker = new PdfWorker();
+        pdfjs.GlobalWorkerOptions.workerPort = sharedPdfPreviewWorker;
+        const loadingTask = pdfjs.getDocument({ data: bytes.slice() });
+        const loaded = await loadingTask.promise;
+        pdfDocument = loaded;
+        if (!active) return;
+        setPageCount(loaded.numPages);
+        if (!initialPageChosen.current) {
+          initialPageChosen.current = true;
+          const lastPageIndex = loaded.numPages - 1;
+          if (lastPageIndex !== placement.pageIndex) {
+            onPageChange(lastPageIndex);
+            return;
+          }
+        }
+        const requestedPage = Math.min(
+          Math.max(placement.pageIndex, 0),
+          loaded.numPages - 1,
+        );
+        if (requestedPage !== placement.pageIndex) {
+          onPageChange(requestedPage);
+          return;
+        }
+        const page = await loaded.getPage(requestedPage + 1);
+        if (!active || !canvasRef.current) return;
+        const viewport = page.getViewport({ scale: 1.55 });
+        const canvas = canvasRef.current;
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("The PDF preview canvas is unavailable.");
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+        setPageRatio(viewport.width / viewport.height);
+        await page.render({ canvas, canvasContext: context, viewport }).promise;
+      })
+      .catch((error) => {
+        if (active)
+          setRenderError(
+            error instanceof Error
+              ? error.message
+              : "The PDF page could not be previewed.",
+          );
+      })
+      .finally(() => {
+        if (active) setRendering(false);
+      });
+    return () => {
+      active = false;
+      if (pdfDocument) void pdfDocument.destroy();
+    };
+  }, [bytes, onPageChange, placement.pageIndex]);
+
+  function changePage(pageIndex: number) {
+    setRendering(true);
+    setRenderError("");
+    onPageChange(pageIndex);
+  }
+
+  function pointFor(target: PdfPlacementTarget) {
+    return placement[target];
+  }
+
+  function beginDrag(
+    event: ReactPointerEvent<HTMLButtonElement>,
+    target: PdfPlacementTarget,
+  ) {
+    if (!pageRef.current) return;
+    const bounds = pageRef.current.getBoundingClientRect();
+    const point = pointFor(target);
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDrag({
+      target,
+      offsetX: event.clientX - bounds.left - point.x * bounds.width,
+      offsetY: event.clientY - bounds.top - point.y * bounds.height,
+    });
+  }
+
+  function moveDrag(event: ReactPointerEvent<HTMLDivElement>) {
+    if (!drag || !pageRef.current) return;
+    const bounds = pageRef.current.getBoundingClientRect();
+    const x = Math.max(
+      0.015,
+      Math.min(
+        0.94,
+        (event.clientX - bounds.left - drag.offsetX) / bounds.width,
+      ),
+    );
+    const y = Math.max(
+      0.015,
+      Math.min(
+        0.94,
+        (event.clientY - bounds.top - drag.offsetY) / bounds.height,
+      ),
+    );
+    if (drag.target === "stamp")
+      onChange({
+        ...placement,
+        stamp: { ...placement.stamp, x, y },
+      });
+    else
+      onChange({
+        ...placement,
+        [drag.target]: { x, y },
+      });
+  }
+
+  const stampStyle = {
+    left: `${placement.stamp.x * 100}%`,
+    top: `${placement.stamp.y * 100}%`,
+    "--stamp-rotation": `${placement.stamp.rotation}deg`,
+  } as CSSProperties;
+
+  return (
+    <div className="portal-pdf-placement-editor">
+      <div className="portal-pdf-placement-toolbar">
+        <div>
+          <strong>Page {placement.pageIndex + 1}</strong>
+          <span> of {pageCount || "…"}</span>
+        </div>
+        <div>
+          <button
+            type="button"
+            className="portal-button portal-button-secondary"
+            disabled={placement.pageIndex <= 0 || rendering}
+            onClick={() => changePage(placement.pageIndex - 1)}
+          >
+            Previous page
+          </button>
+          <button
+            type="button"
+            className="portal-button portal-button-secondary"
+            disabled={
+              !pageCount || placement.pageIndex >= pageCount - 1 || rendering
+            }
+            onClick={() => changePage(placement.pageIndex + 1)}
+          >
+            Next page
+          </button>
+        </div>
+      </div>
+      <p>Drag each labelled item to its exact position on the document.</p>
+      <div
+        ref={pageRef}
+        className="portal-pdf-placement-page"
+        style={{ aspectRatio: String(pageRatio) }}
+        onPointerMove={moveDrag}
+        onPointerUp={() => setDrag(null)}
+        onPointerCancel={() => setDrag(null)}
+      >
+        <canvas ref={canvasRef} aria-label="PDF page placement preview" />
+        {rendering ? <span className="portal-pdf-rendering">Rendering page…</span> : null}
+        {renderError ? (
+          <span className="portal-pdf-render-error">{renderError}</span>
+        ) : null}
+        <button
+          type="button"
+          className="portal-pdf-placement-item signature"
+          style={{
+            left: `${placement.signature.x * 100}%`,
+            top: `${placement.signature.y * 100}%`,
+          }}
+          onPointerDown={(event) => beginDrag(event, "signature")}
+        >
+          <small>Signature</small>
+          <span>{signerName || "Your name"}</span>
+        </button>
+        <button
+          type="button"
+          className="portal-pdf-placement-item stamp"
+          style={stampStyle}
+          onPointerDown={(event) => beginDrag(event, "stamp")}
+        >
+          <small>Company stamp</small>
+          <strong>DB · DEEPBRIDGE</strong>
+          <span>ADVISORY · DUSTDEEP LTD</span>
+        </button>
+        <button
+          type="button"
+          className="portal-pdf-placement-item date"
+          style={{
+            left: `${placement.date.x * 100}%`,
+            top: `${placement.date.y * 100}%`,
+          }}
+          onPointerDown={(event) => beginDrag(event, "date")}
+        >
+          <small>Date</small>
+          <span>
+            {new Intl.DateTimeFormat("en-GB", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+              timeZone: "UTC",
+            }).format(new Date())}
+          </span>
+        </button>
+      </div>
+      <label className="portal-stamp-angle">
+        <span>Stamp angle</span>
+        <input
+          type="range"
+          min="-6"
+          max="6"
+          step="1"
+          value={placement.stamp.rotation}
+          onChange={(event) =>
+            onChange({
+              ...placement,
+              stamp: {
+                ...placement.stamp,
+                rotation: Number(event.target.value),
+              },
+            })
+          }
+        />
+        <strong>{placement.stamp.rotation}°</strong>
+      </label>
+    </div>
+  );
+}
+
 function AdminCountersignDialog({
   item,
   defaultSignerName,
@@ -5287,6 +5564,7 @@ function AdminCountersignDialog({
     signerName: string;
     signerTitle: string;
     signatureImageDataUrl: string;
+    placement?: ManualPdfPlacement;
   }) => Promise<void>;
 }) {
   const [consultantSignedPdf, setConsultantSignedPdf] = useState<File | null>(
@@ -5302,11 +5580,20 @@ function AdminCountersignDialog({
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
+  const [placementBytes, setPlacementBytes] = useState<Uint8Array | null>(null);
+  const [manualPlacement, setManualPlacement] =
+    useState<ManualPdfPlacement | null>(null);
+  const [placementLoading, setPlacementLoading] = useState(false);
   const isReissue = item.status === "completed";
   const usesStoredConsultantPdf =
     !isReissue &&
     item.providerStatus === "consultant_signed" &&
     item.finalScanStatus === "clean";
+  const setPlacementPageIndex = useCallback((pageIndex: number) => {
+    setManualPlacement((current) =>
+      current ? { ...current, pageIndex } : current,
+    );
+  }, []);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -5340,6 +5627,7 @@ function AdminCountersignDialog({
         signerName: signerName.trim(),
         signerTitle: signerTitle.trim(),
         signatureImageDataUrl,
+        placement: manualPlacement ?? undefined,
       });
       onClose();
     } catch (signError) {
@@ -5360,10 +5648,44 @@ function AdminCountersignDialog({
     window.setTimeout(() => URL.revokeObjectURL(previewUrl), 60_000);
   }
 
+  async function openPlacementEditor() {
+    setPlacementLoading(true);
+    setError("");
+    try {
+      let bytes: Uint8Array;
+      if (consultantSignedPdf) {
+        bytes = new Uint8Array(await consultantSignedPdf.arrayBuffer());
+      } else {
+        const access = await getConsultantSignedUpload(item.id);
+        if (!access.url)
+          throw new Error("The secure PDF preview link could not be created.");
+        const previewResponse = await fetch(access.url);
+        if (!previewResponse.ok)
+          throw new Error("The consultant-signed PDF could not be loaded.");
+        bytes = new Uint8Array(await previewResponse.arrayBuffer());
+      }
+      if (
+        bytes.length < 5 ||
+        new TextDecoder("ascii").decode(bytes.subarray(0, 5)) !== "%PDF-"
+      )
+        throw new Error("The selected file is not a readable PDF.");
+      setPlacementBytes(bytes);
+      setManualPlacement(initialManualPdfPlacement(item.title));
+    } catch (placementError) {
+      setError(
+        placementError instanceof Error
+          ? placementError.message
+          : "The PDF placement preview could not be opened.",
+      );
+    } finally {
+      setPlacementLoading(false);
+    }
+  }
+
   return (
     <div className="portal-modal-backdrop" role="presentation">
       <div
-        className="portal-modal portal-signature-modal"
+        className={`portal-modal portal-signature-modal${manualPlacement ? " portal-signature-modal-placement" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="countersign-title"
@@ -5427,9 +5749,11 @@ function AdminCountersignDialog({
                     accept=".pdf,application/pdf"
                     required
                     disabled={busy}
-                    onChange={(event) =>
-                      setConsultantSignedPdf(event.target.files?.[0] ?? null)
-                    }
+                    onChange={(event) => {
+                      setConsultantSignedPdf(event.target.files?.[0] ?? null);
+                      setPlacementBytes(null);
+                      setManualPlacement(null);
+                    }}
                   />
                   {consultantSignedPdf ? (
                     <button
@@ -5448,6 +5772,55 @@ function AdminCountersignDialog({
 
           <div className="portal-signing-step">
             <span>2</span>
+            <div>
+              <strong>Place in the PDF</strong>
+              <p>
+                Automatic placement remains available. To choose the exact
+                positions, open the last page and drag the signature, company
+                stamp and date where they should appear.
+              </p>
+              {manualPlacement && placementBytes ? (
+                <>
+                  <PdfPlacementEditor
+                    bytes={placementBytes}
+                    signerName={signerName}
+                    placement={manualPlacement}
+                    onChange={setManualPlacement}
+                    onPageChange={setPlacementPageIndex}
+                  />
+                  <button
+                    className="portal-button portal-button-secondary"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      setPlacementBytes(null);
+                      setManualPlacement(null);
+                    }}
+                  >
+                    Use automatic placement
+                  </button>
+                </>
+              ) : (
+                <button
+                  className="portal-button portal-button-secondary"
+                  type="button"
+                  disabled={
+                    busy ||
+                    placementLoading ||
+                    (!usesStoredConsultantPdf && !consultantSignedPdf)
+                  }
+                  onClick={() => void openPlacementEditor()}
+                >
+                  {placementLoading
+                    ? "Opening PDF…"
+                    : "Place signature, stamp & date"}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="portal-signing-step">
+            <span>3</span>
             <div>
               <strong>DeepBridge signatory</strong>
               <label htmlFor="deepbridge-signer-name">Full name</label>

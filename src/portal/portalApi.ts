@@ -1209,10 +1209,17 @@ export async function listAdminSigningItems(): Promise<AdminSigningItem[]> {
 export async function getConsultantSignedUpload(
   assignedDocumentId: string,
 ) {
-  return authorisedRequest("/api/admin/signing/consultant-upload", {
+  return authorisedRequest<{ url?: string }>("/api/admin/signing/consultant-upload", {
     assignedDocumentId,
   });
 }
+
+export type ManualPdfPlacement = {
+  pageIndex: number;
+  signature: { x: number; y: number };
+  stamp: { x: number; y: number; rotation: number };
+  date: { x: number; y: number };
+};
 
 export async function recordGoogleSigningStep(
   assignedDocumentId: string,
@@ -1283,6 +1290,7 @@ export async function createPortalCountersignature(input: {
   signerTitle: string;
   signatureImageDataUrl: string;
   confirmed: boolean;
+  placement?: ManualPdfPlacement;
 }) {
   return post<{ envelopeId: string; status: string }>(
     "/api/admin/signing/countersign",

@@ -2372,6 +2372,167 @@
   width: fit-content;
 }
 
+.portal-signature-modal-placement {
+  width: min(100%, 1080px);
+}
+
+.portal-pdf-placement-editor {
+  display: grid;
+  margin: 4px 0 2px;
+  padding: 16px;
+  gap: 12px;
+  border: 1px solid #b7cbc6;
+  background: #edf5f2;
+}
+
+.portal-pdf-placement-toolbar,
+.portal-pdf-placement-toolbar > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.portal-pdf-placement-toolbar {
+  justify-content: space-between;
+}
+
+.portal-pdf-placement-toolbar span {
+  color: var(--portal-muted);
+  font-size: 0.68rem;
+}
+
+.portal-pdf-placement-toolbar .portal-button {
+  padding: 7px 10px;
+  font-size: 0.61rem;
+}
+
+.portal-pdf-placement-page {
+  position: relative;
+  width: min(100%, 720px);
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid #91aaa4;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(6, 31, 38, 0.12);
+  touch-action: none;
+  user-select: none;
+}
+
+.portal-pdf-placement-page canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.portal-pdf-rendering,
+.portal-pdf-render-error {
+  position: absolute;
+  z-index: 4;
+  inset: 50% auto auto 50%;
+  padding: 8px 12px;
+  color: var(--portal-ink);
+  background: rgba(255, 255, 255, 0.94);
+  font-size: 0.65rem;
+  font-weight: 750;
+  transform: translate(-50%, -50%);
+}
+
+.portal-pdf-render-error {
+  color: #8b2925;
+}
+
+.portal-pdf-placement-item {
+  position: absolute;
+  z-index: 3;
+  display: grid;
+  margin: 0;
+  padding: 5px 7px;
+  border: 1px dashed rgba(12, 112, 105, 0.8);
+  border-radius: 2px;
+  color: rgba(7, 45, 52, 0.88);
+  background: rgba(220, 249, 244, 0.42);
+  box-shadow: 0 2px 9px rgba(6, 31, 38, 0.08);
+  cursor: grab;
+  line-height: 1;
+  text-align: left;
+  touch-action: none;
+}
+
+.portal-pdf-placement-item:active {
+  cursor: grabbing;
+}
+
+.portal-pdf-placement-item small {
+  color: rgba(13, 101, 96, 0.82);
+  font-family: Inter, Arial, sans-serif;
+  font-size: clamp(0.38rem, 0.85vw, 0.52rem);
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.portal-pdf-placement-item.signature {
+  width: 28%;
+}
+
+.portal-pdf-placement-item.signature span {
+  color: rgba(8, 62, 68, 0.82);
+  font-family: "AlluraSignature", "Brush Script MT", cursive;
+  font-size: clamp(1rem, 3.8vw, 2.45rem);
+  line-height: 0.9;
+  white-space: nowrap;
+}
+
+.portal-pdf-placement-item.stamp {
+  width: 27.5%;
+  aspect-ratio: 164 / 142;
+  align-content: center;
+  gap: 4px;
+  border-style: solid;
+  border-color: rgba(36, 123, 119, 0.58);
+  background: rgba(255, 255, 255, 0.16);
+  transform: rotate(var(--stamp-rotation));
+  transform-origin: center;
+}
+
+.portal-pdf-placement-item.stamp strong {
+  font-size: clamp(0.46rem, 1.2vw, 0.73rem);
+}
+
+.portal-pdf-placement-item.stamp span {
+  color: rgba(20, 113, 107, 0.78);
+  font-size: clamp(0.36rem, 0.85vw, 0.52rem);
+  font-weight: 800;
+}
+
+.portal-pdf-placement-item.date {
+  min-width: 17%;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.portal-pdf-placement-item.date span {
+  font-size: clamp(0.44rem, 1.1vw, 0.68rem);
+  white-space: nowrap;
+}
+
+.portal-stamp-angle {
+  display: grid;
+  align-items: center;
+  grid-template-columns: auto minmax(140px, 1fr) 34px;
+  gap: 12px;
+}
+
+.portal-stamp-angle span,
+.portal-stamp-angle strong {
+  color: var(--portal-ink);
+  font-size: 0.65rem;
+}
+
+.portal-stamp-angle input {
+  margin: 0;
+  padding: 0;
+}
+
 .portal-signature-preview {
   display: grid;
   min-height: 230px;

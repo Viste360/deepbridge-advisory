@@ -5,9 +5,13 @@ import {
   PDFName,
   type PDFPage,
   PDFSignature,
+  popGraphicsState,
+  pushGraphicsState,
+  rotateDegrees,
   StandardFonts,
   type PDFFont,
   rgb,
+  translate,
 } from "pdf-lib";
 import {
   enforceRateLimit,
@@ -50,6 +54,52 @@ function decodeSignature(value: unknown) {
     throw new PortalHttpError(400, "The signature preview is invalid.");
   }
   return bytes;
+}
+
+export type ManualPdfPlacement = {
+  pageIndex: number;
+  signature: { x: number; y: number };
+  stamp: { x: number; y: number; rotation: number };
+  date: { x: number; y: number };
+};
+
+function normalizedCoordinate(value: unknown, label: string) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 1)
+    throw new PortalHttpError(400, `The ${label} position is invalid.`);
+  return value;
+}
+
+function decodeManualPlacement(value: unknown): ManualPdfPlacement | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (!value || typeof value !== "object")
+    throw new PortalHttpError(400, "The PDF placement is invalid.");
+  const input = value as Record<string, unknown>;
+  if (!Number.isInteger(input.pageIndex) || Number(input.pageIndex) < 0)
+    throw new PortalHttpError(400, "The PDF placement page is invalid.");
+  const signature = input.signature as Record<string, unknown> | undefined;
+  const stamp = input.stamp as Record<string, unknown> | undefined;
+  const date = input.date as Record<string, unknown> | undefined;
+  if (!signature || !stamp || !date)
+    throw new PortalHttpError(400, "Place the signature, stamp and date in the PDF.");
+  const rotation = Number(stamp.rotation);
+  if (!Number.isFinite(rotation) || rotation < -8 || rotation > 8)
+    throw new PortalHttpError(400, "The stamp angle is invalid.");
+  return {
+    pageIndex: Number(input.pageIndex),
+    signature: {
+      x: normalizedCoordinate(signature.x, "signature horizontal"),
+      y: normalizedCoordinate(signature.y, "signature vertical"),
+    },
+    stamp: {
+      x: normalizedCoordinate(stamp.x, "stamp horizontal"),
+      y: normalizedCoordinate(stamp.y, "stamp vertical"),
+      rotation,
+    },
+    date: {
+      x: normalizedCoordinate(date.x, "date horizontal"),
+      y: normalizedCoordinate(date.y, "date vertical"),
+    },
+  };
 }
 
 function wrapText(text: string, font: PDFFont, size: number, width: number) {
@@ -150,6 +200,7 @@ function drawDeepBridgeCompanySeal(
   fonts: { regular: PDFFont; bold: PDFFont; serif: PDFFont },
   x: number,
   y: number,
+  rotation = 0,
 ) {
   const ink = rgb(0.03, 0.11, 0.15);
   const teal = rgb(0.19, 0.7, 0.66);
@@ -159,6 +210,17 @@ function drawDeepBridgeCompanySeal(
   const height = 142;
   const markX = x + 32;
   const markY = y + 103;
+
+  if (rotation !== 0) {
+    const centreX = x + width / 2;
+    const centreY = y + height / 2;
+    page.pushOperators(
+      pushGraphicsState(),
+      translate(centreX, centreY),
+      rotateDegrees(rotation),
+      translate(-centreX, -centreY),
+    );
+  }
 
   page.drawRectangle({
     x,
@@ -274,6 +336,7 @@ function drawDeepBridgeCompanySeal(
     color: ink,
     opacity: stampOpacity,
   });
+  if (rotation !== 0) page.pushOperators(popGraphicsState());
 }
 
 type SignatureBlockPlacement = {
@@ -467,6 +530,89 @@ function drawSignatureInExecutionBlock(
   });
 }
 
+function clamp(value: number, minimum: number, maximum: number) {
+  return Math.max(minimum, Math.min(maximum, value));
+}
+
+function drawManualPdfPlacement(
+  page: PDFPage,
+  placement: ManualPdfPlacement,
+  signature: Awaited<ReturnType<PDFDocument["embedPng"]>>,
+  fonts: { regular: PDFFont; bold: PDFFont; serif: PDFFont },
+  signedAt: Date,
+) {
+  const pageWidth = page.getWidth();
+  const pageHeight = page.getHeight();
+  const signatureRatio = signature.width / signature.height;
+  const signatureHeight = 34;
+  const signatureWidth = Math.min(210, signatureHeight * signatureRatio);
+  const signatureX = clamp(
+    placement.signature.x * pageWidth,
+    12,
+    pageWidth - signatureWidth - 12,
+  );
+  const signatureY = clamp(
+    pageHeight - placement.signature.y * pageHeight - signatureHeight,
+    12,
+    pageHeight - signatureHeight - 12,
+  );
+  page.drawImage(signature, {
+    x: signatureX,
+    y: signatureY,
+    width: signatureWidth,
+    height: signatureHeight,
+  });
+
+  const dateText = formatSigningDate(signedAt);
+  const dateSize = 9.5;
+  const dateWidth = fonts.regular.widthOfTextAtSize(dateText, dateSize);
+  const dateX = clamp(
+    placement.date.x * pageWidth,
+    12,
+    pageWidth - dateWidth - 12,
+  );
+  const dateY = clamp(
+    pageHeight - placement.date.y * pageHeight - dateSize,
+    12,
+    pageHeight - dateSize - 12,
+  );
+  page.drawRectangle({
+    x: dateX - 5,
+    y: dateY - 2,
+    width: dateWidth + 10,
+    height: dateSize + 5,
+    color: rgb(1, 1, 1),
+    opacity: 0.92,
+  });
+  page.drawText(dateText, {
+    x: dateX,
+    y: dateY,
+    size: dateSize,
+    font: fonts.regular,
+    color: rgb(0.03, 0.11, 0.15),
+  });
+
+  const stampWidth = 164;
+  const stampHeight = 142;
+  const stampX = clamp(
+    placement.stamp.x * pageWidth,
+    12,
+    pageWidth - stampWidth - 12,
+  );
+  const stampY = clamp(
+    pageHeight - placement.stamp.y * pageHeight - stampHeight,
+    12,
+    pageHeight - stampHeight - 12,
+  );
+  drawDeepBridgeCompanySeal(
+    page,
+    fonts,
+    stampX,
+    stampY,
+    -placement.stamp.rotation,
+  );
+}
+
 export async function createCountersignedPdf(input: {
   sourceBytes: Uint8Array;
   signatureBytes: Uint8Array;
@@ -480,6 +626,7 @@ export async function createCountersignedPdf(input: {
   assignedDocumentId: string;
   envelopeId: string;
   sourceHash: string;
+  manualPlacement?: ManualPdfPlacement;
 }): Promise<{
   bytes: Uint8Array;
   signaturePlacement:
@@ -508,18 +655,30 @@ export async function createCountersignedPdf(input: {
       "This PDF contains a certificate-based digital signature. Countersign it in Google Workspace to preserve that certificate, then upload the completed pack.",
     );
   }
-  let placement: SignatureBlockPlacement | null;
-  try {
-    placement = await locateDeepBridgeSignatureBlock(input.sourceBytes);
-  } catch {
-    placement = null;
+  let placement: SignatureBlockPlacement | null = null;
+  if (!input.manualPlacement) {
+    try {
+      placement = await locateDeepBridgeSignatureBlock(input.sourceBytes);
+    } catch {
+      placement = null;
+    }
+    placement ??= locateKnownTemplateSignatureBlock(pdf, input.title);
   }
-  placement ??= locateKnownTemplateSignatureBlock(pdf, input.title);
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const serif = await pdf.embedFont(StandardFonts.TimesRoman);
   const signature = await pdf.embedPng(input.signatureBytes);
-  if (placement) {
+  if (input.manualPlacement) {
+    if (input.manualPlacement.pageIndex >= pdf.getPageCount())
+      throw new PortalHttpError(400, "The selected PDF page is invalid.");
+    drawManualPdfPlacement(
+      pdf.getPage(input.manualPlacement.pageIndex),
+      input.manualPlacement,
+      signature,
+      { regular, bold, serif },
+      input.signedAt,
+    );
+  } else if (placement) {
     const executionPage = pdf.getPage(placement.pageIndex);
     drawSignatureInExecutionBlock(
       executionPage,
@@ -690,7 +849,7 @@ export async function createCountersignedPdf(input: {
     color: rgb(0.88, 0.95, 0.93),
   });
   page.drawText(
-    placement
+    input.manualPlacement || placement
       ? "This page forms part of the countersigned agreement. The accompanying audit certificate records the final document hash and authenticated portal event."
       : "The source PDF did not expose a safely writable DeepBridge execution field. This dated page forms part of the agreement and records the binding DeepBridge signature.",
     {
@@ -720,7 +879,7 @@ export async function createCountersignedPdf(input: {
   pdf.setModificationDate(input.signedAt);
   return {
     bytes: await pdf.save({ useObjectStreams: true }),
-    signaturePlacement: placement
+    signaturePlacement: input.manualPlacement || placement
       ? "original_execution_block_and_appended_countersignature_record"
       : "appended_countersignature_record_only",
   };
@@ -911,6 +1070,7 @@ export default async function handler(
     const assignedDocumentId = cleanText(body.assignedDocumentId, 36);
     const signerName = cleanText(body.signerName, 100);
     const signerTitle = cleanText(body.signerTitle, 120);
+    const manualPlacement = decodeManualPlacement(body.placement);
     const confirmed = body.confirmed === true;
     if (!/^[0-9a-f-]{36}$/i.test(assignedDocumentId))
       throw new PortalHttpError(400, "A valid assigned document is required.");
@@ -1029,6 +1189,7 @@ export default async function handler(
       assignedDocumentId,
       envelopeId: envelope.id,
       sourceHash,
+      manualPlacement,
     });
     const finalBytes = countersigned.bytes;
     const finalHash = sha256(finalBytes);
@@ -1105,6 +1266,8 @@ export default async function handler(
         signed_at: signedAt.toISOString(),
         visible_signing_date: formatSigningDate(signedAt),
         signature_placement: countersigned.signaturePlacement,
+        placement_mode: manualPlacement ? "administrator_selected" : "automatic",
+        manual_placement: manualPlacement ?? null,
         source_storage_path: envelope.pending_final_storage_path,
         source_content_sha256: sourceHash,
         final_content_sha256: finalHash,
