@@ -6,7 +6,19 @@
     "api/admin/documents/upload-finalize.ts": {
       "maxDuration": 300
     },
+    "api/admin/signing/countersign.ts": {
+      "maxDuration": 300
+    },
+    "api/admin/signing/countersign-source.ts": {
+      "maxDuration": 300
+    },
+    "api/admin/signing/retry-scan.ts": {
+      "maxDuration": 300
+    },
     "api/admin/signing/upload-finalize.ts": {
+      "maxDuration": 300
+    },
+    "api/documents/manual-signing/upload-finalize.ts": {
       "maxDuration": 300
     },
     "api/compliance/upload-finalize.ts": {
