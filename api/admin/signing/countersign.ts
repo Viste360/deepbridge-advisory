@@ -392,6 +392,39 @@ function formatSigningDate(value: Date) {
   }).format(value);
 }
 
+function locateKnownTemplateSignatureBlock(
+  pdf: PDFDocument,
+  title: string,
+): SignatureBlockPlacement | null {
+  const normalizedTitle = title.trim().toLowerCase();
+  if (!normalizedTitle.includes("professional consultant charter acknowledgement")) {
+    return null;
+  }
+
+  const pageIndex = pdf.getPageCount() - 1;
+  if (pageIndex < 0) return null;
+  const page = pdf.getPage(pageIndex);
+  const scaleX = page.getWidth() / 595.304;
+  const scaleY = page.getHeight() / 841.89;
+
+  // The controlled Charter template ends with a two-column acknowledgement
+  // block. Use its normalized DeepBridge-column coordinates if text
+  // extraction is unavailable in the serverless PDF runtime.
+  return {
+    pageIndex,
+    signature: {
+      x: 63.25 * scaleX,
+      y: 558.339 * scaleY,
+      width: 39.48 * scaleX,
+    },
+    date: {
+      x: 63.25 * scaleX,
+      y: 540.789 * scaleY,
+      width: 19.96 * scaleX,
+    },
+  };
+}
+
 function drawSignatureInExecutionBlock(
   page: PDFPage,
   placement: SignatureBlockPlacement,
@@ -481,6 +514,7 @@ export async function createCountersignedPdf(input: {
   } catch {
     placement = null;
   }
+  placement ??= locateKnownTemplateSignatureBlock(pdf, input.title);
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const serif = await pdf.embedFont(StandardFonts.TimesRoman);

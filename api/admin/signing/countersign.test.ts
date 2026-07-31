@@ -155,4 +155,39 @@ describe("portal countersignature PDFs", () => {
     const finalDocument = await PDFDocument.load(countersigned.bytes);
     expect(finalDocument.getPageCount()).toBe(2);
   });
+
+  it("places the signature in the controlled Charter template when text extraction is unavailable", async () => {
+    const source = await PDFDocument.create();
+    const sourcePage = source.addPage([595.304, 841.89]);
+    sourcePage.drawText("Image-only acknowledgement execution page", {
+      x: 54,
+      y: 760,
+      size: 18,
+    });
+    const sourceBytes = await source.save();
+    const sourceHash = createHash("sha256")
+      .update(sourceBytes)
+      .digest("hex");
+
+    const countersigned = await createCountersignedPdf({
+      sourceBytes,
+      signatureBytes: transparentPng,
+      title: "Professional Consultant Charter Acknowledgement",
+      versionLabel: "1.0",
+      consultantName: "Test Consultant",
+      consultantEmail: "consultant@example.com",
+      signerName: "Yon Wallace",
+      signerTitle: "Director, DeepBridge Advisory",
+      signedAt: new Date("2026-07-31T16:11:48.376Z"),
+      assignedDocumentId: "11111111-1111-4111-8111-111111111111",
+      envelopeId: "22222222-2222-4222-8222-222222222222",
+      sourceHash,
+    });
+
+    expect(countersigned.signaturePlacement).toBe(
+      "original_execution_block_and_appended_countersignature_record",
+    );
+    const finalDocument = await PDFDocument.load(countersigned.bytes);
+    expect(finalDocument.getPageCount()).toBe(2);
+  });
 });
