@@ -40,7 +40,7 @@ function sha256(value: Uint8Array) {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function decodeSignature(value: unknown) {
+export function decodeSignature(value: unknown) {
   if (typeof value !== "string" || value.length > 90_000)
     throw new PortalHttpError(400, "The signature preview is invalid.");
   const match = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(value);
@@ -697,6 +697,10 @@ function appendCountersignatureRecordPage(
     assignedDocumentId: string;
     envelopeId: string;
     sourceHash: string;
+    sourceReference?: string;
+    counterpartyLabel?: string;
+    signedSourceLabel?: string;
+    countersignatureStatement?: string;
   },
 ) {
   const details = correctedSigningDocumentDetails(
@@ -709,6 +713,7 @@ function appendCountersignatureRecordPage(
     input.consultantEmail,
     input.assignedDocumentId,
   );
+  const counterpartyLabel = input.counterpartyLabel || "Consultant";
   const page = pdf.addPage([595.28, 841.89]);
   const ink = rgb(0.03, 0.11, 0.15);
   const teal = rgb(0.19, 0.7, 0.66);
@@ -771,7 +776,7 @@ function appendCountersignatureRecordPage(
     page,
     fonts,
     "Source document reference",
-    details.reference,
+    input.sourceReference || details.reference,
     68,
     584,
     210,
@@ -806,7 +811,8 @@ function appendCountersignatureRecordPage(
   });
   drawWrappedText(
     page,
-    "I have reviewed the complete consultant-signed document and, being authorised to sign for DUSTDEEP LTD trading as DeepBridge Advisory, intend this electronic countersignature to bind DeepBridge to the document.",
+    input.countersignatureStatement ||
+      "I have reviewed the complete consultant-signed document and, being authorised to sign for DUSTDEEP LTD trading as DeepBridge Advisory, intend this electronic countersignature to bind DeepBridge to the document.",
     fonts.regular,
     {
       x: 74,
@@ -867,7 +873,7 @@ function appendCountersignatureRecordPage(
   drawLabeledBlock(
     page,
     fonts,
-    "Consultant signatory",
+    `${counterpartyLabel} signatory`,
     input.consultantName,
     304,
     306,
@@ -885,7 +891,7 @@ function appendCountersignatureRecordPage(
   drawLabeledBlock(
     page,
     fonts,
-    "Consultant email",
+    `${counterpartyLabel} email`,
     consultantEmail,
     304,
     270,
@@ -930,7 +936,7 @@ function appendCountersignatureRecordPage(
   drawLabeledBlock(
     page,
     fonts,
-    "Consultant-signed source SHA-256",
+    input.signedSourceLabel || "Consultant-signed source SHA-256",
     input.sourceHash,
     54,
     145,
@@ -971,6 +977,11 @@ export async function createCountersignedPdf(input: {
   envelopeId: string;
   sourceHash: string;
   manualPlacement?: ManualPdfPlacement;
+  preserveSourcePages?: boolean;
+  sourceReference?: string;
+  counterpartyLabel?: string;
+  signedSourceLabel?: string;
+  countersignatureStatement?: string;
 }): Promise<{
   bytes: Uint8Array;
   signaturePlacement:
@@ -1000,7 +1011,7 @@ export async function createCountersignedPdf(input: {
     );
   }
   let placement: SignatureBlockPlacement | null = null;
-  if (!input.manualPlacement) {
+  if (!input.manualPlacement && !input.preserveSourcePages) {
     try {
       placement = await locateDeepBridgeSignatureBlock(input.sourceBytes);
     } catch {
@@ -1012,7 +1023,9 @@ export async function createCountersignedPdf(input: {
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const serif = await pdf.embedFont(StandardFonts.TimesRoman);
   const signature = await pdf.embedPng(input.signatureBytes);
-  if (input.manualPlacement) {
+  if (input.preserveSourcePages) {
+    placement = null;
+  } else if (input.manualPlacement) {
     if (input.manualPlacement.pageIndex >= pdf.getPageCount())
       throw new PortalHttpError(400, "The selected PDF page is invalid.");
     drawManualPdfPlacement(
@@ -1109,6 +1122,10 @@ export async function createAuditCertificate(input: {
   signaturePlacement?:
     | "original_execution_block_and_appended_countersignature_record"
     | "appended_countersignature_record_only";
+  sourceReference?: string;
+  counterpartyLabel?: string;
+  signedSourceLabel?: string;
+  portalLabel?: string;
 }) {
   const pdf = await PDFDocument.create();
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
@@ -1127,6 +1144,7 @@ export async function createAuditCertificate(input: {
     input.consultantEmail,
     input.assignedDocumentId,
   );
+  const counterpartyLabel = input.counterpartyLabel || "Consultant";
 
   page.drawRectangle({
     x: 0,
@@ -1176,8 +1194,8 @@ export async function createAuditCertificate(input: {
   const signedAt = input.signedAt.toISOString();
   let y = afterTitle - 48;
   const values: Array<[string, string]> = [
-    ["Consultant signatory", input.consultantName],
-    ["Consultant email", consultantEmail],
+    [`${counterpartyLabel} signatory`, input.consultantName],
+    [`${counterpartyLabel} email`, consultantEmail],
     ["Countersignatory", input.signerName],
     ["Countersignatory email", DEEPBRIDGE_COUNTERSIGNATORY_EMAIL],
     ["Signing authority", input.signerTitle],
@@ -1191,7 +1209,7 @@ export async function createAuditCertificate(input: {
     y -= 31;
   }
 
-  page.drawText("CONSULTANT-SIGNED SOURCE SHA-256", {
+  page.drawText((input.signedSourceLabel || "CONSULTANT-SIGNED SOURCE SHA-256").toUpperCase(), {
     x: 54,
     y: 326,
     size: 8,
@@ -1255,7 +1273,7 @@ export async function createAuditCertificate(input: {
       lineHeight: 11,
     },
   );
-  page.drawText("Generated by the DeepBridge Consultant Portal", {
+  page.drawText(input.portalLabel || "Generated by the DeepBridge Consultant Portal", {
     x: 54,
     y: 58,
     size: 7,

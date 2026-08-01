@@ -255,4 +255,40 @@ describe("portal countersignature PDFs", () => {
     const finalDocument = await PDFDocument.load(countersigned.bytes);
     expect(finalDocument.getPageCount()).toBe(2);
   });
+
+  it("preserves contract source pages and appends only the countersignature record", async () => {
+    const source = await PDFDocument.create();
+    const sourcePage = source.addPage([595.28, 841.89]);
+    sourcePage.drawText("Counterparty-signed partnership contract", {
+      x: 54,
+      y: 760,
+      size: 18,
+    });
+    const sourceBytes = await source.save();
+
+    const countersigned = await createCountersignedPdf({
+      sourceBytes,
+      signatureBytes: transparentPng,
+      title: "Strategic Delivery Partner Statement of Work",
+      versionLabel: "1.0",
+      consultantName: "Jozef Lajda",
+      consultantEmail: "signatory@example.com",
+      signerName: "Yon Wallace",
+      signerTitle: "Director",
+      signedAt: new Date("2026-08-01T18:30:00.000Z"),
+      assignedDocumentId: "11111111-1111-4111-8111-111111111111",
+      envelopeId: "22222222-2222-4222-8222-222222222222",
+      sourceHash: createHash("sha256").update(sourceBytes).digest("hex"),
+      preserveSourcePages: true,
+      sourceReference: "SNC-CLIENT-DBA002",
+      counterpartyLabel: "Counterparty",
+      signedSourceLabel: "Counterparty-signed source SHA-256",
+    });
+
+    expect(countersigned.signaturePlacement).toBe(
+      "appended_countersignature_record_only",
+    );
+    const finalDocument = await PDFDocument.load(countersigned.bytes);
+    expect(finalDocument.getPageCount()).toBe(2);
+  });
 });

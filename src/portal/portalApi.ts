@@ -1049,6 +1049,27 @@ export async function retryAdminContractDriveArchive(versionId: string) {
   );
 }
 
+export async function retryAdminContractSecurityScan(versionId: string) {
+  return post<{ status: string }>("/api/admin/contracts/retry-scan", {
+    versionId,
+  });
+}
+
+export async function countersignAdminContract(input: {
+  contractId: string;
+  versionId: string;
+  signerName: string;
+  signerTitle: string;
+  signatureImageDataUrl: string;
+  counterpartySignatoryName: string;
+  counterpartySignatoryEmail: string;
+}) {
+  return post<{ status: string; envelopeId: string }>(
+    "/api/admin/contracts/countersign",
+    { ...input, confirmed: true },
+  );
+}
+
 async function sha256(file: File) {
   const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
   return Array.from(new Uint8Array(digest))

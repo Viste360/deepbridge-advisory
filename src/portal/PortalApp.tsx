@@ -23,6 +23,7 @@ import { adminSnapshot, consultantSnapshot } from "./demoData";
 import {
   acknowledgeDocument,
   completeAuthCallback,
+  countersignAdminContract,
   createPortalCountersignature,
   createInvitation,
   discardSigningAttempt,
@@ -45,6 +46,7 @@ import {
   removeAdminContractVersion,
   removeAdminDocumentVersion,
   retryAdminContractDriveArchive,
+  retryAdminContractSecurityScan,
   retrySigningSecurityScan,
   reviewComplianceSubmission,
   saveAdminOrganisation,
@@ -2455,6 +2457,8 @@ function AdminContractsPage() {
     AdminContract | null | undefined
   >(undefined);
   const [signedTarget, setSignedTarget] = useState<AdminContract | null>(null);
+  const [countersignTarget, setCountersignTarget] =
+    useState<AdminContract | null>(null);
   const [loading, setLoading] = useState(!demo);
   const [busyId, setBusyId] = useState("");
   const [message, setMessage] = useState("");
@@ -2600,6 +2604,25 @@ function AdminContractsPage() {
     }
   }
 
+  async function retryScan(contract: AdminContract) {
+    const version = contract.versions[0];
+    if (!version) return;
+    setBusyId(version.id);
+    try {
+      if (!demo) await retryAdminContractSecurityScan(version.id);
+      setMessage(`${contract.reference} security scan restarted. This page will refresh automatically.`);
+      if (!demo) await refresh();
+    } catch (scanError) {
+      setMessage(
+        scanError instanceof Error
+          ? scanError.message
+          : "The security scan could not be restarted.",
+      );
+    } finally {
+      setBusyId("");
+    }
+  }
+
   return (
     <>
       <PageHeader
@@ -2708,6 +2731,18 @@ function AdminContractsPage() {
                     View source
                   </button>
                 ) : null}
+                {version &&
+                !version.locked &&
+                ["pending", "failed"].includes(version.scanStatus) ? (
+                  <button
+                    type="button"
+                    className="portal-table-primary-action"
+                    onClick={() => void retryScan(contract)}
+                    disabled={Boolean(busyId)}
+                  >
+                    {busyId === version.id ? "Restarting scan…" : "Retry security scan"}
+                  </button>
+                ) : null}
                 {contract.status === "ready_to_sign" ? (
                   <button
                     type="button"
@@ -2716,6 +2751,20 @@ function AdminContractsPage() {
                     disabled={Boolean(busyId)}
                   >
                     Mark sent for signature
+                  </button>
+                ) : null}
+                {version?.scanStatus === "clean" &&
+                contract.requiresSignature &&
+                ["ready_to_sign", "out_for_signature", "partially_signed"].includes(
+                  contract.status,
+                ) ? (
+                  <button
+                    type="button"
+                    className="portal-table-primary-action"
+                    onClick={() => setCountersignTarget(contract)}
+                    disabled={Boolean(busyId)}
+                  >
+                    Review &amp; countersign
                   </button>
                 ) : null}
                 {version?.scanStatus === "clean" &&
@@ -2823,6 +2872,19 @@ function AdminContractsPage() {
           }}
         />
       ) : null}
+      {countersignTarget ? (
+        <AdminContractCountersignDialog
+          contract={countersignTarget}
+          defaultSignerName={snapshot.profile.fullName}
+          demo={demo}
+          onClose={() => setCountersignTarget(null)}
+          onCompleted={async () => {
+            setCountersignTarget(null);
+            setMessage(`${countersignTarget.reference} was countersigned for DeepBridge. The signed PDF and audit certificate are ready to download.`);
+            await refresh();
+          }}
+        />
+      ) : null}
     </>
   );
 }
@@ -2879,11 +2941,23 @@ function AdminContractUploadDialog({
   const [expiryDate, setExpiryDate] = useState("");
   const [currency, setCurrency] = useState(contract?.currency || "EUR");
   const [contractValue, setContractValue] = useState("");
-  const [ownerSignatoryName, setOwnerSignatoryName] = useState("");
-  const [ownerSignatoryEmail, setOwnerSignatoryEmail] = useState("");
-  const [counterpartySignatoryName, setCounterpartySignatoryName] = useState("");
+  const ownerParty = contract?.parties.find(
+    (party) => party.organisationId === contract.owner.id,
+  );
+  const counterpartyParty = contract?.parties.find(
+    (party) => party.organisationId === contract.counterparty.id,
+  );
+  const [ownerSignatoryName, setOwnerSignatoryName] = useState(
+    ownerParty?.signatoryName || "Yon Wallace",
+  );
+  const [ownerSignatoryEmail, setOwnerSignatoryEmail] = useState(
+    ownerParty?.signatoryEmail || "yon.wallace@deepbridgeadvisory.co.uk",
+  );
+  const [counterpartySignatoryName, setCounterpartySignatoryName] = useState(
+    counterpartyParty?.signatoryName || "",
+  );
   const [counterpartySignatoryEmail, setCounterpartySignatoryEmail] =
-    useState("");
+    useState(counterpartyParty?.signatoryEmail || "");
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState<UploadProgress | null>(null);
   const [busy, setBusy] = useState(false);
@@ -2896,12 +2970,26 @@ function AdminContractUploadDialog({
       setError("Select two different contracting organisations.");
       return;
     }
+    if (effectiveDate && expiryDate && expiryDate < effectiveDate) {
+      setError("The expiry date cannot be earlier than the effective date.");
+      return;
+    }
+    if (
+      requiresSignature &&
+      (!ownerSignatoryName.trim() ||
+        !ownerSignatoryEmail.trim() ||
+        !counterpartySignatoryName.trim() ||
+        !counterpartySignatoryEmail.trim())
+    ) {
+      setError("Enter both signatories and their email addresses before uploading.");
+      return;
+    }
     setBusy(true);
     setError("");
     setProgress({ phase: "preparing", percent: 0 });
     try {
-      if (!demo)
-        await uploadAdminContract({
+      const result = !demo
+        ? await uploadAdminContract({
           contractId: contract?.id,
           reference,
           title,
@@ -2922,9 +3010,12 @@ function AdminContractUploadDialog({
           counterpartySignatoryEmail,
           file,
           onProgress: setProgress,
-        });
+          })
+        : { status: "pending_scan" };
       await onUploaded(
-        `${reference.toUpperCase()} v${versionLabel} uploaded. Security scanning has started and the register will refresh automatically.`,
+        result.status === "scan_retry_needed"
+          ? `${reference.toUpperCase()} v${versionLabel} is stored safely. The scanner did not start; use Retry security scan on the contract card.`
+          : `${reference.toUpperCase()} v${versionLabel} uploaded. Security scanning has started and the register will refresh automatically.`,
       );
     } catch (uploadError) {
       setError(
@@ -3096,7 +3187,7 @@ function AdminContractUploadDialog({
                 value={ownerSignatoryName}
                 onChange={(event) => setOwnerSignatoryName(event.target.value)}
                 maxLength={160}
-                placeholder="Yon Wallace"
+                required={requiresSignature}
               />
             </label>
             <label>
@@ -3106,7 +3197,8 @@ function AdminContractUploadDialog({
                 value={ownerSignatoryEmail}
                 onChange={(event) => setOwnerSignatoryEmail(event.target.value)}
                 maxLength={254}
-                placeholder="hello@deepbridgeadvisory.co.uk"
+                required={requiresSignature}
+                placeholder="yon.wallace@deepbridgeadvisory.co.uk"
               />
             </label>
             <label>
@@ -3117,6 +3209,7 @@ function AdminContractUploadDialog({
                   setCounterpartySignatoryName(event.target.value)
                 }
                 maxLength={160}
+                required={requiresSignature}
               />
             </label>
             <label>
@@ -3128,6 +3221,7 @@ function AdminContractUploadDialog({
                   setCounterpartySignatoryEmail(event.target.value)
                 }
                 maxLength={254}
+                required={requiresSignature}
               />
             </label>
           </div>
@@ -3297,6 +3391,227 @@ function AdminContractSignedPackDialog({
               disabled={busy || !finalPdf || !certificatePdf}
             >
               {busy ? "Uploading signed pack…" : "Upload and verify signed pack"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function AdminContractCountersignDialog({
+  contract,
+  defaultSignerName,
+  demo,
+  onClose,
+  onCompleted,
+}: {
+  contract: AdminContract;
+  defaultSignerName: string;
+  demo: boolean;
+  onClose: () => void;
+  onCompleted: () => Promise<void>;
+}) {
+  const version = contract.versions[0];
+  const ownerParty = contract.parties.find(
+    (party) => party.organisationId === contract.owner.id,
+  );
+  const counterpartyParty = contract.parties.find(
+    (party) => party.organisationId === contract.counterparty.id,
+  );
+  const [signerName, setSignerName] = useState(
+    ownerParty?.signatoryName || defaultSignerName || "Yon Wallace",
+  );
+  const [signerTitle, setSignerTitle] = useState("Director");
+  const [counterpartySignatoryName, setCounterpartySignatoryName] = useState(
+    counterpartyParty?.signatoryName || "",
+  );
+  const [counterpartySignatoryEmail, setCounterpartySignatoryEmail] = useState(
+    counterpartyParty?.signatoryEmail || "",
+  );
+  const [reviewed, setReviewed] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function reviewSource() {
+    if (!version) return;
+    setError("");
+    try {
+      if (demo) setReviewed(true);
+      else {
+        await openSecureUrl(() => getAdminContractAccess(version.id, "source"));
+        setReviewed(true);
+      }
+    } catch (reviewError) {
+      setError(
+        reviewError instanceof Error
+          ? reviewError.message
+          : "The source contract could not be opened.",
+      );
+    }
+  }
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!version || !reviewed || !confirmed) return;
+    setBusy(true);
+    setError("");
+    try {
+      if (!demo) {
+        const signatureImageDataUrl = await typedSignatureImage(signerName.trim());
+        await countersignAdminContract({
+          contractId: contract.id,
+          versionId: version.id,
+          signerName: signerName.trim(),
+          signerTitle: signerTitle.trim(),
+          signatureImageDataUrl,
+          counterpartySignatoryName: counterpartySignatoryName.trim(),
+          counterpartySignatoryEmail: counterpartySignatoryEmail.trim(),
+        });
+      }
+      await onCompleted();
+    } catch (signError) {
+      setError(
+        signError instanceof Error
+          ? signError.message
+          : "The contract could not be countersigned.",
+      );
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="portal-modal-backdrop" role="presentation">
+      <div
+        className="portal-modal portal-signature-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="contract-countersign-title"
+      >
+        <button
+          type="button"
+          className="portal-modal-close"
+          onClick={onClose}
+          disabled={busy}
+          aria-label="Close contract countersignature"
+        >
+          ×
+        </button>
+        <p className="portal-kicker">DeepBridge contract countersignature</p>
+        <h2 id="contract-countersign-title">{contract.title}</h2>
+        <p>
+          Review the clean counterparty-signed PDF, then countersign it for
+          DeepBridge. The original pages remain visually and textually
+          unchanged; the portal appends one corporate countersignature record
+          page.
+        </p>
+        <form className="portal-form" onSubmit={submit}>
+          <div className="portal-signing-step">
+            <span>1</span>
+            <div>
+              <strong>Review source contract</strong>
+              <p>
+                Confirm the person who signed for {contract.counterparty.name}.
+              </p>
+              <label htmlFor="contract-counterparty-signer">Counterparty signatory</label>
+              <input
+                id="contract-counterparty-signer"
+                value={counterpartySignatoryName}
+                onChange={(event) => setCounterpartySignatoryName(event.target.value)}
+                required
+                minLength={2}
+                maxLength={160}
+                disabled={busy}
+              />
+              <label htmlFor="contract-counterparty-email">Counterparty signatory email</label>
+              <input
+                id="contract-counterparty-email"
+                type="email"
+                value={counterpartySignatoryEmail}
+                onChange={(event) => setCounterpartySignatoryEmail(event.target.value)}
+                required
+                maxLength={254}
+                disabled={busy}
+              />
+              <button
+                type="button"
+                className="portal-button portal-button-secondary"
+                onClick={() => void reviewSource()}
+                disabled={busy}
+              >
+                {reviewed ? "Review source again" : "Review source PDF"}
+              </button>
+            </div>
+          </div>
+          <div className="portal-signing-step">
+            <span>2</span>
+            <div>
+              <strong>DeepBridge signatory</strong>
+              <label htmlFor="contract-signer-name">Full name</label>
+              <input
+                id="contract-signer-name"
+                value={signerName}
+                onChange={(event) => setSignerName(event.target.value)}
+                required
+                minLength={2}
+                maxLength={100}
+                disabled={busy}
+              />
+              <label htmlFor="contract-signer-title">Title / authority</label>
+              <input
+                id="contract-signer-title"
+                value={signerTitle}
+                onChange={(event) => setSignerTitle(event.target.value)}
+                required
+                minLength={2}
+                maxLength={120}
+                disabled={busy}
+              />
+              <p>
+                {ownerParty?.signatoryEmail || "yon.wallace@deepbridgeadvisory.co.uk"}
+              </p>
+              <div className="portal-signature-preview" aria-label="Signature preview">
+                <div className="portal-signature-person">
+                  <small>Authenticated signatory</small>
+                  <span>{signerName || "Your name"}</span>
+                  <p>{signerTitle || "Signing authority"}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <label className="portal-inline-choice">
+            <input
+              type="checkbox"
+              checked={confirmed}
+              onChange={(event) => setConfirmed(event.target.checked)}
+              disabled={busy}
+            />
+            <span>
+              I reviewed the complete counterparty-signed contract, I am
+              authorised to sign for DUSTDEEP LTD trading as DeepBridge
+              Advisory, and intend this electronic countersignature to bind
+              DeepBridge.
+            </span>
+          </label>
+          {error ? (
+            <p className="portal-form-message error" role="alert">{error}</p>
+          ) : null}
+          <div className="portal-modal-actions">
+            <button
+              type="button"
+              className="portal-button portal-button-secondary"
+              onClick={onClose}
+              disabled={busy}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="portal-button portal-button-primary"
+              disabled={busy || !reviewed || !confirmed}
+            >
+              {busy ? "Creating countersigned PDF…" : "Countersign for DeepBridge"}
             </button>
           </div>
         </form>
