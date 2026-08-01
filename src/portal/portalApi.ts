@@ -1221,7 +1221,6 @@ export async function getConsultantSignedUpload(
 export type ManualPdfPlacement = {
   pageIndex: number;
   signature: { x: number; y: number; size: number };
-  stamp: { x: number; y: number; rotation: number };
   date: { x: number; y: number; size: number };
 };
 

@@ -2495,29 +2495,6 @@
   white-space: nowrap;
 }
 
-.portal-pdf-placement-item.stamp {
-  width: 27.5%;
-  aspect-ratio: 164 / 142;
-  align-content: center;
-  padding: 5px 7px;
-  gap: 4px;
-  border-style: solid;
-  border-color: rgba(36, 123, 119, 0.58);
-  background: rgba(255, 255, 255, 0.16);
-  transform: rotate(var(--stamp-rotation));
-  transform-origin: center;
-}
-
-.portal-pdf-placement-item.stamp strong {
-  font-size: clamp(0.46rem, 1.2vw, 0.73rem);
-}
-
-.portal-pdf-placement-item.stamp span {
-  color: rgba(20, 113, 107, 0.78);
-  font-size: clamp(0.36rem, 0.85vw, 0.52rem);
-  font-weight: 800;
-}
-
 .portal-pdf-placement-item.date {
   width: 12%;
   min-width: 0;
@@ -2540,7 +2517,7 @@
 
 .portal-placement-tuning {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 

@@ -5418,19 +5418,17 @@ function initialManualPdfPlacement(title: string): ManualPdfPlacement {
     return {
       pageIndex: 0,
       signature: { x: 0.18, y: 0.315, size: 0.8 },
-      stamp: { x: 0.6, y: 0.45, rotation: -3 },
       date: { x: 0.15, y: 0.36, size: 0.75 },
     };
   }
   return {
     pageIndex: 0,
     signature: { x: 0.14, y: 0.66, size: 0.8 },
-    stamp: { x: 0.58, y: 0.57, rotation: -3 },
     date: { x: 0.14, y: 0.74, size: 0.75 },
   };
 }
 
-type PdfPlacementTarget = "signature" | "stamp" | "date";
+type PdfPlacementTarget = "signature" | "date";
 
 function PdfPlacementEditor({
   bytes,
@@ -5560,29 +5558,20 @@ function PdfPlacementEditor({
         (event.clientY - bounds.top - drag.offsetY) / bounds.height,
       ),
     );
-    if (drag.target === "stamp")
-      onChange({
-        ...placement,
-        stamp: { ...placement.stamp, x, y },
-      });
-    else
-      onChange({
-        ...placement,
-        [drag.target]: { ...placement[drag.target], x, y },
-      });
+    onChange({
+      ...placement,
+      [drag.target]: { ...placement[drag.target], x, y },
+    });
   }
 
   function nudgeTarget(target: PdfPlacementTarget, deltaX: number, deltaY: number) {
     const point = pointFor(target);
     const x = Math.max(0.005, Math.min(0.96, point.x + deltaX));
     const y = Math.max(0.005, Math.min(0.96, point.y + deltaY));
-    if (target === "stamp")
-      onChange({ ...placement, stamp: { ...placement.stamp, x, y } });
-    else
-      onChange({
-        ...placement,
-        [target]: { ...placement[target], x, y },
-      });
+    onChange({
+      ...placement,
+      [target]: { ...placement[target], x, y },
+    });
   }
 
   function handlePlacementKeys(
@@ -5602,11 +5591,6 @@ function PdfPlacementEditor({
     nudgeTarget(target, movement[0], movement[1]);
   }
 
-  const stampStyle = {
-    left: `${placement.stamp.x * 100}%`,
-    top: `${placement.stamp.y * 100}%`,
-    "--stamp-rotation": `${placement.stamp.rotation}deg`,
-  } as CSSProperties;
   const signatureStyle = {
     left: `${placement.signature.x * 100}%`,
     top: `${placement.signature.y * 100}%`,
@@ -5675,17 +5659,6 @@ function PdfPlacementEditor({
         </button>
         <button
           type="button"
-          className="portal-pdf-placement-item stamp"
-          style={stampStyle}
-          onPointerDown={(event) => beginDrag(event, "stamp")}
-          onKeyDown={(event) => handlePlacementKeys(event, "stamp")}
-        >
-          <small>Company stamp</small>
-          <strong>DB · DEEPBRIDGE</strong>
-          <span>ADVISORY · DUSTDEEP LTD</span>
-        </button>
-        <button
-          type="button"
           className="portal-pdf-placement-item date"
           style={dateStyle}
           onPointerDown={(event) => beginDrag(event, "date")}
@@ -5743,26 +5716,6 @@ function PdfPlacementEditor({
           />
           <strong>{Math.round(placement.date.size * 100)}%</strong>
         </label>
-        <label>
-          <span>Stamp angle</span>
-          <input
-            type="range"
-            min="-6"
-            max="6"
-            step="1"
-            value={placement.stamp.rotation}
-            onChange={(event) =>
-              onChange({
-                ...placement,
-                stamp: {
-                  ...placement.stamp,
-                  rotation: Number(event.target.value),
-                },
-              })
-            }
-          />
-          <strong>{placement.stamp.rotation}°</strong>
-        </label>
       </div>
       <div className="portal-placement-nudge">
         <label htmlFor="placement-fine-target">Fine position</label>
@@ -5775,7 +5728,6 @@ function PdfPlacementEditor({
         >
           <option value="signature">Signature</option>
           <option value="date">Date</option>
-          <option value="stamp">Company stamp</option>
         </select>
         <div>
           <button
@@ -6041,8 +5993,9 @@ function AdminCountersignDialog({
               <strong>Place in the PDF</strong>
               <p>
                 Automatic placement remains available. To choose the exact
-                positions, open the last page and drag the signature, company
-                stamp and date where they should appear.
+                positions, open the last page and drag the signature and
+                countersignature date where they should appear. The corporate
+                execution stamp appears only on the appended record page.
               </p>
               {manualPlacement && placementBytes ? (
                 <>
@@ -6078,7 +6031,7 @@ function AdminCountersignDialog({
                 >
                   {placementLoading
                     ? "Opening PDF…"
-                    : "Place signature, stamp & date"}
+                    : "Place signature & date"}
                 </button>
               )}
             </div>

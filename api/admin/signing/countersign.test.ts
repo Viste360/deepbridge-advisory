@@ -107,17 +107,20 @@ describe("portal countersignature PDFs", () => {
     }).promise;
     const executionPage = await extracted.getPage(1);
     const executionText = await executionPage.getTextContent();
-    expect(
-      executionText.items
-        .map((item) => ("str" in item ? item.str : ""))
-        .join(" "),
-    ).toContain("30 July 2026");
+    const executionRecord = executionText.items
+      .map((item) => ("str" in item ? item.str : ""))
+      .join(" ");
+    expect(executionRecord).toContain("30 July 2026");
+    expect(executionRecord).not.toContain("CORPORATE EXECUTION STAMP");
     const countersignaturePage = await extracted.getPage(2);
     const countersignatureText = await countersignaturePage.getTextContent();
     const countersignatureRecord = countersignatureText.items
       .map((item) => ("str" in item ? item.str : ""))
       .join(" ");
     expect(countersignatureRecord).toContain("DEEPBRIDGE ADVISORY");
+    expect(countersignatureRecord).toContain("CORPORATE EXECUTION STAMP");
+    expect(countersignatureRecord).toContain("COUNTERSIGNED AT");
+    expect(countersignatureRecord).not.toMatch(/(?:^|\s)SIGNED AT(?:$|\s)/);
     expect(countersignatureRecord).toContain("DUSTDEEP LTD");
     expect(countersignatureRecord).toContain("Company no. 16775578");
     expect(countersignatureRecord).toContain(
@@ -220,7 +223,7 @@ describe("portal countersignature PDFs", () => {
     expect(finalDocument.getPageCount()).toBe(2);
   });
 
-  it("uses administrator-selected positions for the signature, stamp and date", async () => {
+  it("uses administrator-selected positions for the signature and date without stamping the source page", async () => {
     const source = await PDFDocument.create();
     const sourcePage = source.addPage([595.28, 841.89]);
     sourcePage.drawText("Manual placement page", { x: 54, y: 760, size: 18 });
@@ -242,7 +245,6 @@ describe("portal countersignature PDFs", () => {
       manualPlacement: {
         pageIndex: 0,
         signature: { x: 0.14, y: 0.58, size: 0.9 },
-        stamp: { x: 0.6, y: 0.52, rotation: -3 },
         date: { x: 0.14, y: 0.67, size: 0.85 },
       },
     });

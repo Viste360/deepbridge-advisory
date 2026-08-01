@@ -60,7 +60,6 @@ function decodeSignature(value: unknown) {
 export type ManualPdfPlacement = {
   pageIndex: number;
   signature: { x: number; y: number; size: number };
-  stamp: { x: number; y: number; rotation: number };
   date: { x: number; y: number; size: number };
 };
 
@@ -85,24 +84,15 @@ function decodeManualPlacement(value: unknown): ManualPdfPlacement | undefined {
   if (!Number.isInteger(input.pageIndex) || Number(input.pageIndex) < 0)
     throw new PortalHttpError(400, "The PDF placement page is invalid.");
   const signature = input.signature as Record<string, unknown> | undefined;
-  const stamp = input.stamp as Record<string, unknown> | undefined;
   const date = input.date as Record<string, unknown> | undefined;
-  if (!signature || !stamp || !date)
-    throw new PortalHttpError(400, "Place the signature, stamp and date in the PDF.");
-  const rotation = Number(stamp.rotation);
-  if (!Number.isFinite(rotation) || rotation < -8 || rotation > 8)
-    throw new PortalHttpError(400, "The stamp angle is invalid.");
+  if (!signature || !date)
+    throw new PortalHttpError(400, "Place the signature and date in the PDF.");
   return {
     pageIndex: Number(input.pageIndex),
     signature: {
       x: normalizedCoordinate(signature.x, "signature horizontal"),
       y: normalizedCoordinate(signature.y, "signature vertical"),
       size: placementScale(signature.size, "signature"),
-    },
-    stamp: {
-      x: normalizedCoordinate(stamp.x, "stamp horizontal"),
-      y: normalizedCoordinate(stamp.y, "stamp vertical"),
-      rotation,
     },
     date: {
       x: normalizedCoordinate(date.x, "date horizontal"),
@@ -551,7 +541,7 @@ function drawManualPdfPlacement(
   page: PDFPage,
   placement: ManualPdfPlacement,
   signature: Awaited<ReturnType<PDFDocument["embedPng"]>>,
-  fonts: { regular: PDFFont; bold: PDFFont; serif: PDFFont },
+  fonts: { regular: PDFFont },
   signedAt: Date,
 ) {
   const pageWidth = page.getWidth();
@@ -601,25 +591,6 @@ function drawManualPdfPlacement(
     color: rgb(0.03, 0.11, 0.15),
   });
 
-  const stampWidth = 164;
-  const stampHeight = 142;
-  const stampX = clamp(
-    placement.stamp.x * pageWidth,
-    12,
-    pageWidth - stampWidth - 12,
-  );
-  const stampY = clamp(
-    pageHeight - placement.stamp.y * pageHeight - stampHeight,
-    12,
-    pageHeight - stampHeight - 12,
-  );
-  drawDeepBridgeCompanySeal(
-    page,
-    fonts,
-    stampX,
-    stampY,
-    -placement.stamp.rotation,
-  );
 }
 
 const DEEPBRIDGE_COUNTERSIGNATORY_EMAIL =
@@ -932,7 +903,7 @@ function appendCountersignatureRecordPage(
   drawLabeledBlock(
     page,
     fonts,
-    "Signed at",
+    "Countersigned at",
     `${input.signedAt.toISOString()} (UTC)`,
     304,
     234,
@@ -1048,7 +1019,7 @@ export async function createCountersignedPdf(input: {
       pdf.getPage(input.manualPlacement.pageIndex),
       input.manualPlacement,
       signature,
-      { regular, bold, serif },
+      { regular },
       input.signedAt,
     );
   } else if (placement) {
@@ -1210,7 +1181,7 @@ export async function createAuditCertificate(input: {
     ["Countersignatory", input.signerName],
     ["Countersignatory email", DEEPBRIDGE_COUNTERSIGNATORY_EMAIL],
     ["Signing authority", input.signerTitle],
-    ["Signed at", `${signedAt} (UTC)`],
+    ["Countersigned at", `${signedAt} (UTC)`],
     ["Signature method", "Authenticated portal electronic signature"],
     ["Assigned document ID", input.assignedDocumentId],
     ["Signature envelope ID", input.envelopeId],
