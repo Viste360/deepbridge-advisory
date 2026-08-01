@@ -183,11 +183,13 @@ administrator to:
 
 The portal appends a branded DeepBridge countersignature page, records the
 consultant-source and final SHA-256 hashes, creates a separate audit
-certificate and scans both final artifacts. The final PDF and certificate
-become downloadable by the administrator and assigned consultant only after
-both scans pass. This is a standard electronic signature; use Google Workspace
-or an approved qualified trust provider when the contract requires a qualified
-electronic signature.
+certificate and verifies both server-generated files against their recorded
+hashes. Because the source PDF has already passed malware scanning and the two
+outputs are created by the portal, they become downloadable immediately.
+Externally uploaded completed packs still require both malware-scan callbacks.
+This is a standard electronic signature; use Google Workspace or an approved
+qualified trust provider when the contract requires a qualified electronic
+signature.
 
 If Google signing is unavailable, the consultant can download the approved PDF
 and upload a signed PDF back to the portal. The upload remains quarantined

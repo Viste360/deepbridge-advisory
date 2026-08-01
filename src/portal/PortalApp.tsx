@@ -25,6 +25,7 @@ import {
   completeAuthCallback,
   createPortalCountersignature,
   createInvitation,
+  discardSigningAttempt,
   getComplianceSubmissionAccess,
   getConsultantSignedUpload,
   getDocumentAccess,
@@ -4565,6 +4566,11 @@ const SIGNING_SCAN_STALE_MS = 5 * 60 * 1_000;
 function isFinalSecurityCheck(item: AdminSigningItem) {
   if (item.status === "completed" || item.providerStatus === "completed")
     return false;
+  if (
+    item.providerStatus?.includes("source_security_review") ||
+    item.providerStatus === "consultant_upload_security_review"
+  )
+    return false;
   return (
     item.providerStatus === "security_review" ||
     item.providerStatus === "security_review_retry_needed" ||
@@ -4604,10 +4610,12 @@ function SecurityScanProgress({
   item,
   busy,
   onRetry,
+  onDiscard,
 }: {
   item: AdminSigningItem;
   busy: boolean;
   onRetry: () => void;
+  onDiscard: () => void;
 }) {
   const infected = isSecurityCheckInfected(item);
   const retryable = isSecurityCheckRetryable(item);
@@ -4619,6 +4627,8 @@ function SecurityScanProgress({
       <strong>
         {infected
           ? "Security check failed"
+          : item.portalGenerated && retryable
+            ? "Signed copy ready"
           : retryable
             ? "Security check paused"
             : "Security check in progress"}
@@ -4638,6 +4648,8 @@ function SecurityScanProgress({
       <small>
         {infected
           ? "Replace the signed file before continuing."
+          : item.portalGenerated && retryable
+            ? "The portal-created PDFs can be verified and released now."
           : retryable
             ? "Your signature is saved. Restart the file check once."
             : cleared
@@ -4646,7 +4658,21 @@ function SecurityScanProgress({
       </small>
       {retryable ? (
         <button type="button" disabled={busy} onClick={onRetry}>
-          {busy ? "Restarting…" : "Retry security check"}
+          {busy
+            ? item.portalGenerated
+              ? "Finishing…"
+              : "Restarting…"
+            : item.portalGenerated
+              ? "Finish & download"
+              : "Retry security check"}
+        </button>
+      ) : null}
+      {(item.status === "superseded" || item.hasPreviousCompleted) &&
+      (retryable || infected) ? (
+        <button type="button" disabled={busy} onClick={onDiscard}>
+          {item.hasPreviousCompleted
+            ? "Cancel correction & restore previous"
+            : "Discard quarantined copy"}
         </button>
       ) : null}
     </div>
@@ -4701,6 +4727,8 @@ function AdminSigningPage() {
       (item.providerStatus === "security_review" &&
         !isSecurityCheckStale(item)) ||
       item.providerStatus === "countersign_source_security_review" ||
+      item.providerStatus ===
+        "countersign_reissue_source_security_review" ||
       item.providerStatus === "consultant_upload_security_review" ||
       (!isSecurityCheckRetryable(item) &&
         (item.finalScanStatus === "pending" ||
@@ -4831,19 +4859,22 @@ function AdminSigningPage() {
   }) {
     let countersignatureWasAlreadySubmitted = false;
     let countersignatureNeedsScanRetry = false;
+    let completedImmediately = false;
     if (demo) {
       setItems((current) =>
         current.map((candidate) =>
           candidate.id === input.item.id
             ? {
                 ...candidate,
-                providerStatus: "security_review",
-                finalScanStatus: "pending",
-                certificateScanStatus: "pending",
+                status: "completed",
+                providerStatus: "completed",
+                finalScanStatus: "clean",
+                certificateScanStatus: "clean",
               }
             : candidate,
         ),
       );
+      completedImmediately = true;
     } else {
       if (input.consultantSignedPdf) {
         await prepareCountersignSource({
@@ -4883,7 +4914,7 @@ function AdminSigningPage() {
       }
 
       try {
-        await createPortalCountersignature({
+        const result = await createPortalCountersignature({
           assignedDocumentId: input.item.id,
           signerName: input.signerName,
           signerTitle: input.signerTitle,
@@ -4891,6 +4922,7 @@ function AdminSigningPage() {
           confirmed: true,
           placement: input.placement,
         });
+        completedImmediately = result.status === "completed";
       } catch (signError) {
         // The server may have committed the signature even if the browser lost
         // the success response. Reconcile before presenting a retryable error so
@@ -4925,7 +4957,9 @@ function AdminSigningPage() {
         ? countersignatureNeedsScanRetry
           ? "The countersignature is saved. Use Retry security check once; do not sign the agreement again."
           : "The countersignature was already accepted. Final security checks are in progress; do not sign the agreement again."
-        : "DeepBridge signed the agreement. The final PDF and its audit certificate are undergoing the final security scan and will become downloadable automatically.",
+        : completedImmediately
+          ? "DeepBridge signed the agreement. The signed PDF and audit certificate are ready to download now."
+          : "DeepBridge signed the agreement. The final PDF and its audit certificate are undergoing the final security scan and will become downloadable automatically.",
     );
   }
 
@@ -4977,8 +5011,15 @@ function AdminSigningPage() {
           ),
         );
       } else {
-        await retrySigningSecurityScan(item.id);
+        const result = await retrySigningSecurityScan(item.id);
         await refreshItems();
+        if (result.downloadAvailable) {
+          await openSecureUrl(() => getDocumentAccess(item.id, "final"));
+          setMessage(
+            "The signed PDF is complete and its download has started. The audit certificate is also available.",
+          );
+          return;
+        }
       }
       setMessage(
         "Security check restarted. Your signature is already saved; no further signing is needed.",
@@ -4993,6 +5034,57 @@ function AdminSigningPage() {
         retryError instanceof Error
           ? retryError.message
           : "The security check could not be restarted.",
+      );
+    } finally {
+      setBusyId("");
+    }
+  }
+
+  async function discardIncompleteAttempt(item: AdminSigningItem) {
+    const confirmed = window.confirm(
+      item.hasPreviousCompleted
+        ? "Cancel this correction and restore the previous completed signed copy? The incomplete replacement files will be permanently removed; the audit event will remain."
+        : "Permanently remove this incomplete quarantined copy? The audit event will remain.",
+    );
+    if (!confirmed) return;
+    setBusyId(item.id);
+    setMessage("");
+    setError("");
+    try {
+      if (demo) {
+        setItems((current) =>
+          current.map((candidate) =>
+            candidate.id === item.id
+              ? {
+                  ...candidate,
+                  providerStatus: "discarded",
+                  finalScanStatus: undefined,
+                  certificateScanStatus: undefined,
+                  status: item.hasPreviousCompleted
+                    ? "completed"
+                    : candidate.status,
+                }
+              : candidate,
+          ),
+        );
+      } else {
+        const result = await discardSigningAttempt(item.id);
+        await refreshItems();
+        setMessage(
+          result.previousCopyRestored
+            ? "The incomplete correction was removed and the previous completed signed copy is available again."
+            : result.resetForRetry
+              ? "The failed upload was removed. You can open Review & sign and upload the corrected PDF again."
+              : "The incomplete quarantined copy was permanently removed. Its audit event was retained.",
+        );
+        return;
+      }
+      setMessage("The incomplete signing attempt was removed.");
+    } catch (discardError) {
+      setError(
+        discardError instanceof Error
+          ? discardError.message
+          : "The incomplete signing attempt could not be removed.",
       );
     } finally {
       setBusyId("");
@@ -5042,8 +5134,8 @@ function AdminSigningPage() {
           <p>
             <strong>Download completion</strong>
             <small>
-              After the final scan, download the countersigned PDF and its audit
-              certificate whenever needed.
+              Portal-created signed PDFs are available immediately. Externally
+              uploaded packs appear after their security check.
             </small>
           </p>
         </article>
@@ -5105,7 +5197,14 @@ function AdminSigningPage() {
               const sourceScanning =
                 item.providerStatus ===
                   "consultant_upload_security_review" ||
-                item.providerStatus === "countersign_source_security_review";
+                item.providerStatus === "countersign_source_security_review" ||
+                item.providerStatus ===
+                  "countersign_reissue_source_security_review";
+              const sourceFailed =
+                item.providerStatus ===
+                  "countersign_source_security_review_failed" ||
+                item.providerStatus ===
+                  "countersign_reissue_source_security_review_failed";
               const scanning = finalSecurityCheck || sourceScanning;
               return (
                 <tr key={item.id}>
@@ -5140,6 +5239,7 @@ function AdminSigningPage() {
                         item={item}
                         busy={busyId === item.id}
                         onRetry={() => void retrySecurityCheck(item)}
+                        onDiscard={() => void discardIncompleteAttempt(item)}
                       />
                     ) : sourceScanning ? (
                       <div className="portal-scan-progress">
@@ -5152,6 +5252,23 @@ function AdminSigningPage() {
                           <span />
                         </div>
                         <small>This page updates automatically.</small>
+                      </div>
+                    ) : sourceFailed ? (
+                      <div className="portal-scan-progress">
+                        <strong>Uploaded PDF was not cleared</strong>
+                        <small>
+                          Remove this incomplete attempt, then upload the
+                          corrected consultant-signed PDF again.
+                        </small>
+                        <button
+                          type="button"
+                          disabled={busyId === item.id}
+                          onClick={() => void discardIncompleteAttempt(item)}
+                        >
+                          {item.hasPreviousCompleted
+                            ? "Cancel correction & restore previous"
+                            : "Discard quarantined copy"}
+                        </button>
                       </div>
                     ) : item.status === "not_reviewed" ? (
                       <button
@@ -5216,10 +5333,28 @@ function AdminSigningPage() {
                         <button
                           type="button"
                           disabled={busyId === item.id}
-                          onClick={() => setCountersignSelected(item)}
+                          onClick={() =>
+                            item.hasPreviousCompleted &&
+                            item.providerStatus === "consultant_signed"
+                              ? void discardIncompleteAttempt(item)
+                              : setCountersignSelected(item)
+                          }
                         >
-                          Correct or reissue signed copy
+                          {item.hasPreviousCompleted &&
+                          item.providerStatus === "consultant_signed"
+                            ? "Cancel correction & keep previous"
+                            : "Correct or reissue signed copy"}
                         </button>
+                        {item.hasPreviousCompleted &&
+                        item.providerStatus === "consultant_signed" ? (
+                          <button
+                            type="button"
+                            disabled={busyId === item.id}
+                            onClick={() => setCountersignSelected(item)}
+                          >
+                            Continue corrected copy
+                          </button>
+                        ) : null}
                       </div>
                     ) : null}
                   </td>
@@ -5717,7 +5852,6 @@ function AdminCountersignDialog({
   const [placementLoading, setPlacementLoading] = useState(false);
   const isReissue = item.status === "completed";
   const usesStoredConsultantPdf =
-    !isReissue &&
     item.providerStatus === "consultant_signed" &&
     item.finalScanStatus === "clean";
   const setPlacementPageIndex = useCallback((pageIndex: number) => {
@@ -5834,7 +5968,7 @@ function AdminCountersignDialog({
         <h2 id="countersign-title">{item.title}</h2>
         <p>
           {isReissue
-            ? "Create a corrected final copy without deleting or altering the completed audit record. Upload the correct consultant-signed source, review it, and sign again for DeepBridge."
+            ? "Create a corrected final copy without interrupting access to the current completed copy. The current copy remains downloadable until the replacement succeeds; it is then retired from active use while its audit record remains."
             : "Review the consultant-signed agreement, then sign it electronically for DeepBridge."}{" "}
           The portal will place your signature and today&apos;s date in the
           agreement&apos;s DeepBridge execution block when it can identify that
@@ -5867,7 +6001,7 @@ function AdminCountersignDialog({
                     Choose the PDF downloaded from Google or returned by the
                     consultant.{" "}
                     {isReissue
-                      ? "Use the same consultant-signed source as the completed record. "
+                      ? "Upload the corrected consultant-signed source. "
                       : ""}
                     It will be scanned before DeepBridge signs it.
                   </p>

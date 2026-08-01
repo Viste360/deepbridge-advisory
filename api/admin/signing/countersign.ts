@@ -23,7 +23,7 @@ import {
   requestContext,
   requirePortalUser,
 } from "../../_lib/server.js";
-import { requestMalwareScan } from "../../_lib/scanner.js";
+import { completeSigningRecord } from "../../_lib/signing-completion.js";
 
 function cleanText(value: unknown, maximum: number) {
   return typeof value === "string"
@@ -1091,13 +1091,16 @@ export default async function handler(
     const { data: assigned, error: assignedError } = await admin
       .from("assigned_documents")
       .select(
-        "id, consultant_id, assignment_id, status, document_versions!inner(version_label, documents!inner(title, category))",
+        "id, consultant_id, assignment_id, status, document_versions!inner(version_label, documents!inner(slug, title, category))",
       )
       .eq("id", assignedDocumentId)
       .single();
     if (assignedError || !assigned)
       throw new PortalHttpError(404, "Assigned document not found.");
-    if (assigned.status !== "awaiting_deepbridge")
+    if (
+      assigned.status !== "awaiting_deepbridge" &&
+      assigned.status !== "completed"
+    )
       throw new PortalHttpError(
         409,
         "The agreement is not ready for DeepBridge countersignature.",
@@ -1270,41 +1273,43 @@ export default async function handler(
         final_content_sha256: finalHash,
         certificate_content_sha256: certificateHash,
         confirmed_signing_intent: true,
-        scan_status: "pending",
+        output_verification: "server_generated_pdf_and_sha256",
       },
     });
 
-    try {
-      await Promise.all([
-        requestMalwareScan({
-          objectType: "signature_artifact",
-          objectId: envelope.id,
-          artifactKind: "final",
-          bucket: "signed-documents",
-          storagePath: finalPath,
-        }),
-        requestMalwareScan({
-          objectType: "signature_artifact",
-          objectId: envelope.id,
-          artifactKind: "certificate",
-          bucket: "signed-documents",
-          storagePath: certificatePath,
-        }),
-      ]);
-    } catch (scanError) {
-      await admin
-        .from("signature_envelopes")
-        .update({
-          provider_status: "security_review_retry_needed",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", envelope.id);
-      throw scanError;
-    }
-
-    return json(response, 202, {
+    await completeSigningRecord({
+      admin,
       envelopeId: envelope.id,
-      status: "pending_security_scan",
+      assignedDocumentId,
+      assignmentId: assigned.assignment_id,
+      consultantId: assigned.consultant_id,
+      documentSlug: document.slug,
+      finalStoragePath: finalPath,
+      certificateStoragePath: certificatePath,
+      completedAt: signedAt.toISOString(),
+    });
+
+    await admin.from("audit_events").insert({
+      actor_id: actor.user.id,
+      actor_label: actor.profile.full_name,
+      action: "portal_generated_signing_completed",
+      object_type: "signature_envelope",
+      object_id: envelope.id,
+      assignment_id: assigned.assignment_id,
+      consultant_id: assigned.consultant_id,
+      ...requestContext(request),
+      metadata: {
+        verification: "server_generated_pdf_and_sha256",
+        final_content_sha256: finalHash,
+        certificate_content_sha256: certificateHash,
+        previous_completed_copy_retired: assigned.status === "completed",
+      },
+    });
+
+    return json(response, 200, {
+      envelopeId: envelope.id,
+      status: "completed",
+      downloadAvailable: true,
     });
   } catch (error) {
     return handleApiError(response, error);

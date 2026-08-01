@@ -127,6 +127,8 @@ export interface AdminSigningItem {
   scanUpdatedAt?: string;
   finalScanStatus?: "pending" | "clean" | "infected" | "failed";
   certificateScanStatus?: "pending" | "clean" | "infected" | "failed";
+  portalGenerated?: boolean;
+  hasPreviousCompleted?: boolean;
 }
 
 export interface AdminConsultant {
@@ -1202,6 +1204,8 @@ export async function listAdminSigningItems(): Promise<AdminSigningItem[]> {
       scanUpdatedAt: text(envelope.updated_at) || undefined,
       finalScanStatus: scanStatus(envelope.final_scan_status),
       certificateScanStatus: scanStatus(envelope.certificate_scan_status),
+      portalGenerated: bool(envelope.portal_generated),
+      hasPreviousCompleted: bool(envelope.has_previous_completed),
     };
   });
 }
@@ -1292,15 +1296,34 @@ export async function createPortalCountersignature(input: {
   confirmed: boolean;
   placement?: ManualPdfPlacement;
 }) {
-  return post<{ envelopeId: string; status: string }>(
+  return post<{
+    envelopeId: string;
+    status: string;
+    downloadAvailable?: boolean;
+  }>(
     "/api/admin/signing/countersign",
     input,
   );
 }
 
 export async function retrySigningSecurityScan(assignedDocumentId: string) {
-  return post<{ envelopeId: string; status: string }>(
+  return post<{
+    envelopeId: string;
+    status: string;
+    downloadAvailable?: boolean;
+  }>(
     "/api/admin/signing/retry-scan",
+    { assignedDocumentId },
+  );
+}
+
+export async function discardSigningAttempt(assignedDocumentId: string) {
+  return post<{
+    discarded: true;
+    previousCopyRestored: boolean;
+    resetForRetry: boolean;
+  }>(
+    "/api/admin/signing/discard-attempt",
     { assignedDocumentId },
   );
 }

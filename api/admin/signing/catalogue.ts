@@ -51,15 +51,36 @@ export default async function handler(
     if (profiles.error) throw profiles.error;
     if (envelopes.error) throw envelopes.error;
 
+    const envelopeIds = (envelopes.data ?? []).map((envelope) => envelope.id);
+    const portalGeneratedEvents = envelopeIds.length
+      ? await admin
+          .from("audit_events")
+          .select("object_id")
+          .eq("object_type", "signature_envelope")
+          .eq("action", "portal_countersignature_applied")
+          .in("object_id", envelopeIds)
+      : { data: [], error: null };
+    if (portalGeneratedEvents.error) throw portalGeneratedEvents.error;
+    const portalGeneratedEnvelopeIds = new Set(
+      (portalGeneratedEvents.data ?? []).map((event) => event.object_id),
+    );
+
     const profileById = new Map(
       (profiles.data ?? []).map((profile) => [profile.id, profile]),
     );
     const latestEnvelopeByDocument = new Map<string, Record<string, unknown>>();
+    const completedEnvelopeCountByDocument = new Map<string, number>();
     for (const envelope of envelopes.data ?? []) {
       if (!latestEnvelopeByDocument.has(envelope.assigned_document_id))
         latestEnvelopeByDocument.set(
           envelope.assigned_document_id,
           envelope as Record<string, unknown>,
+        );
+      if (envelope.provider_status === "completed")
+        completedEnvelopeCountByDocument.set(
+          envelope.assigned_document_id,
+          (completedEnvelopeCountByDocument.get(envelope.assigned_document_id) ??
+            0) + 1,
         );
     }
 
@@ -70,6 +91,7 @@ export default async function handler(
       const document = Array.isArray(version?.documents)
         ? version.documents[0]
         : version?.documents;
+      const latestEnvelope = latestEnvelopeByDocument.get(item.id) ?? null;
       return {
         id: item.id,
         consultant_id: item.consultant_id,
@@ -81,7 +103,17 @@ export default async function handler(
         publication_ready:
           version?.malware_scan_status === "clean" && Boolean(version?.locked_at),
         document,
-        envelope: latestEnvelopeByDocument.get(item.id) ?? null,
+        envelope: latestEnvelope
+          ? {
+              ...latestEnvelope,
+              portal_generated: portalGeneratedEnvelopeIds.has(
+                String(latestEnvelope.id),
+              ),
+              has_previous_completed:
+                (completedEnvelopeCountByDocument.get(item.id) ?? 0) >
+                (latestEnvelope.provider_status === "completed" ? 1 : 0),
+            }
+          : null,
       };
     });
 

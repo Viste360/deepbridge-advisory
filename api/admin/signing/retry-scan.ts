@@ -10,6 +10,10 @@ import {
   requirePortalUser,
 } from "../../_lib/server.js";
 import { requestMalwareScan } from "../../_lib/scanner.js";
+import {
+  completeSigningRecord,
+  downloadAndVerifyPdfArtifact,
+} from "../../_lib/signing-completion.js";
 
 function cleanText(value: unknown, maximum: number) {
   return typeof value === "string" ? value.trim().slice(0, maximum) : "";
@@ -41,7 +45,9 @@ export default async function handler(
     const admin = getSupabaseAdmin();
     const { data: assigned, error: assignedError } = await admin
       .from("assigned_documents")
-      .select("id, consultant_id, assignment_id, status")
+      .select(
+        "id, consultant_id, assignment_id, status, document_versions!inner(documents!inner(slug))",
+      )
       .eq("id", assignedDocumentId)
       .single();
     if (assignedError || !assigned)
@@ -57,7 +63,7 @@ export default async function handler(
     const { data: envelope, error: envelopeError } = await admin
       .from("signature_envelopes")
       .select(
-        "id, provider_status, pending_final_storage_path, pending_certificate_storage_path, final_scan_status, certificate_scan_status",
+        "id, provider_status, pending_final_storage_path, pending_certificate_storage_path, final_content_sha256, certificate_content_sha256, final_scan_status, certificate_scan_status",
       )
       .eq("assigned_document_id", assignedDocumentId)
       .order("created_at", { ascending: false })
@@ -94,6 +100,74 @@ export default async function handler(
         409,
         "A file did not pass the security check and cannot be retried. Replace the signed file.",
       );
+    }
+
+    const { data: portalGeneratedEvent, error: portalGeneratedError } =
+      await admin
+        .from("audit_events")
+        .select("id")
+        .eq("object_type", "signature_envelope")
+        .eq("object_id", envelope.id)
+        .eq("action", "portal_countersignature_applied")
+        .limit(1)
+        .maybeSingle();
+    if (portalGeneratedError) throw portalGeneratedError;
+
+    if (portalGeneratedEvent) {
+      await Promise.all([
+        downloadAndVerifyPdfArtifact(
+          admin,
+          envelope.pending_final_storage_path,
+          envelope.final_content_sha256 ?? "",
+          "The signed PDF",
+        ),
+        downloadAndVerifyPdfArtifact(
+          admin,
+          envelope.pending_certificate_storage_path,
+          envelope.certificate_content_sha256 ?? "",
+          "The audit certificate",
+        ),
+      ]);
+      const version = Array.isArray(assigned.document_versions)
+        ? assigned.document_versions[0]
+        : assigned.document_versions;
+      const document = Array.isArray(version?.documents)
+        ? version.documents[0]
+        : version?.documents;
+      const completedAt = new Date().toISOString();
+      await completeSigningRecord({
+        admin,
+        envelopeId: envelope.id,
+        assignedDocumentId,
+        assignmentId: assigned.assignment_id,
+        consultantId: assigned.consultant_id,
+        documentSlug: document?.slug,
+        finalStoragePath: envelope.pending_final_storage_path,
+        certificateStoragePath: envelope.pending_certificate_storage_path,
+        completedAt,
+      });
+      await admin.from("audit_events").insert({
+        actor_id: actor.user.id,
+        actor_label: actor.profile.full_name,
+        action: "portal_generated_signing_recovered",
+        object_type: "signature_envelope",
+        object_id: envelope.id,
+        assignment_id: assigned.assignment_id,
+        consultant_id: assigned.consultant_id,
+        ...requestContext(request),
+        metadata: {
+          verification: "stored_pdf_and_sha256",
+          previous_scanner_status: {
+            final: envelope.final_scan_status,
+            certificate: envelope.certificate_scan_status,
+          },
+        },
+      });
+      return json(response, 200, {
+        envelopeId: envelope.id,
+        status: "completed",
+        downloadAvailable: true,
+      });
     }
 
     const artifacts: Array<{

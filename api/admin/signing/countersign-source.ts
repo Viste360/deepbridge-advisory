@@ -122,11 +122,6 @@ export default async function handler(
         .single();
       if (replacementError || !replacement) throw replacementError;
       envelopeId = replacement.id;
-      const { error: reopenError } = await admin
-        .from("assigned_documents")
-        .update({ status: "awaiting_deepbridge" })
-        .eq("id", assignedDocumentId);
-      if (reopenError) throw reopenError;
     } else {
       const { error: updateError } = await admin
         .from("signature_envelopes")
