@@ -9,9 +9,10 @@ describe("document download filenames", () => {
         title: "Professional Consulting Services Framework Agreement",
         versionLabel: "1.2",
         kind: "final",
+        assignedDocumentId: "7f4e5866-6dee-4484-a3d1-2b3997414d34",
       }),
     ).toBe(
-      "DeepBridge-Roland-Schneider-Professional-Consulting-Services-Framework-Agreement-v1.2-Signed.pdf",
+      "DeepBridge-Roland-Schneider-Professional-Consulting-Services-Framework-Agreement-v1.1-Countersigned.pdf",
     );
   });
 

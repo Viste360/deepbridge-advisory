@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 import { PDFDocument, StandardFonts } from "pdf-lib";
 import { describe, expect, it } from "vitest";
 import {
+  correctedConsultantEmail,
+  correctedSigningDocumentDetails,
   createAuditCertificate,
   createCountersignedPdf,
   locateDeepBridgeSignatureBlock,
@@ -13,6 +15,33 @@ const transparentPng = Buffer.from(
 );
 
 describe("portal countersignature PDFs", () => {
+  it("uses the genuine Version 1.1 source identity for Roland's signed documents", () => {
+    expect(
+      correctedSigningDocumentDetails(
+        "Professional Consulting Services Framework Agreement",
+        "1.2",
+        "7f4e5866-6dee-4484-a3d1-2b3997414d34",
+      ),
+    ).toEqual({
+      reference: "DBA-CFA-HSC-2026-001",
+      sourceVersion: "1.1",
+    });
+    expect(
+      correctedConsultantEmail(
+        "Roland Schneider",
+        "yonwallace@gmail.com",
+        "3dd2a4ff-97e6-4ee2-8a3f-818c7183d2b2",
+      ),
+    ).toBe("roland.schneider@hs-con.de");
+    expect(
+      correctedConsultantEmail(
+        "Another Consultant",
+        "consultant@example.com",
+        "00000000-0000-0000-0000-000000000000",
+      ),
+    ).toBe("consultant@example.com");
+  });
+
   it("appends a branded countersignature page and creates an audit certificate", async () => {
     const source = await PDFDocument.create();
     const sourceFont = await source.embedFont(StandardFonts.Helvetica);

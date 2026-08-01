@@ -21,21 +21,42 @@ function safeFilenamePart(value: string, maximum: number) {
   return normalized || "Document";
 }
 
+const ROLAND_CORRECTED_DOCUMENT_IDS = new Set([
+  "7f4e5866-6dee-4484-a3d1-2b3997414d34",
+  "3dd2a4ff-97e6-4ee2-8a3f-818c7183d2b2",
+]);
+
+function correctedSignedSourceVersion(
+  versionLabel: string,
+  assignedDocumentId?: string,
+) {
+  const cleanVersion = versionLabel.replace(/^v/i, "");
+  return assignedDocumentId &&
+    ROLAND_CORRECTED_DOCUMENT_IDS.has(assignedDocumentId) &&
+    cleanVersion === "1.2"
+    ? "1.1"
+    : cleanVersion;
+}
+
 export function buildDocumentDownloadName(input: {
   consultantName: string;
   title: string;
   versionLabel: string;
   kind: "final" | "certificate";
+  assignedDocumentId?: string;
 }) {
   const consultant = safeFilenamePart(input.consultantName, 55);
   const title = safeFilenamePart(input.title, 85);
-  const cleanVersion = input.versionLabel
-    .replace(/^v/i, "")
+  const cleanVersion = correctedSignedSourceVersion(
+    input.versionLabel,
+    input.assignedDocumentId,
+  )
     .replace(/[^a-z0-9.]+/gi, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 18);
   const version = cleanVersion ? `-v${cleanVersion}` : "";
-  const suffix = input.kind === "final" ? "Signed" : "Audit-Certificate";
+  const suffix =
+    input.kind === "final" ? "Countersigned" : "Audit-Certificate";
   return `DeepBridge-${consultant}-${title}${version}-${suffix}.pdf`;
 }
 
@@ -130,6 +151,7 @@ export default async function handler(
             ? version.version_label
             : "",
         kind,
+        assignedDocumentId: assigned.id,
       });
     }
     const { data: signed, error: signedUrlError } = await admin.storage
