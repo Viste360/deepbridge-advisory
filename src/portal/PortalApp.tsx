@@ -3611,6 +3611,15 @@ function AdminContractCountersignDialog({
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [placementBytes, setPlacementBytes] = useState<Uint8Array | null>(null);
+  const [manualPlacement, setManualPlacement] =
+    useState<ManualPdfPlacement | null>(null);
+  const [placementLoading, setPlacementLoading] = useState(false);
+  const setPlacementPageIndex = useCallback((pageIndex: number) => {
+    setManualPlacement((current) =>
+      current ? { ...current, pageIndex } : current,
+    );
+  }, []);
 
   async function reviewSource() {
     if (!version) return;
@@ -3646,6 +3655,7 @@ function AdminContractCountersignDialog({
           signatureImageDataUrl,
           counterpartySignatoryName: counterpartySignatoryName.trim(),
           counterpartySignatoryEmail: counterpartySignatoryEmail.trim(),
+          placement: manualPlacement ?? undefined,
         });
       }
       await onCompleted();
@@ -3659,10 +3669,43 @@ function AdminContractCountersignDialog({
     }
   }
 
+  async function openPlacementEditor() {
+    if (!version) return;
+    setPlacementLoading(true);
+    setError("");
+    try {
+      if (demo)
+        throw new Error("PDF placement is available for stored production contracts.");
+      const access = await getAdminContractAccess(version.id, "source");
+      if (!access.url)
+        throw new Error("The secure PDF preview link could not be created.");
+      const previewResponse = await fetch(access.url);
+      if (!previewResponse.ok)
+        throw new Error("The counterparty-signed PDF could not be loaded.");
+      const bytes = new Uint8Array(await previewResponse.arrayBuffer());
+      if (
+        bytes.length < 5 ||
+        new TextDecoder("ascii").decode(bytes.subarray(0, 5)) !== "%PDF-"
+      )
+        throw new Error("The selected file is not a readable PDF.");
+      setPlacementBytes(bytes);
+      setManualPlacement(initialManualPdfPlacement(contract.title));
+      setReviewed(true);
+    } catch (placementError) {
+      setError(
+        placementError instanceof Error
+          ? placementError.message
+          : "The PDF placement preview could not be opened.",
+      );
+    } finally {
+      setPlacementLoading(false);
+    }
+  }
+
   return (
     <div className="portal-modal-backdrop" role="presentation">
       <div
-        className="portal-modal portal-signature-modal"
+        className={`portal-modal portal-signature-modal${manualPlacement ? " portal-signature-modal-placement" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="contract-countersign-title"
@@ -3679,10 +3722,10 @@ function AdminContractCountersignDialog({
         <p className="portal-kicker">DeepBridge contract countersignature</p>
         <h2 id="contract-countersign-title">{contract.title}</h2>
         <p>
-          Review the clean counterparty-signed PDF, then countersign it for
-          DeepBridge. The original pages remain visually and textually
-          unchanged; the portal appends one corporate countersignature record
-          page.
+          Review the clean counterparty-signed PDF, place the DeepBridge
+          signature and date in its existing execution block, then countersign
+          it. The portal changes no contract wording and appends one corporate
+          countersignature record page.
         </p>
         <form className="portal-form" onSubmit={submit}>
           <div className="portal-signing-step">
@@ -3724,6 +3767,48 @@ function AdminContractCountersignDialog({
           </div>
           <div className="portal-signing-step">
             <span>2</span>
+            <div>
+              <strong>Place signature &amp; date</strong>
+              <p>
+                Open the execution page and drag the two transparent items onto
+                the existing DeepBridge lines. No corporate stamp is placed on
+                the contract page; it remains only on the appended record page.
+              </p>
+              {manualPlacement && placementBytes ? (
+                <>
+                  <PdfPlacementEditor
+                    bytes={placementBytes}
+                    signerName={signerName}
+                    placement={manualPlacement}
+                    onChange={setManualPlacement}
+                    onPageChange={setPlacementPageIndex}
+                  />
+                  <button
+                    className="portal-button portal-button-secondary"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      setPlacementBytes(null);
+                      setManualPlacement(null);
+                    }}
+                  >
+                    Keep signature on record page only
+                  </button>
+                </>
+              ) : (
+                <button
+                  className="portal-button portal-button-secondary"
+                  type="button"
+                  disabled={busy || placementLoading || !version}
+                  onClick={() => void openPlacementEditor()}
+                >
+                  {placementLoading ? "Opening PDF…" : "Place signature & date"}
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="portal-signing-step">
+            <span>3</span>
             <div>
               <strong>DeepBridge signatory</strong>
               <label htmlFor="contract-signer-name">Full name</label>
@@ -5414,29 +5499,50 @@ function SecurityScanProgress({
 function AdminSigningPage() {
   const { snapshot, demo } = usePortal();
   const [items, setItems] = useState<AdminSigningItem[]>([]);
+  const [contracts, setContracts] = useState<AdminContract[]>([]);
   const [selected, setSelected] = useState<AdminSigningItem | null>(null);
   const [countersignSelected, setCountersignSelected] =
     useState<AdminSigningItem | null>(null);
+  const [contractCountersignSelected, setContractCountersignSelected] =
+    useState<AdminContract | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   async function refreshItems() {
-    const next = demo
-      ? createDemoSigningItems(snapshot.documents)
-      : await listAdminSigningItems();
-    setItems(next);
+    if (demo) {
+      setItems(createDemoSigningItems(snapshot.documents));
+      setContracts([]);
+      return;
+    }
+    const [nextItems, contractResult] = await Promise.all([
+      listAdminSigningItems(),
+      listAdminContracts(),
+    ]);
+    setItems(nextItems);
+    setContracts(contractResult.contracts);
   }
 
   useEffect(() => {
     let active = true;
     const request = demo
-      ? Promise.resolve(createDemoSigningItems(snapshot.documents))
-      : listAdminSigningItems();
+      ? Promise.resolve({
+          items: createDemoSigningItems(snapshot.documents),
+          contracts: [] as AdminContract[],
+        })
+      : Promise.all([listAdminSigningItems(), listAdminContracts()]).then(
+          ([nextItems, contractResult]) => ({
+            items: nextItems,
+            contracts: contractResult.contracts,
+          }),
+        );
     request
       .then((next) => {
-        if (active) setItems(next);
+        if (active) {
+          setItems(next.items);
+          setContracts(next.contracts);
+        }
       })
       .catch((loadError) => {
         if (active)
@@ -5454,6 +5560,12 @@ function AdminSigningPage() {
     };
   }, [demo, snapshot.documents]);
 
+  const visibleContracts = contracts.filter(
+    (contract) =>
+      contract.requiresSignature &&
+      !["archived", "superseded"].includes(contract.status),
+  );
+
   const signingScanPending = items.some(
     (item) =>
       (item.providerStatus === "security_review" &&
@@ -5466,16 +5578,29 @@ function AdminSigningPage() {
         (item.finalScanStatus === "pending" ||
           item.certificateScanStatus === "pending")),
   );
+  const contractScanPending = visibleContracts.some((contract) => {
+    const version = contract.versions[0];
+    return (
+      contract.status === "security_review" ||
+      contract.status === "partially_signed" ||
+      version?.scanStatus === "pending" ||
+      version?.finalScanStatus === "pending" ||
+      version?.certificateScanStatus === "pending"
+    );
+  });
 
   useEffect(() => {
-    if (demo || !signingScanPending) return;
+    if (demo || (!signingScanPending && !contractScanPending)) return;
     const timer = window.setInterval(() => {
-      void listAdminSigningItems()
-        .then(setItems)
+      void Promise.all([listAdminSigningItems(), listAdminContracts()])
+        .then(([nextItems, contractResult]) => {
+          setItems(nextItems);
+          setContracts(contractResult.contracts);
+        })
         .catch(() => undefined);
     }, 3_000);
     return () => window.clearInterval(timer);
-  }, [demo, signingScanPending]);
+  }, [contractScanPending, demo, signingScanPending]);
 
   async function recordStep(
     item: AdminSigningItem,
@@ -5723,6 +5848,32 @@ function AdminSigningPage() {
     }
   }
 
+  async function openSigningContract(
+    contract: AdminContract,
+    kind: "source" | "final" | "certificate",
+  ) {
+    const version = contract.versions[0];
+    if (!version) return;
+    setBusyId(`${version.id}-${kind}`);
+    setMessage("");
+    setError("");
+    try {
+      if (demo) {
+        setMessage("Contract file access is simulated in local review mode.");
+      } else {
+        await openSecureUrl(() => getAdminContractAccess(version.id, kind));
+      }
+    } catch (accessError) {
+      setError(
+        accessError instanceof Error
+          ? accessError.message
+          : "The contract file could not be opened.",
+      );
+    } finally {
+      setBusyId("");
+    }
+  }
+
   async function retrySecurityCheck(item: AdminSigningItem) {
     setBusyId(item.id);
     setMessage("");
@@ -5913,6 +6064,126 @@ function AdminSigningPage() {
         </p>
       ) : null}
       <section className="portal-panel portal-table-wrap">
+        <div className="portal-section-heading">
+          <div>
+            <p className="portal-kicker">Contract register</p>
+            <h2>Project &amp; partner contracts</h2>
+            <p>
+              Contracts uploaded from the contract register appear here for
+              review, signature placement, countersignature and download.
+            </p>
+          </div>
+          <Link to="/admin/contracts">Open contract register</Link>
+        </div>
+        <table className="portal-table">
+          <thead>
+            <tr>
+              <th>Counterparty</th>
+              <th>Contract</th>
+              <th>Portal status</th>
+              <th>File record</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visibleContracts.map((contract) => {
+              const version = contract.versions[0];
+              const readyToCountersign =
+                version?.scanStatus === "clean" &&
+                ["ready_to_sign", "out_for_signature", "partially_signed"].includes(
+                  contract.status,
+                );
+              return (
+                <tr key={`contract-signing-${contract.id}`}>
+                  <td>
+                    <strong>{contract.counterparty.name}</strong>
+                    <span>{contract.assignmentId ? "Project contract" : "Contract library"}</span>
+                  </td>
+                  <td>
+                    <strong>{contract.title}</strong>
+                    <span>{contract.reference} · Version {version?.versionLabel || "—"}</span>
+                  </td>
+                  <td>
+                    <strong>{contractStatusLabels[contract.status] || contract.status.replaceAll("_", " ")}</strong>
+                    <span>{contract.requiresSignature ? "DeepBridge signature required" : "No signature required"}</span>
+                  </td>
+                  <td>
+                    <strong>
+                      {version?.scanStatus === "clean"
+                        ? "Source PDF verified"
+                        : version?.scanStatus === "infected"
+                          ? "Unsafe file blocked"
+                          : "File safety review"}
+                    </strong>
+                    <span>
+                      {version?.finalAvailable
+                        ? "Countersigned PDF ready"
+                        : version?.scanStatus || "No version uploaded"}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="portal-table-actions">
+                      {version?.scanStatus === "clean" ? (
+                        <button
+                          type="button"
+                          disabled={busyId === `${version.id}-source`}
+                          onClick={() => void openSigningContract(contract, "source")}
+                        >
+                          Review source
+                        </button>
+                      ) : null}
+                      {readyToCountersign ? (
+                        <button
+                          type="button"
+                          className="portal-table-primary-action"
+                          disabled={Boolean(busyId)}
+                          onClick={() => setContractCountersignSelected(contract)}
+                        >
+                          Review, place &amp; sign
+                        </button>
+                      ) : null}
+                      {version?.finalAvailable ? (
+                        <button
+                          type="button"
+                          className="portal-table-primary-action"
+                          disabled={busyId === `${version.id}-final`}
+                          onClick={() => void openSigningContract(contract, "final")}
+                        >
+                          Download signed PDF
+                        </button>
+                      ) : null}
+                      {version?.certificateAvailable ? (
+                        <button
+                          type="button"
+                          disabled={busyId === `${version.id}-certificate`}
+                          onClick={() => void openSigningContract(contract, "certificate")}
+                        >
+                          Download audit certificate
+                        </button>
+                      ) : null}
+                      {!readyToCountersign && !version?.finalAvailable ? (
+                        <Link to="/admin/contracts">Resolve in Contracts</Link>
+                      ) : null}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            {!loading && !visibleContracts.length ? (
+              <tr>
+                <td colSpan={5}>No project or partner contracts require signature.</td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </section>
+      <section className="portal-panel portal-table-wrap">
+        <div className="portal-section-heading">
+          <div>
+            <p className="portal-kicker">Consultant onboarding</p>
+            <h2>Consultant agreements</h2>
+          </div>
+        </div>
         <table className="portal-table">
           <thead>
             <tr>
@@ -6115,6 +6386,22 @@ function AdminSigningPage() {
           onClose={() => setCountersignSelected(null)}
           onReviewConsultantPdf={downloadConsultantUpload}
           onSign={countersign}
+        />
+      ) : null}
+      {contractCountersignSelected ? (
+        <AdminContractCountersignDialog
+          contract={contractCountersignSelected}
+          defaultSignerName={snapshot.profile.fullName}
+          demo={demo}
+          onClose={() => setContractCountersignSelected(null)}
+          onCompleted={async () => {
+            const reference = contractCountersignSelected.reference;
+            setContractCountersignSelected(null);
+            setMessage(
+              `${reference} was countersigned. Its signed PDF and audit certificate are ready to download from this page.`,
+            );
+            await refreshItems();
+          }}
         />
       ) : null}
     </>

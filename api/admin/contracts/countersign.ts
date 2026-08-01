@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   createAuditCertificate,
   createCountersignedPdf,
+  decodeManualPlacement,
   decodeSignature,
 } from "../signing/countersign.js";
 import {
@@ -52,6 +53,7 @@ export default async function handler(
     const signerTitle = clean(body.signerTitle, 120);
     const requestedCounterpartyName = clean(body.counterpartySignatoryName, 160);
     const requestedCounterpartyEmail = clean(body.counterpartySignatoryEmail, 254).toLowerCase();
+    const manualPlacement = decodeManualPlacement(body.placement);
     if (!/^[0-9a-f-]{36}$/i.test(contractId) || !/^[0-9a-f-]{36}$/i.test(versionId))
       throw new PortalHttpError(400, "A valid contract and version are required.");
     if (signerName.length < 2 || signerTitle.length < 2 || body.confirmed !== true)
@@ -94,6 +96,11 @@ export default async function handler(
     if (!counterpartyName || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(counterpartyEmail))
       throw new PortalHttpError(400, "Enter the counterparty signatory and a valid email address.");
     const ownerSignatoryEmail = "yon.wallace@deepbridgeadvisory.co.uk";
+    if (
+      counterpartyName.toLocaleLowerCase("en-GB") === signerName.toLocaleLowerCase("en-GB") ||
+      counterpartyEmail === ownerSignatoryEmail
+    )
+      throw new PortalHttpError(400, "The counterparty signatory must be recorded separately from the DeepBridge signatory.");
     const [ownerPartyUpdate, counterpartyUpdate] = await Promise.all([
       admin.from("contract_parties").update({ signatory_name: signerName, signatory_email: ownerSignatoryEmail }).eq("id", ownerParty.id),
       admin.from("contract_parties").update({ signatory_name: counterpartyName, signatory_email: counterpartyEmail }).eq("id", counterparty.id),
@@ -129,7 +136,8 @@ export default async function handler(
       assignedDocumentId: version.id,
       envelopeId,
       sourceHash,
-      preserveSourcePages: true,
+      manualPlacement,
+      preserveSourcePages: !manualPlacement,
       sourceReference: contract.reference,
       counterpartyLabel: "Counterparty",
       signedSourceLabel: "Counterparty-signed source SHA-256",
@@ -148,7 +156,7 @@ export default async function handler(
       envelopeId,
       sourceHash,
       finalHash,
-      signaturePlacement: "appended_countersignature_record_only",
+      signaturePlacement: countersigned.signaturePlacement,
       sourceReference: contract.reference,
       counterpartyLabel: "Counterparty",
       signedSourceLabel: "Counterparty-signed source SHA-256",
@@ -204,7 +212,10 @@ export default async function handler(
         source_content_sha256: sourceHash,
         final_content_sha256: finalHash,
         certificate_content_sha256: certificateHash,
-        source_pages_preserved: true,
+        source_pages_preserved: !manualPlacement,
+        signature_placement: countersigned.signaturePlacement,
+        placement_mode: manualPlacement ? "administrator_selected" : "appended_record_only",
+        manual_placement: manualPlacement ?? null,
         output_verification: "server_generated_pdf_and_sha256",
       },
     });

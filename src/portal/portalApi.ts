@@ -1179,6 +1179,7 @@ export async function countersignAdminContract(input: {
   signatureImageDataUrl: string;
   counterpartySignatoryName: string;
   counterpartySignatoryEmail: string;
+  placement?: ManualPdfPlacement;
 }) {
   return post<{ status: string; envelopeId: string }>(
     "/api/admin/contracts/countersign",

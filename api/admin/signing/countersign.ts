@@ -76,7 +76,7 @@ function placementScale(value: unknown, label: string) {
   return value;
 }
 
-function decodeManualPlacement(value: unknown): ManualPdfPlacement | undefined {
+export function decodeManualPlacement(value: unknown): ManualPdfPlacement | undefined {
   if (value === undefined || value === null) return undefined;
   if (!value || typeof value !== "object")
     throw new PortalHttpError(400, "The PDF placement is invalid.");
