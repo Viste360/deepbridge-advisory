@@ -58,14 +58,21 @@ function decodeSignature(value: unknown) {
 
 export type ManualPdfPlacement = {
   pageIndex: number;
-  signature: { x: number; y: number };
+  signature: { x: number; y: number; size: number };
   stamp: { x: number; y: number; rotation: number };
-  date: { x: number; y: number };
+  date: { x: number; y: number; size: number };
 };
 
 function normalizedCoordinate(value: unknown, label: string) {
   if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 1)
     throw new PortalHttpError(400, `The ${label} position is invalid.`);
+  return value;
+}
+
+function placementScale(value: unknown, label: string) {
+  if (value === undefined) return 1;
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0.55 || value > 1.75)
+    throw new PortalHttpError(400, `The ${label} size is invalid.`);
   return value;
 }
 
@@ -89,6 +96,7 @@ function decodeManualPlacement(value: unknown): ManualPdfPlacement | undefined {
     signature: {
       x: normalizedCoordinate(signature.x, "signature horizontal"),
       y: normalizedCoordinate(signature.y, "signature vertical"),
+      size: placementScale(signature.size, "signature"),
     },
     stamp: {
       x: normalizedCoordinate(stamp.x, "stamp horizontal"),
@@ -98,6 +106,7 @@ function decodeManualPlacement(value: unknown): ManualPdfPlacement | undefined {
     date: {
       x: normalizedCoordinate(date.x, "date horizontal"),
       y: normalizedCoordinate(date.y, "date vertical"),
+      size: placementScale(date.size, "date"),
     },
   };
 }
@@ -513,14 +522,6 @@ function drawSignatureInExecutionBlock(
   const dateText = formatSigningDate(signedAt);
   const dateX = placement.date.x + placement.date.width + 6;
   const dateSize = 9.5;
-  const dateWidth = regular.widthOfTextAtSize(dateText, dateSize);
-  page.drawRectangle({
-    x: dateX - 8,
-    y: placement.date.y - 2,
-    width: dateWidth + 12,
-    height: dateSize + 4,
-    color: rgb(1, 1, 1),
-  });
   page.drawText(dateText, {
     x: dateX,
     y: placement.date.y,
@@ -544,8 +545,12 @@ function drawManualPdfPlacement(
   const pageWidth = page.getWidth();
   const pageHeight = page.getHeight();
   const signatureRatio = signature.width / signature.height;
-  const signatureHeight = 34;
-  const signatureWidth = Math.min(210, signatureHeight * signatureRatio);
+  const signatureScale = placement.signature.size ?? 1;
+  const signatureHeight = 34 * signatureScale;
+  const signatureWidth = Math.min(
+    210 * signatureScale,
+    signatureHeight * signatureRatio,
+  );
   const signatureX = clamp(
     placement.signature.x * pageWidth,
     12,
@@ -564,7 +569,7 @@ function drawManualPdfPlacement(
   });
 
   const dateText = formatSigningDate(signedAt);
-  const dateSize = 9.5;
+  const dateSize = 9.5 * (placement.date.size ?? 1);
   const dateWidth = fonts.regular.widthOfTextAtSize(dateText, dateSize);
   const dateX = clamp(
     placement.date.x * pageWidth,
@@ -576,14 +581,6 @@ function drawManualPdfPlacement(
     12,
     pageHeight - dateSize - 12,
   );
-  page.drawRectangle({
-    x: dateX - 5,
-    y: dateY - 2,
-    width: dateWidth + 10,
-    height: dateSize + 5,
-    color: rgb(1, 1, 1),
-    opacity: 0.92,
-  });
   page.drawText(dateText, {
     x: dateX,
     y: dateY,

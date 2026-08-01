@@ -212,9 +212,9 @@ describe("portal countersignature PDFs", () => {
       sourceHash: createHash("sha256").update(sourceBytes).digest("hex"),
       manualPlacement: {
         pageIndex: 0,
-        signature: { x: 0.14, y: 0.58 },
+        signature: { x: 0.14, y: 0.58, size: 0.9 },
         stamp: { x: 0.6, y: 0.52, rotation: -3 },
-        date: { x: 0.14, y: 0.67 },
+        date: { x: 0.14, y: 0.67, size: 0.85 },
       },
     });
 

@@ -2446,12 +2446,12 @@
   z-index: 3;
   display: grid;
   margin: 0;
-  padding: 5px 7px;
+  padding: 0;
   border: 1px dashed rgba(12, 112, 105, 0.8);
   border-radius: 2px;
   color: rgba(7, 45, 52, 0.88);
-  background: rgba(220, 249, 244, 0.42);
-  box-shadow: 0 2px 9px rgba(6, 31, 38, 0.08);
+  background: transparent;
+  box-shadow: none;
   cursor: grab;
   line-height: 1;
   text-align: left;
@@ -2463,7 +2463,12 @@
 }
 
 .portal-pdf-placement-item small {
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: -1px;
+  padding: 2px 4px;
   color: rgba(13, 101, 96, 0.82);
+  background: rgba(238, 250, 247, 0.94);
   font-family: Inter, Arial, sans-serif;
   font-size: clamp(0.38rem, 0.85vw, 0.52rem);
   font-weight: 850;
@@ -2472,14 +2477,21 @@
 }
 
 .portal-pdf-placement-item.signature {
-  width: 28%;
+  width: 22.85%;
+  height: 4.04%;
+  align-items: center;
+  transform: scale(var(--placement-scale));
+  transform-origin: top left;
 }
 
 .portal-pdf-placement-item.signature span {
+  display: block;
+  width: 100%;
   color: rgba(8, 62, 68, 0.82);
   font-family: "AlluraSignature", "Brush Script MT", cursive;
-  font-size: clamp(1rem, 3.8vw, 2.45rem);
+  font-size: clamp(0.72rem, 2.8vw, 1.85rem);
   line-height: 0.9;
+  text-align: center;
   white-space: nowrap;
 }
 
@@ -2487,6 +2499,7 @@
   width: 27.5%;
   aspect-ratio: 164 / 142;
   align-content: center;
+  padding: 5px 7px;
   gap: 4px;
   border-style: solid;
   border-color: rgba(36, 123, 119, 0.58);
@@ -2506,31 +2519,89 @@
 }
 
 .portal-pdf-placement-item.date {
-  min-width: 17%;
-  background: rgba(255, 255, 255, 0.78);
+  width: 12%;
+  min-width: 0;
+  height: 1.7%;
+  align-items: center;
+  border-color: rgba(12, 112, 105, 0.68);
+  background: transparent;
+  transform: scale(var(--placement-scale));
+  transform-origin: top left;
 }
 
 .portal-pdf-placement-item.date span {
-  font-size: clamp(0.44rem, 1.1vw, 0.68rem);
+  display: block;
+  width: 100%;
+  font-size: clamp(0.36rem, 0.9vw, 0.58rem);
+  line-height: 1;
+  text-align: left;
   white-space: nowrap;
 }
 
-.portal-stamp-angle {
+.portal-placement-tuning {
   display: grid;
-  align-items: center;
-  grid-template-columns: auto minmax(140px, 1fr) 34px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
-.portal-stamp-angle span,
-.portal-stamp-angle strong {
-  color: var(--portal-ink);
-  font-size: 0.65rem;
+.portal-placement-tuning label {
+  display: grid;
+  align-items: center;
+  grid-template-columns: minmax(82px, auto) minmax(70px, 1fr) 38px;
+  gap: 8px;
 }
 
-.portal-stamp-angle input {
+.portal-placement-tuning span,
+.portal-placement-tuning strong {
+  color: var(--portal-ink);
+  font-size: 0.61rem;
+}
+
+.portal-placement-tuning input {
   margin: 0;
   padding: 0;
+}
+
+.portal-placement-nudge {
+  display: grid;
+  align-items: center;
+  grid-template-columns: auto minmax(120px, 180px) auto minmax(160px, 1fr);
+  gap: 10px;
+}
+
+.portal-placement-nudge > label,
+.portal-placement-nudge > small {
+  color: var(--portal-muted);
+  font-size: 0.6rem;
+}
+
+.portal-placement-nudge select {
+  min-height: 34px;
+  margin: 0;
+  padding: 5px 8px;
+  font-size: 0.62rem;
+}
+
+.portal-placement-nudge > div {
+  display: flex;
+  gap: 4px;
+}
+
+.portal-placement-nudge button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid #a9bcb7;
+  color: var(--portal-ink);
+  background: #fff;
+  cursor: pointer;
+}
+
+.portal-placement-nudge button:hover {
+  border-color: var(--portal-teal);
+  background: var(--portal-aqua-soft);
 }
 
 .portal-signature-preview {
@@ -3216,6 +3287,21 @@
   .portal-progress-ring::before {
     width: 87px;
     height: 87px;
+  }
+
+  .portal-pdf-placement-toolbar,
+  .portal-placement-nudge {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .portal-pdf-placement-toolbar {
+    flex-direction: column;
+  }
+
+  .portal-pdf-placement-tuning,
+  .portal-placement-tuning {
+    grid-template-columns: 1fr;
   }
 
   .portal-compact-details {

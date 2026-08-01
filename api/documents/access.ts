@@ -10,6 +10,35 @@ import {
   requirePortalUser,
 } from "../_lib/server.js";
 
+function safeFilenamePart(value: string, maximum: number) {
+  const normalized = value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/gi, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, maximum)
+    .replace(/-+$/g, "");
+  return normalized || "Document";
+}
+
+export function buildDocumentDownloadName(input: {
+  consultantName: string;
+  title: string;
+  versionLabel: string;
+  kind: "final" | "certificate";
+}) {
+  const consultant = safeFilenamePart(input.consultantName, 55);
+  const title = safeFilenamePart(input.title, 85);
+  const cleanVersion = input.versionLabel
+    .replace(/^v/i, "")
+    .replace(/[^a-z0-9.]+/gi, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 18);
+  const version = cleanVersion ? `-v${cleanVersion}` : "";
+  const suffix = input.kind === "final" ? "Signed" : "Audit-Certificate";
+  return `DeepBridge-${consultant}-${title}${version}-${suffix}.pdf`;
+}
+
 export default async function handler(
   request: IncomingMessage,
   response: ServerResponse,
@@ -36,7 +65,7 @@ export default async function handler(
     let query = admin
       .from("assigned_documents")
       .select(
-        "id, consultant_id, assignment_id, status, final_storage_path, certificate_storage_path, document_versions!inner(source_storage_path, malware_scan_status, locked_at)",
+        "id, consultant_id, assignment_id, status, final_storage_path, certificate_storage_path, document_versions!inner(version_label, source_storage_path, malware_scan_status, locked_at, documents!inner(title))",
       )
       .eq("id", documentId);
     if (actor.profile.role !== "admin")
@@ -77,10 +106,36 @@ export default async function handler(
 
     const bucket =
       kind === "source" ? "portal-documents" : "signed-documents";
+    const documentRelation = Array.isArray(version?.documents)
+      ? version.documents[0]
+      : version?.documents;
+    let downloadName: string | undefined;
+    if (kind !== "source") {
+      const { data: consultant } = await admin
+        .from("portal_profiles")
+        .select("full_name")
+        .eq("id", assigned.consultant_id)
+        .maybeSingle();
+      downloadName = buildDocumentDownloadName({
+        consultantName:
+          typeof consultant?.full_name === "string"
+            ? consultant.full_name
+            : "Consultant",
+        title:
+          typeof documentRelation?.title === "string"
+            ? documentRelation.title
+            : "Agreement",
+        versionLabel:
+          typeof version?.version_label === "string"
+            ? version.version_label
+            : "",
+        kind,
+      });
+    }
     const { data: signed, error: signedUrlError } = await admin.storage
       .from(bucket)
       .createSignedUrl(storagePath, 300, {
-        download: kind === "source" ? false : true,
+        download: kind === "source" ? false : downloadName,
       });
     if (signedUrlError) throw signedUrlError;
 
@@ -93,7 +148,7 @@ export default async function handler(
       assignment_id: assigned.assignment_id,
       consultant_id: assigned.consultant_id,
       ...requestContext(request),
-      metadata: { kind },
+      metadata: { kind, download_name: downloadName ?? null },
     });
 
     return json(response, 200, { url: signed.signedUrl });

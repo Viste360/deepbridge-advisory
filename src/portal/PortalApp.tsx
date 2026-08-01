@@ -1,6 +1,7 @@
 import {
   CSSProperties,
   FormEvent,
+  KeyboardEvent as ReactKeyboardEvent,
   PointerEvent as ReactPointerEvent,
   ReactNode,
   createContext,
@@ -5281,16 +5282,16 @@ function initialManualPdfPlacement(title: string): ManualPdfPlacement {
   if (title.toLowerCase().includes("professional consultant charter")) {
     return {
       pageIndex: 0,
-      signature: { x: 0.18, y: 0.315 },
+      signature: { x: 0.18, y: 0.315, size: 1 },
       stamp: { x: 0.6, y: 0.45, rotation: -3 },
-      date: { x: 0.15, y: 0.36 },
+      date: { x: 0.15, y: 0.36, size: 1 },
     };
   }
   return {
     pageIndex: 0,
-    signature: { x: 0.14, y: 0.66 },
+    signature: { x: 0.14, y: 0.66, size: 1 },
     stamp: { x: 0.58, y: 0.57, rotation: -3 },
-    date: { x: 0.14, y: 0.74 },
+    date: { x: 0.14, y: 0.74, size: 1 },
   };
 }
 
@@ -5315,6 +5316,8 @@ function PdfPlacementEditor({
   const [pageRatio, setPageRatio] = useState(595.28 / 841.89);
   const [rendering, setRendering] = useState(true);
   const [renderError, setRenderError] = useState("");
+  const [fineTarget, setFineTarget] =
+    useState<PdfPlacementTarget>("signature");
   const [drag, setDrag] = useState<{
     target: PdfPlacementTarget;
     offsetX: number;
@@ -5396,6 +5399,7 @@ function PdfPlacementEditor({
     if (!pageRef.current) return;
     const bounds = pageRef.current.getBoundingClientRect();
     const point = pointFor(target);
+    setFineTarget(target);
     event.currentTarget.setPointerCapture(event.pointerId);
     setDrag({
       target,
@@ -5429,14 +5433,54 @@ function PdfPlacementEditor({
     else
       onChange({
         ...placement,
-        [drag.target]: { x, y },
+        [drag.target]: { ...placement[drag.target], x, y },
       });
+  }
+
+  function nudgeTarget(target: PdfPlacementTarget, deltaX: number, deltaY: number) {
+    const point = pointFor(target);
+    const x = Math.max(0.005, Math.min(0.96, point.x + deltaX));
+    const y = Math.max(0.005, Math.min(0.96, point.y + deltaY));
+    if (target === "stamp")
+      onChange({ ...placement, stamp: { ...placement.stamp, x, y } });
+    else
+      onChange({
+        ...placement,
+        [target]: { ...placement[target], x, y },
+      });
+  }
+
+  function handlePlacementKeys(
+    event: ReactKeyboardEvent<HTMLButtonElement>,
+    target: PdfPlacementTarget,
+  ) {
+    const step = event.shiftKey ? 0.01 : 0.0025;
+    const movement = {
+      ArrowLeft: [-step, 0],
+      ArrowRight: [step, 0],
+      ArrowUp: [0, -step],
+      ArrowDown: [0, step],
+    }[event.key];
+    if (!movement) return;
+    event.preventDefault();
+    setFineTarget(target);
+    nudgeTarget(target, movement[0], movement[1]);
   }
 
   const stampStyle = {
     left: `${placement.stamp.x * 100}%`,
     top: `${placement.stamp.y * 100}%`,
     "--stamp-rotation": `${placement.stamp.rotation}deg`,
+  } as CSSProperties;
+  const signatureStyle = {
+    left: `${placement.signature.x * 100}%`,
+    top: `${placement.signature.y * 100}%`,
+    "--placement-scale": placement.signature.size,
+  } as CSSProperties;
+  const dateStyle = {
+    left: `${placement.date.x * 100}%`,
+    top: `${placement.date.y * 100}%`,
+    "--placement-scale": placement.date.size,
   } as CSSProperties;
 
   return (
@@ -5467,7 +5511,10 @@ function PdfPlacementEditor({
           </button>
         </div>
       </div>
-      <p>Drag each labelled item to its exact position on the document.</p>
+      <p>
+        Drag each item to its exact position. The dashed box is the final PDF
+        footprint; the small label above it is only an editor guide.
+      </p>
       <div
         ref={pageRef}
         className="portal-pdf-placement-page"
@@ -5484,11 +5531,9 @@ function PdfPlacementEditor({
         <button
           type="button"
           className="portal-pdf-placement-item signature"
-          style={{
-            left: `${placement.signature.x * 100}%`,
-            top: `${placement.signature.y * 100}%`,
-          }}
+          style={signatureStyle}
           onPointerDown={(event) => beginDrag(event, "signature")}
+          onKeyDown={(event) => handlePlacementKeys(event, "signature")}
         >
           <small>Signature</small>
           <span>{signerName || "Your name"}</span>
@@ -5498,6 +5543,7 @@ function PdfPlacementEditor({
           className="portal-pdf-placement-item stamp"
           style={stampStyle}
           onPointerDown={(event) => beginDrag(event, "stamp")}
+          onKeyDown={(event) => handlePlacementKeys(event, "stamp")}
         >
           <small>Company stamp</small>
           <strong>DB · DEEPBRIDGE</strong>
@@ -5506,11 +5552,9 @@ function PdfPlacementEditor({
         <button
           type="button"
           className="portal-pdf-placement-item date"
-          style={{
-            left: `${placement.date.x * 100}%`,
-            top: `${placement.date.y * 100}%`,
-          }}
+          style={dateStyle}
           onPointerDown={(event) => beginDrag(event, "date")}
+          onKeyDown={(event) => handlePlacementKeys(event, "date")}
         >
           <small>Date</small>
           <span>
@@ -5523,26 +5567,113 @@ function PdfPlacementEditor({
           </span>
         </button>
       </div>
-      <label className="portal-stamp-angle">
-        <span>Stamp angle</span>
-        <input
-          type="range"
-          min="-6"
-          max="6"
-          step="1"
-          value={placement.stamp.rotation}
+      <div className="portal-placement-tuning">
+        <label>
+          <span>Signature size</span>
+          <input
+            type="range"
+            min="55"
+            max="175"
+            step="5"
+            value={Math.round(placement.signature.size * 100)}
+            onChange={(event) =>
+              onChange({
+                ...placement,
+                signature: {
+                  ...placement.signature,
+                  size: Number(event.target.value) / 100,
+                },
+              })
+            }
+          />
+          <strong>{Math.round(placement.signature.size * 100)}%</strong>
+        </label>
+        <label>
+          <span>Date size</span>
+          <input
+            type="range"
+            min="55"
+            max="175"
+            step="5"
+            value={Math.round(placement.date.size * 100)}
+            onChange={(event) =>
+              onChange({
+                ...placement,
+                date: {
+                  ...placement.date,
+                  size: Number(event.target.value) / 100,
+                },
+              })
+            }
+          />
+          <strong>{Math.round(placement.date.size * 100)}%</strong>
+        </label>
+        <label>
+          <span>Stamp angle</span>
+          <input
+            type="range"
+            min="-6"
+            max="6"
+            step="1"
+            value={placement.stamp.rotation}
+            onChange={(event) =>
+              onChange({
+                ...placement,
+                stamp: {
+                  ...placement.stamp,
+                  rotation: Number(event.target.value),
+                },
+              })
+            }
+          />
+          <strong>{placement.stamp.rotation}°</strong>
+        </label>
+      </div>
+      <div className="portal-placement-nudge">
+        <label htmlFor="placement-fine-target">Fine position</label>
+        <select
+          id="placement-fine-target"
+          value={fineTarget}
           onChange={(event) =>
-            onChange({
-              ...placement,
-              stamp: {
-                ...placement.stamp,
-                rotation: Number(event.target.value),
-              },
-            })
+            setFineTarget(event.target.value as PdfPlacementTarget)
           }
-        />
-        <strong>{placement.stamp.rotation}°</strong>
-      </label>
+        >
+          <option value="signature">Signature</option>
+          <option value="date">Date</option>
+          <option value="stamp">Company stamp</option>
+        </select>
+        <div>
+          <button
+            type="button"
+            aria-label={`Move ${fineTarget} left`}
+            onClick={() => nudgeTarget(fineTarget, -0.0025, 0)}
+          >
+            ←
+          </button>
+          <button
+            type="button"
+            aria-label={`Move ${fineTarget} up`}
+            onClick={() => nudgeTarget(fineTarget, 0, -0.0025)}
+          >
+            ↑
+          </button>
+          <button
+            type="button"
+            aria-label={`Move ${fineTarget} down`}
+            onClick={() => nudgeTarget(fineTarget, 0, 0.0025)}
+          >
+            ↓
+          </button>
+          <button
+            type="button"
+            aria-label={`Move ${fineTarget} right`}
+            onClick={() => nudgeTarget(fineTarget, 0.0025, 0)}
+          >
+            →
+          </button>
+        </div>
+        <small>Each tap moves less than 1 mm. Arrow keys also work.</small>
+      </div>
     </div>
   );
 }
