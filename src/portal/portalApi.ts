@@ -108,6 +108,39 @@ export interface AdminContract {
   }>;
 }
 
+export interface AdminAssignment {
+  id: string;
+  title: string;
+  programme: string;
+  location: string;
+  startDate: string;
+  startDateValue: string;
+  expectedEnd: string;
+  currency: string;
+  status: string;
+  contractingOrganisationId: string;
+  customerOrganisationId: string;
+  endCustomerOrganisationId: string;
+  contractingOrganisation: string;
+  customerOrganisation: string;
+  endCustomerOrganisation: string;
+  consultants: Array<{
+    id: string;
+    fullName: string;
+    email: string;
+    businessName: string;
+  }>;
+  contracts: Array<{
+    id: string;
+    reference: string;
+    title: string;
+    status: string;
+    contractType: string;
+    counterpartyId: string;
+    counterpartyName: string;
+  }>;
+}
+
 export interface AdminSigningItem {
   id: string;
   consultantId: string;
@@ -831,6 +864,72 @@ export async function listAdminContracts(): Promise<{
   };
 }
 
+export async function listAdminAssignments(): Promise<AdminAssignment[]> {
+  const result = await apiRequest<{ assignments: unknown }>(
+    "/api/admin/assignments/list",
+  );
+  return records(result.assignments).map((row) => {
+    const contracting = record(row.contracting);
+    const customer = record(row.customer);
+    const endCustomer = record(row.end_customer);
+    return {
+      id: text(row.id),
+      title: text(row.title),
+      programme: text(row.programme),
+      location: text(row.primary_location),
+      startDate: displayDate(row.start_date),
+      startDateValue: text(row.start_date),
+      expectedEnd: text(row.expected_end_display),
+      currency: text(row.currency, "EUR"),
+      status: text(row.status, "active"),
+      contractingOrganisationId: text(row.contracting_organisation_id),
+      customerOrganisationId: text(row.customer_organisation_id),
+      endCustomerOrganisationId: text(row.end_customer_organisation_id),
+      contractingOrganisation:
+        text(contracting.trading_name) || text(contracting.legal_name),
+      customerOrganisation:
+        text(customer.trading_name) || text(customer.legal_name),
+      endCustomerOrganisation:
+        text(endCustomer.trading_name) || text(endCustomer.legal_name),
+      consultants: records(row.consultants).map((consultant) => ({
+        id: text(consultant.id),
+        fullName: text(consultant.full_name),
+        email: text(consultant.email),
+        businessName: text(consultant.business_name),
+      })),
+      contracts: records(row.contracts).map((contract) => {
+        const counterparty = record(contract.counterparty);
+        return {
+          id: text(contract.id),
+          reference: text(contract.reference),
+          title: text(contract.title),
+          status: text(contract.status),
+          contractType: text(contract.contract_type),
+          counterpartyId: text(counterparty.id),
+          counterpartyName:
+            text(counterparty.trading_name) || text(counterparty.legal_name),
+        };
+      }),
+    };
+  });
+}
+
+export async function saveAdminAssignment(input: {
+  assignmentId?: string;
+  title: string;
+  programme: string;
+  location: string;
+  startDate: string;
+  expectedEnd: string;
+  currency: string;
+  contractingOrganisationId: string;
+  customerOrganisationId: string;
+  endCustomerOrganisationId: string;
+  consultantProfileIds: string[];
+}) {
+  return post<{ assignmentId: string }>("/api/admin/assignments/save", input);
+}
+
 export async function uploadAdminContract(input: {
   contractId?: string;
   reference: string;
@@ -1036,6 +1135,16 @@ export async function updateAdminContractStatus(
   });
 }
 
+export async function updateAdminContractDetails(input: {
+  contractId: string;
+  counterpartyOrganisationId: string;
+  assignmentId: string;
+  counterpartySignatoryName: string;
+  counterpartySignatoryEmail: string;
+}) {
+  return post<{ updated: true }>("/api/admin/contracts/update-details", input);
+}
+
 export async function removeAdminContractVersion(versionId: string) {
   return post<{ removed: true }>("/api/admin/contracts/remove-version", {
     versionId,
@@ -1053,6 +1162,13 @@ export async function retryAdminContractSecurityScan(versionId: string) {
   return post<{ status: string }>("/api/admin/contracts/retry-scan", {
     versionId,
   });
+}
+
+export async function verifyAdminContractPdf(versionId: string) {
+  return post<{ status: string; readyToSign: boolean }>(
+    "/api/admin/contracts/verify-pdf",
+    { versionId },
+  );
 }
 
 export async function countersignAdminContract(input: {

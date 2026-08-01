@@ -18,6 +18,9 @@
     "api/admin/contracts/countersign.ts": {
       "maxDuration": 300
     },
+    "api/admin/contracts/verify-pdf.ts": {
+      "maxDuration": 300
+    },
     "api/admin/signing/countersign.ts": {
       "maxDuration": 300
     },

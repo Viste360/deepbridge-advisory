@@ -53,6 +53,8 @@ function validScan(body) {
     "document_version",
     "compliance_submission",
     "signature_artifact",
+    "contract_version",
+    "contract_artifact",
   ]);
   return (
     body &&
@@ -64,7 +66,7 @@ function validScan(body) {
     body.storagePath.length > 0 &&
     body.storagePath.length <= 500 &&
     !body.storagePath.includes("..") &&
-    (body.objectType !== "signature_artifact" ||
+    (!["signature_artifact", "contract_artifact"].includes(body.objectType) ||
       body.artifactKind === "final" ||
       body.artifactKind === "certificate")
   );

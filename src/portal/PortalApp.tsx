@@ -33,6 +33,7 @@ import {
   getAdminContractAccess,
   getPortalSession,
   listAdminContracts,
+  listAdminAssignments,
   listAdminConsultants,
   listAdminDocumentCatalogue,
   listAdminOrganisations,
@@ -50,11 +51,13 @@ import {
   retrySigningSecurityScan,
   reviewComplianceSubmission,
   saveAdminOrganisation,
+  saveAdminAssignment,
   sendConsultantPortalLink,
   sendMagicLink,
   signInWithGoogle,
   signOutPortal,
   updateAdminConsultant,
+  updateAdminContractDetails,
   updateAdminContractStatus,
   uploadComplianceFile,
   uploadComplianceFileAsAdmin,
@@ -63,6 +66,8 @@ import {
   uploadAdminContract,
   uploadAdminContractSignedPack,
   uploadManualSignedDocument,
+  verifyAdminContractPdf,
+  type AdminAssignment,
   type AdminContract,
   type AdminDocumentCatalogueItem,
   type AdminConsultant,
@@ -470,7 +475,7 @@ const adminNavigation = [
   ["Organisations", "/admin/organisations"],
   ["Contracts", "/admin/contracts"],
   ["Consultants", "/admin/consultants"],
-  ["Assignments", "/admin/assignments"],
+  ["Projects", "/admin/assignments"],
   ["Documents", "/admin/documents"],
   ["Signing", "/admin/signing"],
   ["Compliance", "/admin/compliance"],
@@ -2406,7 +2411,7 @@ function contractPipeline(
       state: version ? "complete" : "waiting",
     },
     {
-      label: "Security scan",
+      label: "File safety",
       state: isBlocked
         ? "blocked"
         : sourceClean
@@ -2448,17 +2453,24 @@ function contractPipeline(
 
 function AdminContractsPage() {
   const { snapshot, demo } = usePortal();
+  const location = useLocation();
+  const initialParameters = new URLSearchParams(location.search);
+  const initialProjectId = initialParameters.get("assignment") || "";
+  const openProjectUpload = initialParameters.get("upload") === "1";
   const [contracts, setContracts] = useState<AdminContract[]>([]);
+  const [assignments, setAssignments] = useState<AdminAssignment[]>([]);
   const [organisations, setOrganisations] = useState<AdminOrganisation[]>(
     demo ? demoOrganisations() : [],
   );
   const [driveConfigured, setDriveConfigured] = useState(false);
   const [uploadTarget, setUploadTarget] = useState<
     AdminContract | null | undefined
-  >(undefined);
+  >(openProjectUpload ? null : undefined);
   const [signedTarget, setSignedTarget] = useState<AdminContract | null>(null);
   const [countersignTarget, setCountersignTarget] =
     useState<AdminContract | null>(null);
+  const [detailsTarget, setDetailsTarget] = useState<AdminContract | null>(null);
+  const [uploadProjectId, setUploadProjectId] = useState(initialProjectId);
   const [loading, setLoading] = useState(!demo);
   const [busyId, setBusyId] = useState("");
   const [message, setMessage] = useState("");
@@ -2469,13 +2481,15 @@ function AdminContractsPage() {
       return;
     }
     try {
-      const [contractResult, organisationResult] = await Promise.all([
+      const [contractResult, organisationResult, assignmentResult] = await Promise.all([
         listAdminContracts(),
         listAdminOrganisations(),
+        listAdminAssignments(),
       ]);
       setContracts(contractResult.contracts);
       setDriveConfigured(contractResult.driveConfigured);
       setOrganisations(organisationResult);
+      setAssignments(assignmentResult);
     } catch (loadError) {
       setMessage(
         loadError instanceof Error
@@ -2623,17 +2637,39 @@ function AdminContractsPage() {
     }
   }
 
+  async function verifyPdf(contract: AdminContract) {
+    const version = contract.versions[0];
+    if (!version) return;
+    setBusyId(`${version.id}-verify`);
+    try {
+      if (!demo) await verifyAdminContractPdf(version.id);
+      setMessage(`${contract.reference} passed the controlled PDF verification and is ready for the next step.`);
+      if (!demo) await refresh();
+    } catch (verifyError) {
+      setMessage(
+        verifyError instanceof Error
+          ? verifyError.message
+          : "The PDF could not be verified.",
+      );
+    } finally {
+      setBusyId("");
+    }
+  }
+
   return (
     <>
       <PageHeader
         eyebrow="Contract register"
         title="Contracts"
-        description="Control client, consultant, partner and intercompany agreements from upload through security checks, signature and archive."
+        description="Upload any signed or unsigned PDF, file it to a project, verify it, countersign it and archive the completed record."
         action={
           <button
             className="portal-button portal-button-primary"
             type="button"
-            onClick={() => setUploadTarget(null)}
+            onClick={() => {
+              setUploadProjectId("");
+              setUploadTarget(null);
+            }}
             disabled={organisations.length < 2}
           >
             Upload contract
@@ -2643,7 +2679,7 @@ function AdminContractsPage() {
       <div className="portal-contract-assurance">
         <div>
           <strong>Private storage</strong>
-          <span>PDFs stay inaccessible until the security scan passes.</span>
+          <span>PDFs stay private until antivirus or controlled PDF verification passes.</span>
         </div>
         <div>
           <strong>Audit trail</strong>
@@ -2706,6 +2742,14 @@ function AdminContractsPage() {
                 {contract.effectiveDate ? (
                   <span>Effective {contract.effectiveDate}</span>
                 ) : null}
+                {contract.assignmentId ? (
+                  <span>
+                    Project {assignments.find((item) => item.id === contract.assignmentId)?.programme || "linked"}
+                  </span>
+                ) : (
+                  <span>Contract library · no project</span>
+                )}
+                {version ? <span>File check: {version.scanStatus}</span> : null}
               </div>
               <ol className="portal-contract-pipeline" aria-label="Contract progress">
                 {contractPipeline(contract, driveConfigured).map((step) => (
@@ -2734,14 +2778,26 @@ function AdminContractsPage() {
                 {version &&
                 !version.locked &&
                 ["pending", "failed"].includes(version.scanStatus) ? (
-                  <button
-                    type="button"
-                    className="portal-table-primary-action"
-                    onClick={() => void retryScan(contract)}
-                    disabled={Boolean(busyId)}
-                  >
-                    {busyId === version.id ? "Restarting scan…" : "Retry security scan"}
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => void retryScan(contract)}
+                      disabled={Boolean(busyId)}
+                    >
+                      {busyId === version.id ? "Restarting scan…" : "Retry antivirus scan"}
+                    </button>
+                    <button
+                      type="button"
+                      className="portal-table-primary-action"
+                      onClick={() => void verifyPdf(contract)}
+                      disabled={Boolean(busyId)}
+                    >
+                      {busyId === `${version.id}-verify` ? "Verifying PDF…" : "Verify PDF & continue"}
+                    </button>
+                  </>
+                ) : null}
+                {version?.scanStatus === "infected" ? (
+                  <strong className="portal-danger-link">Unsafe file detected · replace upload</strong>
                 ) : null}
                 {contract.status === "ready_to_sign" ? (
                   <button
@@ -2818,10 +2874,22 @@ function AdminContractsPage() {
                     Remove quarantined upload
                   </button>
                 ) : null}
+                {contract.status !== "completed" ? (
+                  <button
+                    type="button"
+                    onClick={() => setDetailsTarget(contract)}
+                    disabled={Boolean(busyId)}
+                  >
+                    Correct project &amp; counterparty
+                  </button>
+                ) : null}
                 {version?.locked ? (
                   <button
                     type="button"
-                    onClick={() => setUploadTarget(contract)}
+                    onClick={() => {
+                      setUploadProjectId(contract.assignmentId);
+                      setUploadTarget(contract);
+                    }}
                     disabled={Boolean(busyId)}
                   >
                     Add version
@@ -2848,7 +2916,8 @@ function AdminContractsPage() {
         <AdminContractUploadDialog
           contract={uploadTarget}
           organisations={organisations}
-          assignmentId={snapshot.assignment.id}
+          assignments={assignments}
+          initialAssignmentId={uploadProjectId}
           demo={demo}
           onClose={() => setUploadTarget(undefined)}
           onUploaded={async (notice) => {
@@ -2885,6 +2954,19 @@ function AdminContractsPage() {
           }}
         />
       ) : null}
+      {detailsTarget ? (
+        <AdminContractDetailsDialog
+          contract={detailsTarget}
+          organisations={organisations}
+          assignments={assignments}
+          onClose={() => setDetailsTarget(null)}
+          onSaved={async () => {
+            setDetailsTarget(null);
+            setMessage("Contract relationship corrected. The source PDF and checksum were not changed.");
+            await refresh();
+          }}
+        />
+      ) : null}
     </>
   );
 }
@@ -2892,14 +2974,16 @@ function AdminContractsPage() {
 function AdminContractUploadDialog({
   contract,
   organisations,
-  assignmentId,
+  assignments,
+  initialAssignmentId,
   demo,
   onClose,
   onUploaded,
 }: {
   contract: AdminContract | null;
   organisations: AdminOrganisation[];
-  assignmentId: string;
+  assignments: AdminAssignment[];
+  initialAssignmentId: string;
   demo: boolean;
   onClose: () => void;
   onUploaded: (notice: string) => Promise<void>;
@@ -2908,8 +2992,6 @@ function AdminContractUploadDialog({
     organisations.find((item) =>
       item.relationshipTypes.includes("deepbridge_entity"),
     ) || organisations[0];
-  const defaultCounterparty =
-    organisations.find((item) => item.id !== deepBridge?.id) || organisations[1];
   const currentVersion = contract?.versions[0]?.versionLabel;
   const versionMatch = currentVersion?.match(/^(\d+)\.(\d+)$/);
   const [reference, setReference] = useState(contract?.reference || "");
@@ -2921,7 +3003,7 @@ function AdminContractUploadDialog({
     contract?.owner.id || deepBridge?.id || "",
   );
   const [counterpartyOrganisationId, setCounterpartyOrganisationId] = useState(
-    contract?.counterparty.id || defaultCounterparty?.id || "",
+    contract?.counterparty.id || "",
   );
   const [versionLabel, setVersionLabel] = useState(
     versionMatch
@@ -2934,8 +3016,8 @@ function AdminContractUploadDialog({
   const [requiresSignature, setRequiresSignature] = useState(
     contract?.requiresSignature !== false,
   );
-  const [linkAssignment, setLinkAssignment] = useState(
-    Boolean(contract?.assignmentId),
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState(
+    contract?.assignmentId || initialAssignmentId || "",
   );
   const [effectiveDate, setEffectiveDate] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
@@ -2996,7 +3078,7 @@ function AdminContractUploadDialog({
           contractType,
           ownerOrganisationId,
           counterpartyOrganisationId,
-          assignmentId: linkAssignment ? assignmentId : undefined,
+          assignmentId: selectedAssignmentId || undefined,
           description,
           versionLabel,
           requiresSignature,
@@ -3117,11 +3199,14 @@ function AdminContractUploadDialog({
                 }
                 required
               >
-                {organisations.map((organisation) => (
+                <option value="">Select the contracting counterparty</option>
+                {organisations
+                  .filter((organisation) => organisation.id !== ownerOrganisationId)
+                  .map((organisation) => (
                   <option value={organisation.id} key={organisation.id}>
                     {organisation.tradingName || organisation.legalName}
                   </option>
-                ))}
+                  ))}
               </select>
             </label>
           </div>
@@ -3234,12 +3319,18 @@ function AdminContractUploadDialog({
             <span>This contract requires signatures</span>
           </label>
           <label className="portal-inline-choice">
-            <input
-              type="checkbox"
-              checked={linkAssignment}
-              onChange={(event) => setLinkAssignment(event.target.checked)}
-            />
-            <span>Link to the current consultant assignment</span>
+            <span>Project / assignment</span>
+            <select
+              value={selectedAssignmentId}
+              onChange={(event) => setSelectedAssignmentId(event.target.value)}
+            >
+              <option value="">Contract library only</option>
+              {assignments.map((assignment) => (
+                <option value={assignment.id} key={assignment.id}>
+                  {assignment.programme} · {assignment.title}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             Approved contract PDF
@@ -3392,6 +3483,93 @@ function AdminContractSignedPackDialog({
             >
               {busy ? "Uploading signed pack…" : "Upload and verify signed pack"}
             </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function AdminContractDetailsDialog({
+  contract,
+  organisations,
+  assignments,
+  onClose,
+  onSaved,
+}: {
+  contract: AdminContract;
+  organisations: AdminOrganisation[];
+  assignments: AdminAssignment[];
+  onClose: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  const counterpartyParty = contract.parties.find(
+    (party) => party.organisationId === contract.counterparty.id,
+  );
+  const [counterpartyOrganisationId, setCounterpartyOrganisationId] = useState(
+    contract.counterparty.id,
+  );
+  const [assignmentId, setAssignmentId] = useState(contract.assignmentId || "");
+  const [signatoryName, setSignatoryName] = useState(
+    counterpartyParty?.signatoryName || "",
+  );
+  const [signatoryEmail, setSignatoryEmail] = useState(
+    counterpartyParty?.signatoryEmail || "",
+  );
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      await updateAdminContractDetails({
+        contractId: contract.id,
+        counterpartyOrganisationId,
+        assignmentId,
+        counterpartySignatoryName: signatoryName,
+        counterpartySignatoryEmail: signatoryEmail,
+      });
+      await onSaved();
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "The contract relationship could not be corrected.",
+      );
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="portal-modal-backdrop" role="presentation">
+      <div className="portal-modal" role="dialog" aria-modal="true" aria-labelledby="contract-details-title">
+        <button type="button" className="portal-modal-close" onClick={onClose} disabled={busy} aria-label="Close contract details">×</button>
+        <p className="portal-kicker">Correct filing details</p>
+        <h2 id="contract-details-title">{contract.reference}</h2>
+        <p>Move this unchanged PDF record to the correct project and counterparty. The source file and SHA-256 checksum remain unchanged.</p>
+        <form className="portal-form" onSubmit={submit}>
+          <label>
+            Project / assignment
+            <select value={assignmentId} onChange={(event) => setAssignmentId(event.target.value)}>
+              <option value="">Contract library only</option>
+              {assignments.map((assignment) => <option value={assignment.id} key={assignment.id}>{assignment.programme} · {assignment.title}</option>)}
+            </select>
+          </label>
+          <label>
+            Counterparty
+            <select value={counterpartyOrganisationId} onChange={(event) => setCounterpartyOrganisationId(event.target.value)} required>
+              <option value="">Select counterparty</option>
+              {organisations.filter((item) => item.id !== contract.owner.id).map((item) => <option value={item.id} key={item.id}>{item.tradingName || item.legalName}</option>)}
+            </select>
+          </label>
+          <label>Counterparty signatory<input value={signatoryName} onChange={(event) => setSignatoryName(event.target.value)} maxLength={160} /></label>
+          <label>Counterparty signatory email<input type="email" value={signatoryEmail} onChange={(event) => setSignatoryEmail(event.target.value)} maxLength={254} /></label>
+          {error ? <p className="portal-form-message error" role="alert">{error}</p> : null}
+          <div className="portal-modal-actions">
+            <button type="button" className="portal-button portal-button-secondary" onClick={onClose} disabled={busy}>Cancel</button>
+            <button type="submit" className="portal-button portal-button-primary" disabled={busy}>{busy ? "Saving…" : "Save corrected filing"}</button>
           </div>
         </form>
       </div>
@@ -4204,41 +4382,280 @@ function InviteDialog({
 }
 
 function AdminAssignmentsPage() {
-  const { snapshot } = usePortal();
+  const { demo } = usePortal();
+  const [assignments, setAssignments] = useState<AdminAssignment[]>([]);
+  const [organisations, setOrganisations] = useState<AdminOrganisation[]>([]);
+  const [consultants, setConsultants] = useState<AdminConsultant[]>([]);
+  const [selected, setSelected] = useState<AdminAssignment | null | undefined>(
+    undefined,
+  );
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(!demo);
+
+  const refresh = useCallback(async () => {
+    if (demo) {
+      setLoading(false);
+      return;
+    }
+    try {
+      const [assignmentResult, organisationResult, consultantResult] =
+        await Promise.all([
+          listAdminAssignments(),
+          listAdminOrganisations(),
+          listAdminConsultants(),
+        ]);
+      setAssignments(assignmentResult);
+      setOrganisations(organisationResult);
+      setConsultants(consultantResult);
+    } catch (loadError) {
+      setMessage(
+        loadError instanceof Error
+          ? loadError.message
+          : "Projects could not be loaded.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [demo]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void refresh(), 0);
+    return () => window.clearTimeout(timer);
+  }, [refresh]);
+
+  async function saveProject(input: Parameters<typeof saveAdminAssignment>[0]) {
+    if (!demo) await saveAdminAssignment(input);
+    setSelected(undefined);
+    setMessage(`${input.programme} is saved. Add contracts as separate branches from the project card.`);
+    await refresh();
+  }
+
   return (
     <>
       <PageHeader
-        eyebrow="Administration"
-        title="Assignments"
-        description="Assignment records and consultant access."
-      />
-      <section className="portal-panel">
-        <div className="portal-admin-record">
-          <div>
-            <StatusPill status="active" />
-            <h2>{snapshot.assignment.title}</h2>
-            <p>{snapshot.assignment.programme}</p>
-          </div>
-          <dl className="portal-compact-details">
-            <div>
-              <dt>Consultant</dt>
-              <dd>Roland Schneider</dd>
-            </div>
-            <div>
-              <dt>End customer</dt>
-              <dd>{snapshot.assignment.endCustomer}</dd>
-            </div>
-            <div>
-              <dt>Start</dt>
-              <dd>{snapshot.assignment.startDate}</dd>
-            </div>
-          </dl>
-          <button className="portal-button portal-button-secondary" type="button">
-            Edit assignment
+        eyebrow="Delivery workspace"
+        title="Projects & assignments"
+        description="Create a project, add consultants and delivery partners, then keep every contract or amendment as a separate controlled branch."
+        action={
+          <button
+            className="portal-button portal-button-primary"
+            type="button"
+            onClick={() => setSelected(null)}
+          >
+            Create project
           </button>
-        </div>
+        }
+      />
+      <div className="portal-privacy-callout">
+        <span aria-hidden="true">i</span>
+        <p>
+          A project is the folder. Consultants and partner organisations sit
+          inside it; each uploaded PDF is a contract branch with its own
+          versions, signatures, audit record and Drive archive.
+        </p>
+      </div>
+      {message ? (
+        <p className="portal-form-message neutral" role="status">{message}</p>
+      ) : null}
+      <section className="portal-organisation-grid">
+        {assignments.map((assignment) => {
+          const partnerNames = [
+            ...new Set(
+              assignment.contracts
+                .map((contract) => contract.counterpartyName)
+                .filter(Boolean),
+            ),
+          ];
+          return (
+            <article className="portal-organisation-card" key={assignment.id}>
+              <div>
+                <span className="portal-card-label">{assignment.programme}</span>
+                <StatusPill status={assignment.status === "active" ? "active" : "revoked"} />
+              </div>
+              <h2>{assignment.title}</h2>
+              <p>
+                {assignment.location} · Starts {assignment.startDate}
+              </p>
+              <div className="portal-relationship-tags">
+                {assignment.consultants.map((consultant) => (
+                  <span key={consultant.id}>
+                    {consultant.fullName}
+                    {consultant.businessName ? ` · ${consultant.businessName}` : ""}
+                  </span>
+                ))}
+                {partnerNames.map((name) => <span key={name}>{name}</span>)}
+                {!assignment.consultants.length && !partnerNames.length ? (
+                  <span>No delivery participants yet</span>
+                ) : null}
+              </div>
+              <dl className="portal-mini-details">
+                <div>
+                  <dt>Customer / programme</dt>
+                  <dd>{assignment.customerOrganisation || assignment.endCustomerOrganisation || "Not assigned"}</dd>
+                </div>
+                <div>
+                  <dt>Contract branches</dt>
+                  <dd>{assignment.contracts.length}</dd>
+                </div>
+              </dl>
+              {assignment.contracts.length ? (
+                <ul className="portal-document-list">
+                  {assignment.contracts.map((contract) => (
+                    <li key={contract.id}>
+                      <span>
+                        <strong>{contract.reference}</strong>
+                        <small>{contract.counterpartyName} · {contract.status}</small>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <div className="portal-contract-actions">
+                <Link
+                  className="portal-button portal-button-primary"
+                  to={`/admin/contracts?assignment=${assignment.id}&upload=1`}
+                >
+                  Add &amp; quick-sign PDF
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setSelected(assignment)}
+                >
+                  Edit project
+                </button>
+              </div>
+            </article>
+          );
+        })}
+        {!loading && !assignments.length ? (
+          <article className="portal-panel">
+            <h2>Create the first delivery project</h2>
+            <p>Add Roland, Sneci or another delivery partner, then upload the applicable PDFs from that project.</p>
+          </article>
+        ) : null}
       </section>
+      {selected !== undefined ? (
+        <AdminAssignmentDialog
+          assignment={selected}
+          organisations={organisations}
+          consultants={consultants}
+          onClose={() => setSelected(undefined)}
+          onSave={saveProject}
+        />
+      ) : null}
     </>
+  );
+}
+
+function AdminAssignmentDialog({
+  assignment,
+  organisations,
+  consultants,
+  onClose,
+  onSave,
+}: {
+  assignment: AdminAssignment | null;
+  organisations: AdminOrganisation[];
+  consultants: AdminConsultant[];
+  onClose: () => void;
+  onSave: (input: Parameters<typeof saveAdminAssignment>[0]) => Promise<void>;
+}) {
+  const deepBridge = organisations.find((item) =>
+    item.relationshipTypes.includes("deepbridge_entity"),
+  );
+  const [title, setTitle] = useState(assignment?.title || "");
+  const [programme, setProgramme] = useState(assignment?.programme || "");
+  const [location, setLocation] = useState(assignment?.location || "Remote / as agreed");
+  const [startDate, setStartDate] = useState(
+    assignment?.startDateValue || new Date().toISOString().slice(0, 10),
+  );
+  const [expectedEnd, setExpectedEnd] = useState(assignment?.expectedEnd || "To be confirmed");
+  const [currency, setCurrency] = useState(assignment?.currency || "EUR");
+  const [contractingOrganisationId, setContractingOrganisationId] = useState(
+    assignment?.contractingOrganisationId || deepBridge?.id || "",
+  );
+  const [customerOrganisationId, setCustomerOrganisationId] = useState(
+    assignment?.customerOrganisationId || "",
+  );
+  const [endCustomerOrganisationId, setEndCustomerOrganisationId] = useState(
+    assignment?.endCustomerOrganisationId || "",
+  );
+  const [consultantProfileIds, setConsultantProfileIds] = useState<string[]>(
+    assignment?.consultants.map((consultant) => consultant.id) || [],
+  );
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  function toggleConsultant(consultantId: string) {
+    setConsultantProfileIds((current) =>
+      current.includes(consultantId)
+        ? current.filter((id) => id !== consultantId)
+        : [...current, consultantId],
+    );
+  }
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      await onSave({
+        assignmentId: assignment?.id,
+        title,
+        programme,
+        location,
+        startDate,
+        expectedEnd,
+        currency,
+        contractingOrganisationId,
+        customerOrganisationId,
+        endCustomerOrganisationId,
+        consultantProfileIds,
+      });
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "The project could not be saved.");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="portal-modal-backdrop" role="presentation">
+      <div className="portal-modal portal-consultant-modal" role="dialog" aria-modal="true" aria-labelledby="assignment-dialog-title">
+        <button type="button" className="portal-modal-close" onClick={onClose} disabled={busy} aria-label="Close project form">×</button>
+        <p className="portal-kicker">Project folder</p>
+        <h2 id="assignment-dialog-title">{assignment ? "Edit project" : "Create project"}</h2>
+        <form className="portal-form" onSubmit={submit}>
+          <div className="portal-consultant-fields">
+            <label>Project code<input value={programme} onChange={(event) => setProgramme(event.target.value.toUpperCase())} required maxLength={160} placeholder="DBA-SNECI-2026" /></label>
+            <label>Project / assignment name<input value={title} onChange={(event) => setTitle(event.target.value)} required maxLength={240} placeholder="Sneci delivery programme" /></label>
+            <label>Location<input value={location} onChange={(event) => setLocation(event.target.value)} required maxLength={160} /></label>
+            <label>Start date<input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} required /></label>
+            <label>Expected end<input value={expectedEnd} onChange={(event) => setExpectedEnd(event.target.value)} required maxLength={120} /></label>
+            <label>Currency<input value={currency} onChange={(event) => setCurrency(event.target.value.toUpperCase())} required maxLength={3} /></label>
+            <label>DeepBridge entity<select value={contractingOrganisationId} onChange={(event) => setContractingOrganisationId(event.target.value)} required>{organisations.filter((item) => item.relationshipTypes.includes("deepbridge_entity")).map((item) => <option value={item.id} key={item.id}>{item.tradingName || item.legalName}</option>)}</select></label>
+            <label>Customer / partner organisation<select value={customerOrganisationId} onChange={(event) => setCustomerOrganisationId(event.target.value)}><option value="">Not selected</option>{organisations.filter((item) => item.id !== contractingOrganisationId).map((item) => <option value={item.id} key={item.id}>{item.tradingName || item.legalName}</option>)}</select></label>
+            <label>End customer<select value={endCustomerOrganisationId} onChange={(event) => setEndCustomerOrganisationId(event.target.value)}><option value="">Not selected</option>{organisations.filter((item) => item.id !== contractingOrganisationId).map((item) => <option value={item.id} key={item.id}>{item.tradingName || item.legalName}</option>)}</select></label>
+          </div>
+          <fieldset className="portal-package-picker">
+            <legend>Consultants working on this project</legend>
+            <div className="portal-choice-grid">
+              {consultants.map((consultant) => (
+                <label key={consultant.id}>
+                  <input type="checkbox" checked={consultantProfileIds.includes(consultant.id)} onChange={() => toggleConsultant(consultant.id)} />
+                  <span>{consultant.fullName}<small>{consultant.businessName}</small></span>
+                </label>
+              ))}
+              {!consultants.length ? <p>Add consultants from the Consultants page first.</p> : null}
+            </div>
+          </fieldset>
+          {error ? <p className="portal-form-message error" role="alert">{error}</p> : null}
+          <div className="portal-modal-actions">
+            <button type="button" className="portal-button portal-button-secondary" onClick={onClose} disabled={busy}>Cancel</button>
+            <button type="submit" className="portal-button portal-button-primary" disabled={busy}>{busy ? "Saving project…" : "Save project"}</button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }
 
