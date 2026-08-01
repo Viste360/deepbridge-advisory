@@ -93,8 +93,12 @@ export default async function handler(
       throw new PortalHttpError(409, "Both contracting parties must be recorded before signing.");
     const counterpartyName = requestedCounterpartyName || counterparty.signatory_name || "";
     const counterpartyEmail = requestedCounterpartyEmail || counterparty.signatory_email || "";
-    if (!counterpartyName || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(counterpartyEmail))
-      throw new PortalHttpError(400, "Enter the counterparty signatory and a valid email address.");
+    if (
+      !counterpartyName ||
+      (counterpartyEmail &&
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(counterpartyEmail))
+    )
+      throw new PortalHttpError(400, "Enter the person who already signed for the counterparty. Their business email is optional.");
     const ownerSignatoryEmail = "yon.wallace@deepbridgeadvisory.co.uk";
     if (
       counterpartyName.toLocaleLowerCase("en-GB") === signerName.toLocaleLowerCase("en-GB") ||
@@ -129,7 +133,7 @@ export default async function handler(
       title: contract.title,
       versionLabel: version.version_label,
       consultantName: counterpartyName,
-      consultantEmail: counterpartyEmail,
+      consultantEmail: counterpartyEmail || "Not supplied",
       signerName,
       signerTitle,
       signedAt,
@@ -148,7 +152,7 @@ export default async function handler(
       title: contract.title,
       versionLabel: version.version_label,
       consultantName: counterpartyName,
-      consultantEmail: counterpartyEmail,
+      consultantEmail: counterpartyEmail || "Not supplied",
       signerName,
       signerTitle,
       signedAt,

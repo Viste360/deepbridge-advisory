@@ -73,6 +73,20 @@ export default async function handler(
     if (!stored?.some((item) => item.name === filename))
       throw new PortalHttpError(409, "The uploaded PDF could not be verified.");
 
+    const { count: duplicateCount, error: duplicateError } = await admin
+      .from("document_versions")
+      .select("id", { count: "exact", head: true })
+      .eq("document_id", documentId)
+      .eq("version_label", versionLabel);
+    if (duplicateError) throw duplicateError;
+    if ((duplicateCount ?? 0) > 0) {
+      await admin.storage.from("portal-documents").remove([storagePath]);
+      throw new PortalHttpError(
+        409,
+        "That version label already exists for this document.",
+      );
+    }
+
     const { data: version, error: versionError } = await admin
       .from("document_versions")
       .insert({
@@ -91,6 +105,7 @@ export default async function handler(
       .select("id")
       .single();
     if (versionError) {
+      await admin.storage.from("portal-documents").remove([storagePath]);
       if (versionError.code === "23505")
         throw new PortalHttpError(
           409,

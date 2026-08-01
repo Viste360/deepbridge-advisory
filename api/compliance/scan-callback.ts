@@ -81,7 +81,7 @@ export default async function handler(
         .update({ [statusColumn]: status, updated_at: now })
         .eq("id", objectId)
         .select(
-          "id, contract_id, version_label, pending_final_storage_path, pending_certificate_storage_path, final_scan_status, certificate_scan_status, drive_source_file_id, drive_final_file_id, drive_certificate_file_id, contracts!inner(reference, title, requires_signature)",
+          "id, contract_id, version_label, pending_final_storage_path, pending_certificate_storage_path, final_scan_status, certificate_scan_status, drive_source_file_id, drive_final_file_id, drive_certificate_file_id, contracts!inner(reference, title, requires_signature, assignment:assignments(programme, title), counterparty:organisations!contracts_counterparty_organisation_id_fkey(legal_name, trading_name))",
         )
         .single();
       if (versionError || !version)
@@ -89,6 +89,19 @@ export default async function handler(
       const contract = Array.isArray(version.contracts)
         ? version.contracts[0]
         : version.contracts;
+      const assignment = Array.isArray(contract?.assignment)
+        ? contract.assignment[0]
+        : contract?.assignment;
+      const counterparty = Array.isArray(contract?.counterparty)
+        ? contract.counterparty[0]
+        : contract?.counterparty;
+      const folderPath = [
+        assignment
+          ? `${assignment.programme || "Project"} - ${assignment.title || "Contracts"}`
+          : "Contract Library",
+        counterparty?.trading_name || counterparty?.legal_name || "Unfiled Counterparty",
+        `${contract?.reference || "CONTRACT"} - ${contract?.title || "Contract"}`,
+      ];
       const storagePath =
         artifactKind === "certificate"
           ? version.pending_certificate_storage_path
@@ -115,6 +128,7 @@ export default async function handler(
               deepbridgeContractVersionId: version.id,
               artifactKind,
             },
+            folderPath,
           });
         } catch {
           driveFailed = true;
@@ -227,7 +241,7 @@ export default async function handler(
         })
         .eq("id", objectId)
         .select(
-          "id, contract_id, version_label, source_storage_path, original_filename, contracts!inner(reference, title, requires_signature)",
+          "id, contract_id, version_label, source_storage_path, original_filename, contracts!inner(reference, title, requires_signature, assignment:assignments(programme, title), counterparty:organisations!contracts_counterparty_organisation_id_fkey(legal_name, trading_name))",
         )
         .single();
       if (versionError || !version)
@@ -235,6 +249,19 @@ export default async function handler(
       const contract = Array.isArray(version.contracts)
         ? version.contracts[0]
         : version.contracts;
+      const assignment = Array.isArray(contract?.assignment)
+        ? contract.assignment[0]
+        : contract?.assignment;
+      const counterparty = Array.isArray(contract?.counterparty)
+        ? contract.counterparty[0]
+        : contract?.counterparty;
+      const folderPath = [
+        assignment
+          ? `${assignment.programme || "Project"} - ${assignment.title || "Contracts"}`
+          : "Contract Library",
+        counterparty?.trading_name || counterparty?.legal_name || "Unfiled Counterparty",
+        `${contract?.reference || "CONTRACT"} - ${contract?.title || "Contract"}`,
+      ];
       let driveFileId: string | null = null;
       let driveFailed = false;
       if (status === "clean" && driveConfigured) {
@@ -253,6 +280,7 @@ export default async function handler(
               deepbridgeContractVersionId: version.id,
               artifactKind: "source",
             },
+            folderPath,
           });
         } catch {
           driveFailed = true;

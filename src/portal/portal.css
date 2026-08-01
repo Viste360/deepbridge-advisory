@@ -2740,9 +2740,11 @@
 }
 
 .portal-modal-close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
+  position: sticky;
+  z-index: 12;
+  top: 0;
+  float: right;
+  margin: -12px -12px -24px 12px;
   width: 36px;
   height: 36px;
   border: 1px solid var(--portal-line);
@@ -2750,6 +2752,49 @@
   background: transparent;
   font-size: 1.3rem;
   cursor: pointer;
+}
+
+.portal-version-history {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--portal-line);
+}
+
+.portal-version-history.compact {
+  margin-top: 4px;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.portal-version-history summary {
+  color: #176762;
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.portal-version-history ul {
+  display: grid;
+  margin: 10px 0 0;
+  padding: 0;
+  gap: 7px;
+  list-style: none;
+}
+
+.portal-version-history li {
+  display: flex;
+  padding: 8px 10px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--portal-line);
+  color: var(--portal-muted);
+  background: rgba(255, 255, 255, 0.6);
+  font-size: 0.64rem;
+}
+
+.portal-version-history li button {
+  flex: 0 0 auto;
 }
 
 .portal-modal-actions {

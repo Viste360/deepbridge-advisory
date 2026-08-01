@@ -87,9 +87,21 @@ export default async function handler(
       (!ownerSignatoryName ||
         !counterpartySignatoryName ||
         !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerSignatoryEmail) ||
-        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(counterpartySignatoryEmail))
+        (counterpartySignatoryEmail &&
+          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(counterpartySignatoryEmail)))
     )
-      throw new PortalHttpError(400, "Both signatories and their valid email addresses are required.");
+      throw new PortalHttpError(400, "Record the DeepBridge signatory and the person who already signed for the counterparty. The counterparty email is optional.");
+    if (
+      requiresSignature &&
+      (ownerSignatoryName.toLocaleLowerCase("en-GB") ===
+        counterpartySignatoryName.toLocaleLowerCase("en-GB") ||
+        (counterpartySignatoryEmail &&
+          ownerSignatoryEmail === counterpartySignatoryEmail))
+    )
+      throw new PortalHttpError(
+        400,
+        "The person who signed for the counterparty must be recorded separately from the DeepBridge countersignatory.",
+      );
 
     const admin = getSupabaseAdmin();
     const { data: organisations, error: organisationError } = await admin
@@ -119,9 +131,39 @@ export default async function handler(
 
     const now = new Date().toISOString();
     let activeContractId = contractId;
+    let previousCounterpartyOrganisationId = "";
+    let previousContractState: Record<string, unknown> | null = null;
+    let createdContract = false;
     if (activeContractId) {
       if (!uuidPattern.test(activeContractId))
         throw new PortalHttpError(400, "Invalid contract record.");
+      const [{ data: existingContract, error: existingContractError }, { count: duplicateCount, error: duplicateError }] = await Promise.all([
+        admin
+          .from("contracts")
+          .select(
+            "reference, title, contract_type, owner_organisation_id, counterparty_organisation_id, assignment_id, description, requires_signature, status, updated_at",
+          )
+          .eq("id", activeContractId)
+          .single(),
+        admin
+          .from("contract_versions")
+          .select("id", { count: "exact", head: true })
+          .eq("contract_id", activeContractId)
+          .eq("version_label", versionLabel),
+      ]);
+      if (existingContractError || !existingContract)
+        throw new PortalHttpError(404, "Contract record not found.");
+      if (duplicateError) throw duplicateError;
+      if ((duplicateCount ?? 0) > 0) {
+        await admin.storage.from("contract-documents").remove([storagePath]);
+        throw new PortalHttpError(
+          409,
+          "That version label already exists for this contract.",
+        );
+      }
+      previousCounterpartyOrganisationId =
+        existingContract.counterparty_organisation_id;
+      previousContractState = existingContract;
       const { error } = await admin
         .from("contracts")
         .update({
@@ -171,6 +213,7 @@ export default async function handler(
         throw error || new Error("Contract record was not created.");
       }
       activeContractId = data.id;
+      createdContract = true;
     }
 
     const { data: version, error: versionError } = await admin
@@ -192,6 +235,17 @@ export default async function handler(
       .select("id")
       .single();
     if (versionError || !version) {
+      await Promise.all([
+        admin.storage.from("contract-documents").remove([storagePath]),
+        createdContract
+          ? admin.from("contracts").delete().eq("id", activeContractId)
+          : previousContractState
+            ? admin
+                .from("contracts")
+                .update(previousContractState)
+                .eq("id", activeContractId)
+            : Promise.resolve(),
+      ]);
       if (versionError?.code === "23505")
         throw new PortalHttpError(
           409,
@@ -231,6 +285,17 @@ export default async function handler(
       { onConflict: "contract_id,organisation_id,party_role" },
     );
     if (partyError) throw partyError;
+    if (
+      previousCounterpartyOrganisationId &&
+      previousCounterpartyOrganisationId !== counterpartyOrganisationId
+    ) {
+      const { error: stalePartyError } = await admin
+        .from("contract_parties")
+        .delete()
+        .eq("contract_id", activeContractId)
+        .eq("organisation_id", previousCounterpartyOrganisationId);
+      if (stalePartyError) throw stalePartyError;
+    }
 
     await admin.from("audit_events").insert({
       actor_id: actor.user.id,

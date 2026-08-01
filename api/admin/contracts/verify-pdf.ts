@@ -38,7 +38,7 @@ export default async function handler(
     const admin = getSupabaseAdmin();
     const { data: version, error } = await admin
       .from("contract_versions")
-      .select("id, contract_id, version_label, source_storage_path, content_sha256, malware_scan_status, locked_at, contracts!inner(reference, title, requires_signature)")
+      .select("id, contract_id, version_label, source_storage_path, content_sha256, malware_scan_status, locked_at, contracts!inner(reference, title, requires_signature, assignment:assignments(programme, title), counterparty:organisations!contracts_counterparty_organisation_id_fkey(legal_name, trading_name))")
       .eq("id", versionId)
       .single();
     if (error || !version)
@@ -93,6 +93,19 @@ export default async function handler(
     const contract = Array.isArray(version.contracts)
       ? version.contracts[0]
       : version.contracts;
+    const assignment = Array.isArray(contract?.assignment)
+      ? contract.assignment[0]
+      : contract?.assignment;
+    const counterparty = Array.isArray(contract?.counterparty)
+      ? contract.counterparty[0]
+      : contract?.counterparty;
+    const folderPath = [
+      assignment
+        ? `${assignment.programme || "Project"} - ${assignment.title || "Contracts"}`
+        : "Contract Library",
+      counterparty?.trading_name || counterparty?.legal_name || "Unfiled Counterparty",
+      `${contract?.reference || "CONTRACT"} - ${contract?.title || "Contract"}`,
+    ];
     const now = new Date().toISOString();
     let driveFileId: string | null = null;
     let driveFailed = false;
@@ -107,6 +120,7 @@ export default async function handler(
             deepbridgeContractVersionId: version.id,
             artifactKind: "source",
           },
+          folderPath,
         });
       } catch {
         driveFailed = true;

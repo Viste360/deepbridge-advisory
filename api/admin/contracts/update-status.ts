@@ -10,11 +10,14 @@ import {
 } from "../../_lib/server.js";
 
 const allowedTransitions: Record<string, string[]> = {
+  draft: ["archived"],
+  security_review: ["archived"],
   ready_to_sign: ["out_for_signature", "archived"],
   out_for_signature: ["partially_signed", "ready_to_sign", "archived"],
   partially_signed: ["out_for_signature", "archived"],
   completed: ["superseded", "archived"],
   blocked: ["archived"],
+  superseded: ["archived"],
 };
 
 export default async function handler(

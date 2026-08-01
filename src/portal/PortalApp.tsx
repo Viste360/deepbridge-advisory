@@ -2457,6 +2457,9 @@ function AdminContractsPage() {
   const initialParameters = new URLSearchParams(location.search);
   const initialProjectId = initialParameters.get("assignment") || "";
   const openProjectUpload = initialParameters.get("upload") === "1";
+  const requestedContractId = initialParameters.get("contract") || "";
+  const requestedContractAction = initialParameters.get("action") || "";
+  const handledRequestedContract = useRef(false);
   const [contracts, setContracts] = useState<AdminContract[]>([]);
   const [assignments, setAssignments] = useState<AdminAssignment[]>([]);
   const [organisations, setOrganisations] = useState<AdminOrganisation[]>(
@@ -2505,6 +2508,27 @@ function AdminContractsPage() {
     const timer = window.setTimeout(() => void refresh(), 0);
     return () => window.clearTimeout(timer);
   }, [refresh]);
+
+  useEffect(() => {
+    if (
+      handledRequestedContract.current ||
+      !requestedContractId ||
+      !contracts.length
+    )
+      return;
+    const requested = contracts.find((item) => item.id === requestedContractId);
+    if (!requested) return;
+    handledRequestedContract.current = true;
+    const timer = window.setTimeout(() => {
+      if (requestedContractAction === "correct") {
+        setUploadProjectId(requested.assignmentId);
+        setUploadTarget(requested);
+      } else if (requestedContractAction === "file") {
+        setDetailsTarget(requested);
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [contracts, requestedContractAction, requestedContractId]);
 
   useEffect(() => {
     if (
@@ -2574,8 +2598,10 @@ function AdminContractsPage() {
     }
   }
 
-  async function removeVersion(contract: AdminContract) {
-    const version = contract.versions[0];
+  async function removeVersion(
+    contract: AdminContract,
+    version = contract.versions[0],
+  ) {
     if (!version) return;
     setBusyId(version.id);
     try {
@@ -2599,13 +2625,46 @@ function AdminContractsPage() {
     }
   }
 
+  async function archiveContract(contract: AdminContract) {
+    const confirmed = window.confirm(
+      contract.status === "completed"
+        ? `Remove ${contract.reference} from the active register? The signed PDF, audit certificate and audit history will be retained.`
+        : `Remove ${contract.reference} from the active register? You can upload the corrected contract as a new record afterwards.`,
+    );
+    if (!confirmed) return;
+    setBusyId(contract.id);
+    try {
+      if (!demo) await updateAdminContractStatus(contract.id, "archived");
+      setContracts((current) =>
+        current.filter((item) => item.id !== contract.id),
+      );
+      setMessage(
+        `${contract.reference} was removed from the active register. Executed files and audit history were retained where applicable.`,
+      );
+    } catch (archiveError) {
+      setMessage(
+        archiveError instanceof Error
+          ? archiveError.message
+          : "The contract could not be removed from the active register.",
+      );
+    } finally {
+      setBusyId("");
+    }
+  }
+
   async function retryDrive(contract: AdminContract) {
     const version = contract.versions[0];
     if (!version) return;
     setBusyId(version.id);
     try {
-      if (!demo) await retryAdminContractDriveArchive(version.id);
-      setMessage(`${contract.reference} was queued for Google Drive archival.`);
+      const result = !demo
+        ? await retryAdminContractDriveArchive(version.id)
+        : { synced: true, copiedFiles: 0 };
+      setMessage(
+        result.synced
+          ? `${contract.reference} is archived in its project and counterparty folder in Google Drive.`
+          : `${contract.reference} copied ${result.copiedFiles} file(s). Remaining clean artifacts will be added automatically.`,
+      );
       if (!demo) await refresh();
     } catch (driveError) {
       setMessage(
@@ -2689,7 +2748,7 @@ function AdminContractsPage() {
           <strong>{driveConfigured ? "Google Drive connected" : "Google Drive setup required"}</strong>
           <span>
             {driveConfigured
-              ? "Clean contract files are copied automatically."
+              ? "Clean files are organised automatically by project, counterparty and contract."
               : "Portal storage remains protected; automatic Drive copying is paused."}
           </span>
         </div>
@@ -2855,13 +2914,17 @@ function AdminContractsPage() {
                     Download audit certificate
                   </button>
                 ) : null}
-                {driveConfigured && version?.driveSyncStatus === "failed" ? (
+                {driveConfigured &&
+                version?.scanStatus === "clean" &&
+                version.driveSyncStatus !== "synced" ? (
                   <button
                     type="button"
                     onClick={() => void retryDrive(contract)}
                     disabled={Boolean(busyId)}
                   >
-                    Retry Drive archive
+                    {version.driveSyncStatus === "failed"
+                      ? "Retry Drive archive"
+                      : "Archive to Drive now"}
                   </button>
                 ) : null}
                 {removable ? (
@@ -2892,10 +2955,45 @@ function AdminContractsPage() {
                     }}
                     disabled={Boolean(busyId)}
                   >
-                    Add version
+                    {contract.status === "completed"
+                      ? "Create corrected version"
+                      : "Add version"}
                   </button>
                 ) : null}
+                <button
+                  type="button"
+                  className="portal-danger-link"
+                  onClick={() => void archiveContract(contract)}
+                  disabled={Boolean(busyId)}
+                >
+                  Remove contract from active list
+                </button>
               </div>
+              {contract.versions.length > 1 ? (
+                <details className="portal-version-history">
+                  <summary>Version history ({contract.versions.length})</summary>
+                  <ul>
+                    {contract.versions.map((item) => (
+                      <li key={item.id}>
+                        <span>
+                          <strong>v{item.versionLabel}</strong>{" "}
+                          {item.originalFilename || "PDF"} · {item.scanStatus}
+                        </span>
+                        {!item.locked && item.scanStatus !== "clean" && !item.finalAvailable ? (
+                          <button
+                            type="button"
+                            className="portal-danger-link"
+                            disabled={Boolean(busyId)}
+                            onClick={() => void removeVersion(contract, item)}
+                          >
+                            Delete upload
+                          </button>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              ) : null}
             </article>
           );
         })}
@@ -2994,6 +3092,11 @@ function AdminContractUploadDialog({
     ) || organisations[0];
   const currentVersion = contract?.versions[0]?.versionLabel;
   const versionMatch = currentVersion?.match(/^(\d+)\.(\d+)$/);
+  const suggestedVersion = versionMatch
+    ? `${versionMatch[1]}.${Number(versionMatch[2]) + 1}`
+    : currentVersion
+      ? `${currentVersion}.1`
+      : "1.0";
   const [reference, setReference] = useState(contract?.reference || "");
   const [title, setTitle] = useState(contract?.title || "");
   const [contractType, setContractType] = useState<AdminContract["contractType"]>(
@@ -3005,13 +3108,7 @@ function AdminContractUploadDialog({
   const [counterpartyOrganisationId, setCounterpartyOrganisationId] = useState(
     contract?.counterparty.id || "",
   );
-  const [versionLabel, setVersionLabel] = useState(
-    versionMatch
-      ? `${versionMatch[1]}.${Number(versionMatch[2]) + 1}`
-      : currentVersion
-        ? `${currentVersion}.1`
-        : "1.0",
-  );
+  const [versionLabel, setVersionLabel] = useState(suggestedVersion);
   const [description, setDescription] = useState(contract?.description || "");
   const [requiresSignature, setRequiresSignature] = useState(
     contract?.requiresSignature !== false,
@@ -3029,6 +3126,17 @@ function AdminContractUploadDialog({
   const counterpartyParty = contract?.parties.find(
     (party) => party.organisationId === contract.counterparty.id,
   );
+  const storedCounterpartyMatchesOwner = Boolean(
+    counterpartyParty &&
+      ((counterpartyParty.signatoryName &&
+        counterpartyParty.signatoryName.trim().toLowerCase() ===
+          (ownerParty?.signatoryName || "Yon Wallace").trim().toLowerCase()) ||
+        (counterpartyParty.signatoryEmail &&
+          counterpartyParty.signatoryEmail.trim().toLowerCase() ===
+            (ownerParty?.signatoryEmail || "yon.wallace@deepbridgeadvisory.co.uk")
+              .trim()
+              .toLowerCase())),
+  );
   const [ownerSignatoryName, setOwnerSignatoryName] = useState(
     ownerParty?.signatoryName || "Yon Wallace",
   );
@@ -3036,14 +3144,22 @@ function AdminContractUploadDialog({
     ownerParty?.signatoryEmail || "yon.wallace@deepbridgeadvisory.co.uk",
   );
   const [counterpartySignatoryName, setCounterpartySignatoryName] = useState(
-    counterpartyParty?.signatoryName || "",
+    storedCounterpartyMatchesOwner ? "" : counterpartyParty?.signatoryName || "",
   );
   const [counterpartySignatoryEmail, setCounterpartySignatoryEmail] =
-    useState(counterpartyParty?.signatoryEmail || "");
+    useState(storedCounterpartyMatchesOwner ? "" : counterpartyParty?.signatoryEmail || "");
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState<UploadProgress | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape" && !busy) onClose();
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [busy, onClose]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -3060,10 +3176,9 @@ function AdminContractUploadDialog({
       requiresSignature &&
       (!ownerSignatoryName.trim() ||
         !ownerSignatoryEmail.trim() ||
-        !counterpartySignatoryName.trim() ||
-        !counterpartySignatoryEmail.trim())
+        !counterpartySignatoryName.trim())
     ) {
-      setError("Enter both signatories and their email addresses before uploading.");
+      setError("Enter the DeepBridge signatory and the person who already signed for the counterparty. Their email is optional.");
       return;
     }
     setBusy(true);
@@ -3100,18 +3215,31 @@ function AdminContractUploadDialog({
           : `${reference.toUpperCase()} v${versionLabel} uploaded. Security scanning has started and the register will refresh automatically.`,
       );
     } catch (uploadError) {
-      setError(
+      const message =
         uploadError instanceof Error
           ? uploadError.message
-          : "The contract could not be uploaded.",
-      );
+          : "The contract could not be uploaded.";
+      if (message.toLowerCase().includes("version label already exists")) {
+        setVersionLabel(suggestedVersion);
+        setError(
+          `That version already exists. The next available label, ${suggestedVersion}, is selected—review it and upload again.`,
+        );
+      } else {
+        setError(message);
+      }
       setBusy(false);
       setProgress(null);
     }
   }
 
   return (
-    <div className="portal-modal-backdrop" role="presentation">
+    <div
+      className="portal-modal-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !busy) onClose();
+      }}
+    >
       <div
         className="portal-modal portal-consultant-modal"
         role="dialog"
@@ -3129,11 +3257,18 @@ function AdminContractUploadDialog({
         </button>
         <p className="portal-kicker">Controlled contract upload</p>
         <h2 id="contract-upload-title">
-          {contract ? `Add version · ${contract.reference}` : "Upload contract"}
+          {contract
+            ? contract.status === "completed"
+              ? `Correct & reissue · ${contract.reference}`
+              : `Add version · ${contract.reference}`
+            : "Upload contract"}
         </h2>
         <p>
           The PDF is checksummed, quarantined and scanned. Only a clean version
           can be opened, signed, archived to Drive or downloaded.
+          {contract?.status === "completed"
+            ? " The completed copy remains in the audit history while this corrected source is reviewed and countersigned."
+            : ""}
         </p>
         <form className="portal-form" onSubmit={submit}>
           <div className="portal-consultant-fields">
@@ -3194,9 +3329,13 @@ function AdminContractUploadDialog({
               Counterparty
               <select
                 value={counterpartyOrganisationId}
-                onChange={(event) =>
-                  setCounterpartyOrganisationId(event.target.value)
-                }
+                onChange={(event) => {
+                  setCounterpartyOrganisationId(event.target.value);
+                  if (event.target.value !== contract?.counterparty.id) {
+                    setCounterpartySignatoryName("");
+                    setCounterpartySignatoryEmail("");
+                  }
+                }}
                 required
               >
                 <option value="">Select the contracting counterparty</option>
@@ -3287,7 +3426,7 @@ function AdminContractUploadDialog({
               />
             </label>
             <label>
-              Counterparty signatory
+              Person who already signed for the counterparty
               <input
                 value={counterpartySignatoryName}
                 onChange={(event) =>
@@ -3298,7 +3437,7 @@ function AdminContractUploadDialog({
               />
             </label>
             <label>
-              Counterparty signatory email
+              That signatory&apos;s business email
               <input
                 type="email"
                 value={counterpartySignatoryEmail}
@@ -3306,7 +3445,7 @@ function AdminContractUploadDialog({
                   setCounterpartySignatoryEmail(event.target.value)
                 }
                 maxLength={254}
-                required={requiresSignature}
+                placeholder="Optional"
               />
             </label>
           </div>
@@ -3503,21 +3642,45 @@ function AdminContractDetailsDialog({
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
+  const ownerParty = contract.parties.find(
+    (party) => party.organisationId === contract.owner.id,
+  );
   const counterpartyParty = contract.parties.find(
     (party) => party.organisationId === contract.counterparty.id,
+  );
+  const counterpartyMatchesDeepBridge = Boolean(
+    counterpartyParty &&
+      ((counterpartyParty.signatoryName &&
+        counterpartyParty.signatoryName.trim().toLowerCase() ===
+          (ownerParty?.signatoryName || "Yon Wallace")
+            .trim()
+            .toLowerCase()) ||
+        (counterpartyParty.signatoryEmail &&
+          counterpartyParty.signatoryEmail.trim().toLowerCase() ===
+            (ownerParty?.signatoryEmail || "yon.wallace@deepbridgeadvisory.co.uk")
+              .trim()
+              .toLowerCase())),
   );
   const [counterpartyOrganisationId, setCounterpartyOrganisationId] = useState(
     contract.counterparty.id,
   );
   const [assignmentId, setAssignmentId] = useState(contract.assignmentId || "");
   const [signatoryName, setSignatoryName] = useState(
-    counterpartyParty?.signatoryName || "",
+    counterpartyMatchesDeepBridge ? "" : counterpartyParty?.signatoryName || "",
   );
   const [signatoryEmail, setSignatoryEmail] = useState(
-    counterpartyParty?.signatoryEmail || "",
+    counterpartyMatchesDeepBridge ? "" : counterpartyParty?.signatoryEmail || "",
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape" && !busy) onClose();
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [busy, onClose]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -3543,9 +3706,28 @@ function AdminContractDetailsDialog({
   }
 
   return (
-    <div className="portal-modal-backdrop" role="presentation">
-      <div className="portal-modal" role="dialog" aria-modal="true" aria-labelledby="contract-details-title">
-        <button type="button" className="portal-modal-close" onClick={onClose} disabled={busy} aria-label="Close contract details">×</button>
+    <div
+      className="portal-modal-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !busy) onClose();
+      }}
+    >
+      <div
+        className="portal-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="contract-details-title"
+      >
+        <button
+          type="button"
+          className="portal-modal-close"
+          onClick={onClose}
+          disabled={busy}
+          aria-label="Close contract details"
+        >
+          ×
+        </button>
         <p className="portal-kicker">Correct filing details</p>
         <h2 id="contract-details-title">{contract.reference}</h2>
         <p>Move this unchanged PDF record to the correct project and counterparty. The source file and SHA-256 checksum remain unchanged.</p>
@@ -3559,13 +3741,19 @@ function AdminContractDetailsDialog({
           </label>
           <label>
             Counterparty
-            <select value={counterpartyOrganisationId} onChange={(event) => setCounterpartyOrganisationId(event.target.value)} required>
+            <select value={counterpartyOrganisationId} onChange={(event) => {
+              setCounterpartyOrganisationId(event.target.value);
+              if (event.target.value !== contract.counterparty.id) {
+                setSignatoryName("");
+                setSignatoryEmail("");
+              }
+            }} required>
               <option value="">Select counterparty</option>
               {organisations.filter((item) => item.id !== contract.owner.id).map((item) => <option value={item.id} key={item.id}>{item.tradingName || item.legalName}</option>)}
             </select>
           </label>
-          <label>Counterparty signatory<input value={signatoryName} onChange={(event) => setSignatoryName(event.target.value)} maxLength={160} /></label>
-          <label>Counterparty signatory email<input type="email" value={signatoryEmail} onChange={(event) => setSignatoryEmail(event.target.value)} maxLength={254} /></label>
+          <label>Person who already signed for the counterparty<input value={signatoryName} onChange={(event) => setSignatoryName(event.target.value)} maxLength={160} /></label>
+          <label>That signatory&apos;s business email (optional)<input type="email" value={signatoryEmail} onChange={(event) => setSignatoryEmail(event.target.value)} maxLength={254} /></label>
           {error ? <p className="portal-form-message error" role="alert">{error}</p> : null}
           <div className="portal-modal-actions">
             <button type="button" className="portal-button portal-button-secondary" onClick={onClose} disabled={busy}>Cancel</button>
@@ -3597,15 +3785,28 @@ function AdminContractCountersignDialog({
   const counterpartyParty = contract.parties.find(
     (party) => party.organisationId === contract.counterparty.id,
   );
+  const counterpartyMatchesDeepBridge = Boolean(
+    counterpartyParty &&
+      ((counterpartyParty.signatoryName &&
+        counterpartyParty.signatoryName.trim().toLowerCase() ===
+          (ownerParty?.signatoryName || defaultSignerName || "Yon Wallace")
+            .trim()
+            .toLowerCase()) ||
+        (counterpartyParty.signatoryEmail &&
+          counterpartyParty.signatoryEmail.trim().toLowerCase() ===
+            (ownerParty?.signatoryEmail || "yon.wallace@deepbridgeadvisory.co.uk")
+              .trim()
+              .toLowerCase())),
+  );
   const [signerName, setSignerName] = useState(
     ownerParty?.signatoryName || defaultSignerName || "Yon Wallace",
   );
   const [signerTitle, setSignerTitle] = useState("Director");
   const [counterpartySignatoryName, setCounterpartySignatoryName] = useState(
-    counterpartyParty?.signatoryName || "",
+    counterpartyMatchesDeepBridge ? "" : counterpartyParty?.signatoryName || "",
   );
   const [counterpartySignatoryEmail, setCounterpartySignatoryEmail] = useState(
-    counterpartyParty?.signatoryEmail || "",
+    counterpartyMatchesDeepBridge ? "" : counterpartyParty?.signatoryEmail || "",
   );
   const [reviewed, setReviewed] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
@@ -3620,6 +3821,14 @@ function AdminContractCountersignDialog({
       current ? { ...current, pageIndex } : current,
     );
   }, []);
+
+  useEffect(() => {
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape" && !busy) onClose();
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [busy, onClose]);
 
   async function reviewSource() {
     if (!version) return;
@@ -3703,7 +3912,13 @@ function AdminContractCountersignDialog({
   }
 
   return (
-    <div className="portal-modal-backdrop" role="presentation">
+    <div
+      className="portal-modal-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !busy) onClose();
+      }}
+    >
       <div
         className={`portal-modal portal-signature-modal${manualPlacement ? " portal-signature-modal-placement" : ""}`}
         role="dialog"
@@ -3733,9 +3948,9 @@ function AdminContractCountersignDialog({
             <div>
               <strong>Review source contract</strong>
               <p>
-                Confirm the person who signed for {contract.counterparty.name}.
+                Record the other person who already signed the source PDF for {contract.counterparty.name}. You are the DeepBridge countersignatory in step 3.
               </p>
-              <label htmlFor="contract-counterparty-signer">Counterparty signatory</label>
+              <label htmlFor="contract-counterparty-signer">Person who already signed for {contract.counterparty.name}</label>
               <input
                 id="contract-counterparty-signer"
                 value={counterpartySignatoryName}
@@ -3745,15 +3960,15 @@ function AdminContractCountersignDialog({
                 maxLength={160}
                 disabled={busy}
               />
-              <label htmlFor="contract-counterparty-email">Counterparty signatory email</label>
+              <label htmlFor="contract-counterparty-email">That signatory&apos;s business email</label>
               <input
                 id="contract-counterparty-email"
                 type="email"
                 value={counterpartySignatoryEmail}
                 onChange={(event) => setCounterpartySignatoryEmail(event.target.value)}
-                required
                 maxLength={254}
                 disabled={busy}
+                placeholder="Optional"
               />
               <button
                 type="button"
@@ -5043,6 +5258,29 @@ function AdminDocumentsPage() {
                         {latest ? "Add version" : "Upload"}
                       </button>
                     )}
+                    {document.versions.length ? (
+                      <details className="portal-version-history compact">
+                        <summary>Versions ({document.versions.length})</summary>
+                        <ul>
+                          {document.versions.map((version) => (
+                            <li key={version.id}>
+                              <span>
+                                <strong>v{version.versionLabel}</strong>{" "}
+                                {version.locked ? "Published" : version.scanStatus}
+                              </span>
+                              {!version.locked && version.scanStatus !== "clean" ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setRemoveTarget({ document, version })}
+                                >
+                                  Delete
+                                </button>
+                              ) : null}
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    ) : null}
                   </div>
                 </td>
               </tr>
@@ -5102,6 +5340,14 @@ function AdminDocumentUploadDialog({
   const [error, setError] = useState("");
   const [progress, setProgress] = useState<UploadProgress | null>(null);
 
+  useEffect(() => {
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape" && !busy) onClose();
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [busy, onClose]);
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!file) return;
@@ -5125,18 +5371,31 @@ function AdminDocumentUploadDialog({
       });
       onClose();
     } catch (uploadError) {
-      setError(
+      const message =
         uploadError instanceof Error
           ? uploadError.message
-          : "The document could not be uploaded.",
-      );
+          : "The document could not be uploaded.";
+      if (message.toLowerCase().includes("version label already exists")) {
+        setVersionLabel(suggestedVersion);
+        setError(
+          `That version already exists. The next available label, ${suggestedVersion}, is selected—review it and upload again.`,
+        );
+      } else {
+        setError(message);
+      }
       setBusy(false);
       setProgress(null);
     }
   }
 
   return (
-    <div className="portal-modal-backdrop" role="presentation">
+    <div
+      className="portal-modal-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !busy) onClose();
+      }}
+    >
       <div
         className="portal-modal"
         role="dialog"
@@ -5874,6 +6133,31 @@ function AdminSigningPage() {
     }
   }
 
+  async function archiveSigningContract(contract: AdminContract) {
+    const confirmed = window.confirm(
+      `Remove ${contract.reference} from the active contract and signing lists? Executed files and audit history will be retained.`,
+    );
+    if (!confirmed) return;
+    setBusyId(contract.id);
+    setMessage("");
+    setError("");
+    try {
+      if (!demo) await updateAdminContractStatus(contract.id, "archived");
+      setContracts((current) =>
+        current.filter((item) => item.id !== contract.id),
+      );
+      setMessage(`${contract.reference} was removed from the active lists.`);
+    } catch (archiveError) {
+      setError(
+        archiveError instanceof Error
+          ? archiveError.message
+          : "The contract could not be removed from the active lists.",
+      );
+    } finally {
+      setBusyId("");
+    }
+  }
+
   async function retrySecurityCheck(item: AdminSigningItem) {
     setBusyId(item.id);
     setMessage("");
@@ -6161,6 +6445,21 @@ function AdminSigningPage() {
                           Download audit certificate
                         </button>
                       ) : null}
+                      <Link
+                        to={`/admin/contracts?contract=${encodeURIComponent(contract.id)}&action=${contract.status === "completed" ? "correct" : "file"}`}
+                      >
+                        {contract.status === "completed"
+                          ? "Correct & reissue"
+                          : "Change project / counterparty"}
+                      </Link>
+                      <button
+                        type="button"
+                        className="portal-danger-link"
+                        disabled={Boolean(busyId)}
+                        onClick={() => void archiveSigningContract(contract)}
+                      >
+                        Remove from active lists
+                      </button>
                       {!readyToCountersign && !version?.finalAvailable ? (
                         <Link to="/admin/contracts">Resolve in Contracts</Link>
                       ) : null}

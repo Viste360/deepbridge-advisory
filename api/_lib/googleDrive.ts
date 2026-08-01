@@ -30,6 +30,26 @@ function driveConfiguration() {
   };
 }
 
+export function googleDriveArchiveErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error || "");
+  const lower = message.toLowerCase();
+  if (lower.includes("service accounts do not have storage quota"))
+    return "The configured Google folder is in My Drive, where service accounts cannot own files. Create a folder inside a Google Shared Drive, add the DeepBridge service account as Content manager, update GOOGLE_DRIVE_CONTRACTS_FOLDER_ID to that folder ID, then retry.";
+  if (
+    lower.includes("insufficient permissions") ||
+    lower.includes("permission") ||
+    lower.includes("not found")
+  )
+    return "The DeepBridge service account cannot access the configured Google Drive folder. Share a folder inside a Google Shared Drive with the service account as Content manager, then retry.";
+  if (
+    lower.includes("authentication") ||
+    lower.includes("identity exchange") ||
+    lower.includes("impersonation")
+  )
+    return "Google Drive authentication could not complete. Check the Workload Identity provider and service-account impersonation settings, then retry.";
+  return "Google Drive could not archive this contract. Check the Shared Drive folder access and retry.";
+}
+
 export function googleDriveArchiveConfigured() {
   const {
     clientEmail,
@@ -167,20 +187,141 @@ async function getAccessToken() {
     : getWorkloadIdentityAccessToken();
 }
 
+function driveName(value: string) {
+  return value
+    .replace(/[\\/:*?"<>|]+/g, "-")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 140) || "Unfiled";
+}
+
+function driveQueryValue(value: string) {
+  return value.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+}
+
+async function ensureGoogleDriveFolder(
+  token: string,
+  parentId: string,
+  name: string,
+) {
+  const cleanName = driveName(name);
+  const query = [
+    `'${driveQueryValue(parentId)}' in parents`,
+    `name = '${driveQueryValue(cleanName)}'`,
+    "mimeType = 'application/vnd.google-apps.folder'",
+    "trashed = false",
+  ].join(" and ");
+  const search = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&supportsAllDrives=true&includeItemsFromAllDrives=true&fields=files(id,name)&pageSize=10`,
+    { headers: { authorization: `Bearer ${token}` } },
+  );
+  const searchResult = (await search.json()) as {
+    files?: Array<{ id?: string }>;
+    error?: { message?: string };
+  };
+  if (!search.ok)
+    throw new Error(
+      searchResult.error?.message || "The Drive archive folder could not be read.",
+    );
+  const existingId = searchResult.files?.find((item) => item.id)?.id;
+  if (existingId) return existingId;
+
+  const create = await fetch(
+    "https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&fields=id,name",
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        name: cleanName,
+        parents: [parentId],
+        mimeType: "application/vnd.google-apps.folder",
+      }),
+    },
+  );
+  const createResult = (await create.json()) as {
+    id?: string;
+    error?: { message?: string };
+  };
+  if (!create.ok || !createResult.id)
+    throw new Error(
+      createResult.error?.message || "The Drive archive folder could not be created.",
+    );
+  return createResult.id;
+}
+
+async function ensureGoogleDriveFolderPath(
+  token: string,
+  rootFolderId: string,
+  path: string[],
+) {
+  let parentId = rootFolderId;
+  for (const segment of path.filter(Boolean))
+    parentId = await ensureGoogleDriveFolder(token, parentId, segment);
+  return parentId;
+}
+
+async function moveGoogleDriveFile(
+  token: string,
+  fileId: string,
+  targetFolderId: string,
+) {
+  const current = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?supportsAllDrives=true&fields=parents`,
+    { headers: { authorization: `Bearer ${token}` } },
+  );
+  const currentResult = (await current.json()) as {
+    parents?: string[];
+    error?: { message?: string };
+  };
+  if (!current.ok)
+    throw new Error(
+      currentResult.error?.message || "The archived Drive file could not be read.",
+    );
+  const previousParents = (currentResult.parents || []).filter(
+    (parent) => parent !== targetFolderId,
+  );
+  if (!previousParents.length && currentResult.parents?.includes(targetFolderId))
+    return;
+  const parameters = new URLSearchParams({
+    supportsAllDrives: "true",
+    addParents: targetFolderId,
+    fields: "id,parents",
+  });
+  if (previousParents.length)
+    parameters.set("removeParents", previousParents.join(","));
+  const update = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?${parameters.toString()}`,
+    { method: "PATCH", headers: { authorization: `Bearer ${token}` } },
+  );
+  if (!update.ok) {
+    const result = (await update.json()) as { error?: { message?: string } };
+    throw new Error(
+      result.error?.message || "The archived Drive file could not be moved.",
+    );
+  }
+}
+
 export async function archivePdfToGoogleDrive(input: {
   filename: string;
   data: Buffer;
   description: string;
   appProperties: Record<string, string>;
+  folderPath?: string[];
 }) {
   const { folderId } = driveConfiguration();
   if (!folderId)
     throw new Error("The Google Drive contracts folder is not configured.");
   const token = await getAccessToken();
+  const targetFolderId = input.folderPath?.length
+    ? await ensureGoogleDriveFolderPath(token, folderId, input.folderPath)
+    : folderId;
   const boundary = `deepbridge-${randomUUID()}`;
   const metadata = JSON.stringify({
     name: input.filename,
-    parents: [folderId],
+    parents: [targetFolderId],
     description: input.description,
     mimeType: "application/pdf",
     appProperties: input.appProperties,
@@ -213,4 +354,22 @@ export async function archivePdfToGoogleDrive(input: {
       result.error?.message || "The contract could not be archived in Drive.",
     );
   return result.id;
+}
+
+export async function organiseGoogleDriveFiles(input: {
+  fileIds: string[];
+  folderPath: string[];
+}) {
+  const { folderId } = driveConfiguration();
+  if (!folderId)
+    throw new Error("The Google Drive contracts folder is not configured.");
+  const token = await getAccessToken();
+  const targetFolderId = await ensureGoogleDriveFolderPath(
+    token,
+    folderId,
+    input.folderPath,
+  );
+  for (const fileId of input.fileIds.filter(Boolean))
+    await moveGoogleDriveFile(token, fileId, targetFolderId);
+  return targetFolderId;
 }

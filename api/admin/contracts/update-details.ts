@@ -45,7 +45,7 @@ export default async function handler(
     const admin = getSupabaseAdmin();
     const { data: contract, error } = await admin
       .from("contracts")
-      .select("id, owner_organisation_id, counterparty_organisation_id, contract_type, status, contract_versions(final_storage_path)")
+      .select("id, owner_organisation_id, counterparty_organisation_id, contract_type, status, contract_versions(final_storage_path), contract_parties(organisation_id, signatory_name, signatory_email)")
       .eq("id", contractId)
       .single();
     if (error || !contract)
@@ -57,6 +57,28 @@ export default async function handler(
       (contract.contract_versions ?? []).some((version) => version.final_storage_path)
     )
       throw new PortalHttpError(409, "Completed contract records cannot be reassigned. Add a corrected version instead.");
+    const ownerParty = (contract.contract_parties ?? []).find(
+      (party) => party.organisation_id === contract.owner_organisation_id,
+    );
+    if (
+      signatoryName &&
+      ownerParty?.signatory_name &&
+      signatoryName.toLocaleLowerCase("en-GB") ===
+        ownerParty.signatory_name.toLocaleLowerCase("en-GB")
+    )
+      throw new PortalHttpError(
+        400,
+        "The person who signed for the counterparty must be different from the DeepBridge countersignatory.",
+      );
+    if (
+      signatoryEmail &&
+      ownerParty?.signatory_email &&
+      signatoryEmail === ownerParty.signatory_email.toLowerCase()
+    )
+      throw new PortalHttpError(
+        400,
+        "The counterparty email must be different from the DeepBridge signatory email.",
+      );
 
     const now = new Date().toISOString();
     const { error: updateError } = await admin
@@ -68,12 +90,6 @@ export default async function handler(
       })
       .eq("id", contract.id);
     if (updateError) throw updateError;
-    const { error: oldPartyError } = await admin
-      .from("contract_parties")
-      .delete()
-      .eq("contract_id", contract.id)
-      .eq("organisation_id", contract.counterparty_organisation_id);
-    if (oldPartyError) throw oldPartyError;
     const partyRole =
       contract.contract_type === "consultant_supply"
         ? "consultant_supplier"
@@ -95,6 +111,14 @@ export default async function handler(
       { onConflict: "contract_id,organisation_id,party_role" },
     );
     if (partyError) throw partyError;
+    if (contract.counterparty_organisation_id !== counterpartyOrganisationId) {
+      const { error: oldPartyError } = await admin
+        .from("contract_parties")
+        .delete()
+        .eq("contract_id", contract.id)
+        .eq("organisation_id", contract.counterparty_organisation_id);
+      if (oldPartyError) throw oldPartyError;
+    }
     await admin.from("audit_events").insert({
       actor_id: actor.user.id,
       actor_label: actor.profile.full_name,
