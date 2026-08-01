@@ -2464,15 +2464,15 @@
 
 .portal-pdf-placement-item small {
   position: absolute;
-  bottom: calc(100% + 2px);
+  bottom: calc(100% + 1px);
   left: -1px;
-  padding: 2px 4px;
+  padding: 1px 2px;
   color: rgba(13, 101, 96, 0.82);
   background: rgba(238, 250, 247, 0.94);
   font-family: Inter, Arial, sans-serif;
-  font-size: clamp(0.38rem, 0.85vw, 0.52rem);
+  font-size: clamp(0.28rem, 0.62vw, 0.4rem);
   font-weight: 850;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 

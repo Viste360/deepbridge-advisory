@@ -72,7 +72,7 @@ function normalizedCoordinate(value: unknown, label: string) {
 
 function placementScale(value: unknown, label: string) {
   if (value === undefined) return 1;
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0.55 || value > 1.75)
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0.35 || value > 1.75)
     throw new PortalHttpError(400, `The ${label} size is invalid.`);
   return value;
 }
@@ -581,7 +581,7 @@ function drawManualPdfPlacement(
   });
 
   const dateText = formatSigningDate(signedAt);
-  const dateSize = 9.5 * (placement.date.size ?? 1);
+  const dateSize = 9 * (placement.date.size ?? 1);
   const dateWidth = fonts.regular.widthOfTextAtSize(dateText, dateSize);
   const dateX = clamp(
     placement.date.x * pageWidth,

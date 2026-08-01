@@ -5417,16 +5417,16 @@ function initialManualPdfPlacement(title: string): ManualPdfPlacement {
   if (title.toLowerCase().includes("professional consultant charter")) {
     return {
       pageIndex: 0,
-      signature: { x: 0.18, y: 0.315, size: 1 },
+      signature: { x: 0.18, y: 0.315, size: 0.8 },
       stamp: { x: 0.6, y: 0.45, rotation: -3 },
-      date: { x: 0.15, y: 0.36, size: 1 },
+      date: { x: 0.15, y: 0.36, size: 0.75 },
     };
   }
   return {
     pageIndex: 0,
-    signature: { x: 0.14, y: 0.66, size: 1 },
+    signature: { x: 0.14, y: 0.66, size: 0.8 },
     stamp: { x: 0.58, y: 0.57, rotation: -3 },
-    date: { x: 0.14, y: 0.74, size: 1 },
+    date: { x: 0.14, y: 0.74, size: 0.75 },
   };
 }
 
@@ -5707,7 +5707,7 @@ function PdfPlacementEditor({
           <span>Signature size</span>
           <input
             type="range"
-            min="55"
+            min="35"
             max="175"
             step="5"
             value={Math.round(placement.signature.size * 100)}
@@ -5727,7 +5727,7 @@ function PdfPlacementEditor({
           <span>Date size</span>
           <input
             type="range"
-            min="55"
+            min="35"
             max="175"
             step="5"
             value={Math.round(placement.date.size * 100)}
