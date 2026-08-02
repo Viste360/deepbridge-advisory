@@ -33,14 +33,18 @@ function driveConfiguration() {
 export function googleDriveArchiveErrorMessage(error: unknown) {
   const message = error instanceof Error ? error.message : String(error || "");
   const lower = message.toLowerCase();
+  const { clientEmail } = driveConfiguration();
+  const serviceAccount = clientEmail?.endsWith(".gserviceaccount.com")
+    ? clientEmail
+    : "the DeepBridge service account";
   if (lower.includes("service accounts do not have storage quota"))
-    return "The configured Google folder is in My Drive, where service accounts cannot own files. Create a folder inside a Google Shared Drive, add the DeepBridge service account as Content manager, update GOOGLE_DRIVE_CONTRACTS_FOLDER_ID to that folder ID, then retry.";
+    return `The configured Google folder is in My Drive, where service accounts cannot own files. Create a folder inside a Google Shared Drive, add ${serviceAccount} as Content manager, update GOOGLE_DRIVE_CONTRACTS_FOLDER_ID to that folder ID, then retry.`;
   if (
     lower.includes("insufficient permissions") ||
     lower.includes("permission") ||
     lower.includes("not found")
   )
-    return "The DeepBridge service account cannot access the configured Google Drive folder. Share a folder inside a Google Shared Drive with the service account as Content manager, then retry.";
+    return `The DeepBridge service account cannot access the configured Google Drive folder. Add ${serviceAccount} to the Shared Drive as Content manager, then retry.`;
   if (
     lower.includes("authentication") ||
     lower.includes("identity exchange") ||

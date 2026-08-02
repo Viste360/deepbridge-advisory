@@ -13,9 +13,18 @@ describe("googleDriveArchiveErrorMessage", () => {
   });
 
   it("explains a folder permission failure", () => {
-    expect(
-      googleDriveArchiveErrorMessage(new Error("File not found: folder-id")),
-    ).toContain("cannot access");
+    const previousEmail = process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL;
+    try {
+      process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL =
+        "portal-drive@example-project.iam.gserviceaccount.com";
+      expect(
+        googleDriveArchiveErrorMessage(new Error("File not found: folder-id")),
+      ).toContain("portal-drive@example-project.iam.gserviceaccount.com");
+    } finally {
+      if (previousEmail === undefined)
+        delete process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL;
+      else process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL = previousEmail;
+    }
   });
 
   it("does not expose an unexpected provider error", () => {
