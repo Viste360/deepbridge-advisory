@@ -6,7 +6,7 @@ Verified on 2 August 2026 from the repository scripts and lockfile.
 
 The main application is a Vite 8, React 19 and TypeScript 5 project. It includes Vercel Functions under `api/`, Supabase integration and Vitest tests. The package manager is npm, as confirmed by `package-lock.json` (lockfile version 3).
 
-The `scanner/` directory is a separate Node service whose package declares Node 22. Use Node 22 LTS for a consistent local and hosted environment. The root checks also pass on newer supported Node versions, but the scanner's declared engine remains the repository's clearest version constraint.
+The Vercel application is hosted with Node 24. Use Node 24 for root application work so local and CI checks match that environment. The `scanner/` directory is a separate service whose package and Docker image declare Node 22; use Node 22 for scanner-specific work.
 
 ## Verified commands
 
@@ -38,12 +38,14 @@ The public website can be reviewed without enabling portal integrations. `VITE_P
 
 Use `npm run check` before hand-off. It executes linting, TypeScript checks, tests and the production build in that order. For frontend changes, also inspect representative mobile and desktop widths and exercise affected forms, links, downloads and important workflows.
 
+GitHub Actions runs the same command for every pull request and every push to `main` using Node 24. The workflow has read-only repository permissions and cancels superseded runs on the same branch.
+
 Do not claim that credential-dependent integrations work unless they were tested safely against an approved non-production environment. Record skipped checks and the reason.
 
 ## Recommended Codex local environment
 
 - Working directory: repository root.
-- Runtime: Node 22 LTS with npm.
+- Runtime: Node 24 with npm for the root application; Node 22 for `scanner/`.
 - Setup command: `npm ci`.
 - Development command: `npm run dev`.
 - Lint command: `npm run lint`.
@@ -57,7 +59,7 @@ Do not claim that credential-dependent integrations work unless they were tested
 ## Remaining manual configuration
 
 - Supply approved non-production environment values when portal, Formspree, Supabase, Google Workspace signing or malware-scanning workflows need to be exercised.
-- Confirm that the Vercel project uses Node 22 and that its install and build settings match `npm ci` and `npm run build`. Changing hosted settings or environment variables requires account access and a separate approval at the point of change.
+- Vercel currently uses Node 24 and repository-derived install/build commands without overrides. Preview deployments require Vercel team authentication. Keep those settings aligned with this document and approval-gate production changes.
 - Review Supabase row-level security and service-role handling before testing workflows that touch real records. Do not edit production data.
 - Verify end-to-end Google Drive signing and scanner callbacks only in an approved non-production environment.
 - Review the React Router security advisory reported by `npm audit --omit=dev` on 2 August 2026. It produces two high-severity findings for the same unstable-RSC CSRF advisory. No unstable RSC APIs were found in this Vite SPA, so the documented exploit condition does not appear to be present, but the package remains flagged. The available automated fix is a forced dependency change and must not be applied without explicit approval and regression testing.
