@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
+  concatTransformationMatrix,
   PDFDocument,
   PDFName,
   type PDFPage,
@@ -537,6 +538,31 @@ function clamp(value: number, minimum: number, maximum: number) {
   return Math.max(minimum, Math.min(maximum, value));
 }
 
+export function manualPlacementPageGeometry(page: PDFPage) {
+  const crop = page.getCropBox();
+  const rotation = ((page.getRotation().angle % 360) + 360) % 360;
+  if (![0, 90, 180, 270].includes(rotation))
+    throw new PortalHttpError(
+      409,
+      "The selected PDF page uses an unsupported rotation.",
+    );
+  const displayWidth = rotation === 90 || rotation === 270
+    ? crop.height
+    : crop.width;
+  const displayHeight = rotation === 90 || rotation === 270
+    ? crop.width
+    : crop.height;
+  const matrix: [number, number, number, number, number, number] =
+    rotation === 90
+      ? [0, 1, -1, 0, crop.x + crop.width, crop.y]
+      : rotation === 180
+        ? [-1, 0, 0, -1, crop.x + crop.width, crop.y + crop.height]
+        : rotation === 270
+          ? [0, -1, 1, 0, crop.x, crop.y + crop.height]
+          : [1, 0, 0, 1, crop.x, crop.y];
+  return { displayWidth, displayHeight, matrix, rotation };
+}
+
 function drawManualPdfPlacement(
   page: PDFPage,
   placement: ManualPdfPlacement,
@@ -544,8 +570,8 @@ function drawManualPdfPlacement(
   fonts: { regular: PDFFont },
   signedAt: Date,
 ) {
-  const pageWidth = page.getWidth();
-  const pageHeight = page.getHeight();
+  const { displayWidth, displayHeight, matrix } =
+    manualPlacementPageGeometry(page);
   const signatureRatio = signature.width / signature.height;
   const signatureScale = placement.signature.size ?? 1;
   const signatureHeight = 34 * signatureScale;
@@ -554,14 +580,18 @@ function drawManualPdfPlacement(
     signatureHeight * signatureRatio,
   );
   const signatureX = clamp(
-    placement.signature.x * pageWidth,
+    placement.signature.x * displayWidth,
     12,
-    pageWidth - signatureWidth - 12,
+    displayWidth - signatureWidth - 12,
   );
   const signatureY = clamp(
-    pageHeight - placement.signature.y * pageHeight - signatureHeight,
+    displayHeight - placement.signature.y * displayHeight - signatureHeight,
     12,
-    pageHeight - signatureHeight - 12,
+    displayHeight - signatureHeight - 12,
+  );
+  page.pushOperators(
+    pushGraphicsState(),
+    concatTransformationMatrix(...matrix),
   );
   page.drawImage(signature, {
     x: signatureX,
@@ -574,14 +604,14 @@ function drawManualPdfPlacement(
   const dateSize = 9 * (placement.date.size ?? 1);
   const dateWidth = fonts.regular.widthOfTextAtSize(dateText, dateSize);
   const dateX = clamp(
-    placement.date.x * pageWidth,
+    placement.date.x * displayWidth,
     12,
-    pageWidth - dateWidth - 12,
+    displayWidth - dateWidth - 12,
   );
   const dateY = clamp(
-    pageHeight - placement.date.y * pageHeight - dateSize,
+    displayHeight - placement.date.y * displayHeight - dateSize,
     12,
-    pageHeight - dateSize - 12,
+    displayHeight - dateSize - 12,
   );
   page.drawText(dateText, {
     x: dateX,
@@ -590,7 +620,7 @@ function drawManualPdfPlacement(
     font: fonts.regular,
     color: rgb(0.03, 0.11, 0.15),
   });
-
+  page.pushOperators(popGraphicsState());
 }
 
 const DEEPBRIDGE_COUNTERSIGNATORY_EMAIL =

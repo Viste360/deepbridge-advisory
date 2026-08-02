@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { PDFDocument, StandardFonts } from "pdf-lib";
+import { degrees, PDFDocument, StandardFonts } from "pdf-lib";
 import { describe, expect, it } from "vitest";
 import {
   correctedConsultantEmail,
@@ -7,6 +7,7 @@ import {
   createAuditCertificate,
   createCountersignedPdf,
   locateDeepBridgeSignatureBlock,
+  manualPlacementPageGeometry,
 } from "./countersign";
 
 const transparentPng = Buffer.from(
@@ -15,6 +16,19 @@ const transparentPng = Buffer.from(
 );
 
 describe("portal countersignature PDFs", () => {
+  it("maps editor coordinates onto rotated PDF pages", async () => {
+    const source = await PDFDocument.create();
+    const page = source.addPage([841.92, 595.32]);
+    page.setRotation(degrees(90));
+
+    expect(manualPlacementPageGeometry(page)).toEqual({
+      displayWidth: 595.32,
+      displayHeight: 841.92,
+      matrix: [0, 1, -1, 0, 841.92, 0],
+      rotation: 90,
+    });
+  });
+
   it("uses the genuine Version 1.1 source identity for Roland's signed documents", () => {
     expect(
       correctedSigningDocumentDetails(
