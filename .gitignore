@@ -2,5 +2,8 @@ node_modules
 dist
 .DS_Store
 .env
+.vercel/
 .qa/
+output/
+tmp/
 scripts/__pycache__/
