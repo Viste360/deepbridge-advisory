@@ -731,6 +731,11 @@ function appendCountersignatureRecordPage(
     counterpartyLabel?: string;
     signedSourceLabel?: string;
     countersignatureStatement?: string;
+    signerEmail?: string;
+    signedFor?: string;
+    recordTitle?: string;
+    recordEyebrow?: string;
+    recordNote?: string;
   },
 ) {
   const details = correctedSigningDocumentDetails(
@@ -744,6 +749,8 @@ function appendCountersignatureRecordPage(
     input.assignedDocumentId,
   );
   const counterpartyLabel = input.counterpartyLabel || "Consultant";
+  const signerEmail = input.signerEmail || DEEPBRIDGE_COUNTERSIGNATORY_EMAIL;
+  const signedFor = input.signedFor || DEEPBRIDGE_SIGNED_FOR;
   const page = pdf.addPage([595.28, 841.89]);
   const ink = rgb(0.03, 0.11, 0.15);
   const teal = rgb(0.19, 0.7, 0.66);
@@ -771,7 +778,7 @@ function appendCountersignatureRecordPage(
     font: fonts.bold,
     color: rgb(1, 1, 1),
   });
-  page.drawText("ELECTRONIC COUNTERSIGNATURE RECORD", {
+  page.drawText(input.recordEyebrow || "ELECTRONIC COUNTERSIGNATURE RECORD", {
     x: 54,
     y: 731,
     size: 8,
@@ -779,7 +786,7 @@ function appendCountersignatureRecordPage(
     color: rgb(0.68, 0.83, 0.82),
   });
 
-  page.drawText("Countersigned for DeepBridge Advisory", {
+  page.drawText(input.recordTitle || "Countersigned for DeepBridge Advisory", {
     x: 54,
     y: 668,
     size: 19,
@@ -882,7 +889,7 @@ function appendCountersignatureRecordPage(
     font: fonts.regular,
     color: muted,
   });
-  page.drawText(DEEPBRIDGE_SIGNED_FOR, {
+  page.drawText(signedFor, {
     x: 74,
     y: 348,
     size: 7.3,
@@ -913,7 +920,7 @@ function appendCountersignatureRecordPage(
     page,
     fonts,
     "Countersignatory email",
-    DEEPBRIDGE_COUNTERSIGNATORY_EMAIL,
+    signerEmail,
     54,
     270,
     225,
@@ -931,7 +938,7 @@ function appendCountersignatureRecordPage(
     page,
     fonts,
     "Signed for",
-    DEEPBRIDGE_SIGNED_FOR,
+    signedFor,
     54,
     234,
     225,
@@ -976,7 +983,8 @@ function appendCountersignatureRecordPage(
   page.drawRectangle({ x: 54, y: 76, width: 487, height: 42, color: paleTeal });
   drawWrappedText(
     page,
-    "This page forms part of the countersigned agreement and records the DeepBridge countersignature event and the SHA-256 hash of the consultant-signed source document.",
+    input.recordNote ||
+      "This page forms part of the countersigned agreement and records the DeepBridge countersignature event and the SHA-256 hash of the consultant-signed source document.",
     fonts.regular,
     {
       x: 68,
@@ -1012,6 +1020,11 @@ export async function createCountersignedPdf(input: {
   counterpartyLabel?: string;
   signedSourceLabel?: string;
   countersignatureStatement?: string;
+  signerEmail?: string;
+  signedFor?: string;
+  recordTitle?: string;
+  recordEyebrow?: string;
+  recordNote?: string;
 }): Promise<{
   bytes: Uint8Array;
   signaturePlacement:
@@ -1088,6 +1101,54 @@ export async function createCountersignedPdf(input: {
   };
 }
 
+export async function createPlacedSignaturePdf(input: {
+  sourceBytes: Uint8Array;
+  signatureBytes: Uint8Array;
+  signerName: string;
+  signedAt: Date;
+  manualPlacement: ManualPdfPlacement;
+  title: string;
+}) {
+  let pdf: PDFDocument;
+  try {
+    pdf = await PDFDocument.load(input.sourceBytes, {
+      ignoreEncryption: false,
+      updateMetadata: false,
+    });
+  } catch {
+    throw new PortalHttpError(
+      400,
+      "The contract PDF could not be opened. Download an unencrypted PDF and try again.",
+    );
+  }
+  const hasAcroForm = Boolean(pdf.catalog.get(PDFName.of("AcroForm")));
+  if (
+    hasAcroForm &&
+    pdf.getForm().getFields().some((field) => field instanceof PDFSignature)
+  ) {
+    throw new PortalHttpError(
+      409,
+      "This PDF contains a certificate-based digital signature. Complete it in Google Workspace to preserve that certificate.",
+    );
+  }
+  if (input.manualPlacement.pageIndex >= pdf.getPageCount())
+    throw new PortalHttpError(400, "The selected PDF page is invalid.");
+  const regular = await pdf.embedFont(StandardFonts.Helvetica);
+  const signature = await pdf.embedPng(input.signatureBytes);
+  drawManualPdfPlacement(
+    pdf.getPage(input.manualPlacement.pageIndex),
+    input.manualPlacement,
+    signature,
+    { regular },
+    input.signedAt,
+  );
+  pdf.setTitle(`${input.title} - partially signed`);
+  pdf.setAuthor("DeepBridge Advisory");
+  pdf.setSubject(`Electronic signature by ${input.signerName}`);
+  pdf.setModificationDate(input.signedAt);
+  return pdf.save({ useObjectStreams: true });
+}
+
 export async function replaceCountersignatureRecordPage(input: {
   existingCountersignedBytes: Uint8Array;
   signatureBytes: Uint8Array;
@@ -1156,6 +1217,10 @@ export async function createAuditCertificate(input: {
   counterpartyLabel?: string;
   signedSourceLabel?: string;
   portalLabel?: string;
+  signerEmail?: string;
+  signedFor?: string;
+  auditTitle?: string;
+  evidenceStatement?: string;
 }) {
   const pdf = await PDFDocument.create();
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
@@ -1175,6 +1240,7 @@ export async function createAuditCertificate(input: {
     input.assignedDocumentId,
   );
   const counterpartyLabel = input.counterpartyLabel || "Consultant";
+  const signerEmail = input.signerEmail || DEEPBRIDGE_COUNTERSIGNATORY_EMAIL;
 
   page.drawRectangle({
     x: 0,
@@ -1190,7 +1256,7 @@ export async function createAuditCertificate(input: {
     font: bold,
     color: teal,
   });
-  page.drawText("Electronic signing audit certificate", {
+  page.drawText(input.auditTitle || "Electronic signing audit certificate", {
     x: 54,
     y: 742,
     size: 25,
@@ -1227,7 +1293,7 @@ export async function createAuditCertificate(input: {
     [`${counterpartyLabel} signatory`, input.consultantName],
     [`${counterpartyLabel} email`, consultantEmail],
     ["Countersignatory", input.signerName],
-    ["Countersignatory email", DEEPBRIDGE_COUNTERSIGNATORY_EMAIL],
+    ["Countersignatory email", signerEmail],
     ["Signing authority", input.signerTitle],
     ["Countersigned at", `${signedAt} (UTC)`],
     ["Signature method", "Authenticated portal electronic signature"],
@@ -1290,9 +1356,9 @@ export async function createAuditCertificate(input: {
     color: rgb(0.88, 0.95, 0.93),
   });
   page.drawText(
-    input.signaturePlacement === "appended_countersignature_record_only"
+    input.evidenceStatement || (input.signaturePlacement === "appended_countersignature_record_only"
       ? "The administrator authenticated to the private DeepBridge portal and confirmed both signing authority and intent. The dated countersignature page forms the binding DeepBridge signature. The portal verified both server-generated artifacts against their recorded SHA-256 hashes."
-      : "The administrator authenticated to the private DeepBridge portal and confirmed both signing authority and intent. The portal placed the signature and date in the original DeepBridge execution block and appended the countersignature record. The portal verified both server-generated artifacts against their recorded SHA-256 hashes.",
+      : "The administrator authenticated to the private DeepBridge portal and confirmed both signing authority and intent. The portal placed the signature and date in the original DeepBridge execution block and appended the countersignature record. The portal verified both server-generated artifacts against their recorded SHA-256 hashes."),
     {
       x: 68,
       y: 154,

@@ -25,7 +25,9 @@ export default async function handler(
     const versionId =
       typeof body.versionId === "string" ? body.versionId : "";
     const kind =
-      body.kind === "final" || body.kind === "certificate"
+      body.kind === "final" ||
+      body.kind === "certificate" ||
+      body.kind === "intermediate"
         ? body.kind
         : "source";
     if (!/^[0-9a-f-]{36}$/i.test(versionId))
@@ -34,7 +36,7 @@ export default async function handler(
     const { data: version, error } = await admin
       .from("contract_versions")
       .select(
-        "id, contract_id, source_storage_path, final_storage_path, certificate_storage_path, malware_scan_status, locked_at, final_scan_status, certificate_scan_status",
+        "id, contract_id, source_storage_path, intermediate_storage_path, intermediate_content_sha256, final_storage_path, certificate_storage_path, malware_scan_status, locked_at, final_scan_status, certificate_scan_status",
       )
       .eq("id", versionId)
       .single();
@@ -45,12 +47,19 @@ export default async function handler(
         ? version.final_storage_path
         : kind === "certificate"
           ? version.certificate_storage_path
+          : kind === "intermediate"
+            ? version.intermediate_storage_path
           : version.source_storage_path;
     const cleared =
       kind === "final"
         ? version.final_scan_status === "clean"
         : kind === "certificate"
           ? version.certificate_scan_status === "clean"
+          : kind === "intermediate"
+            ? Boolean(
+                version.intermediate_storage_path &&
+                  version.intermediate_content_sha256,
+              )
           : version.malware_scan_status === "clean" && version.locked_at;
     if (!storagePath || !cleared)
       throw new PortalHttpError(
@@ -59,12 +68,17 @@ export default async function handler(
       );
     const { data, error: signedUrlError } = await admin.storage
       .from("contract-documents")
-      .createSignedUrl(storagePath, 300, { download: kind !== "source" });
+      .createSignedUrl(storagePath, 300, {
+        download: kind === "final" || kind === "certificate",
+      });
     if (signedUrlError) throw signedUrlError;
     await admin.from("audit_events").insert({
       actor_id: actor.user.id,
       actor_label: actor.profile.full_name,
-      action: kind === "source" ? "contract_viewed" : "contract_downloaded",
+      action:
+        kind === "source" || kind === "intermediate"
+          ? "contract_viewed"
+          : "contract_downloaded",
       object_type: "contract_version",
       object_id: version.id,
       ...requestContext(request),

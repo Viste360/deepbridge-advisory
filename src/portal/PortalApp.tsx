@@ -54,6 +54,7 @@ import {
   saveAdminAssignment,
   sendConsultantPortalLink,
   sendMagicLink,
+  signIntercompanyAdminContract,
   signInWithGoogle,
   signOutPortal,
   updateAdminConsultant,
@@ -2433,7 +2434,11 @@ function contractPipeline(
               : "current",
     },
     {
-      label: contract.requiresSignature ? "Signature" : "Approval",
+      label: contract.requiresSignature
+        ? contract.contractType === "intercompany"
+          ? "Two-party signing"
+          : "Signature"
+        : "Approval",
       state: contract.status === "completed"
         ? "complete"
         : signatureCurrent
@@ -2787,7 +2792,10 @@ function AdminContractsPage() {
                   }`}
                 >
                   <span aria-hidden="true" />
-                  {contractStatusLabels[contract.status] || contract.status}
+                  {contract.contractType === "intercompany" &&
+                  contract.status === "partially_signed"
+                    ? "First signature complete"
+                    : contractStatusLabels[contract.status] || contract.status}
                 </span>
               </header>
               <div className="portal-contract-meta">
@@ -2795,7 +2803,9 @@ function AdminContractsPage() {
                 <span>Version {version?.versionLabel || "—"}</span>
                 <span>
                   {contract.requiresSignature
-                    ? "Signature required"
+                    ? contract.contractType === "intercompany"
+                      ? "Two portal signatures"
+                      : "Signature required"
                     : "No signature required"}
                 </span>
                 {contract.effectiveDate ? (
@@ -2858,7 +2868,8 @@ function AdminContractsPage() {
                 {version?.scanStatus === "infected" ? (
                   <strong className="portal-danger-link">Unsafe file detected · replace upload</strong>
                 ) : null}
-                {contract.status === "ready_to_sign" ? (
+                {contract.status === "ready_to_sign" &&
+                contract.contractType !== "intercompany" ? (
                   <button
                     type="button"
                     className="portal-table-primary-action"
@@ -2879,7 +2890,11 @@ function AdminContractsPage() {
                     onClick={() => setCountersignTarget(contract)}
                     disabled={Boolean(busyId)}
                   >
-                    Review &amp; countersign
+                    {contract.contractType === "intercompany"
+                      ? version.signatureEvents.length
+                        ? `Countersign for ${contract.counterparty.name}`
+                        : `Sign for ${contract.owner.name}`
+                      : "Review & countersign"}
                   </button>
                 ) : null}
                 {version?.scanStatus === "clean" &&
@@ -2893,7 +2908,7 @@ function AdminContractsPage() {
                     onClick={() => setSignedTarget(contract)}
                     disabled={Boolean(busyId)}
                   >
-                    Upload signed pack
+                    Upload externally signed pack
                   </button>
                 ) : null}
                 {version?.finalAvailable ? (
@@ -3047,7 +3062,16 @@ function AdminContractsPage() {
           onClose={() => setCountersignTarget(null)}
           onCompleted={async () => {
             setCountersignTarget(null);
-            setMessage(`${countersignTarget.reference} was countersigned for DeepBridge. The signed PDF and audit certificate are ready to download.`);
+            const intercompanyFirstSignature =
+              countersignTarget.contractType === "intercompany" &&
+              !countersignTarget.versions[0]?.signatureEvents.length;
+            setMessage(
+              intercompanyFirstSignature
+                ? `${countersignTarget.reference} was signed for ${countersignTarget.owner.name}. The protected first-signed PDF is ready for ${countersignTarget.counterparty.name} to countersign.`
+                : countersignTarget.contractType === "intercompany"
+                  ? `${countersignTarget.reference} was countersigned for ${countersignTarget.counterparty.name}. The executed PDF and audit certificate are ready to download.`
+                  : `${countersignTarget.reference} was countersigned for DeepBridge. The signed PDF and audit certificate are ready to download.`,
+            );
             await refresh();
           }}
         />
@@ -3127,6 +3151,7 @@ function AdminContractUploadDialog({
     (party) => party.organisationId === contract.counterparty.id,
   );
   const storedCounterpartyMatchesOwner = Boolean(
+    contractType !== "intercompany" &&
     counterpartyParty &&
       ((counterpartyParty.signatoryName &&
         counterpartyParty.signatoryName.trim().toLowerCase() ===
@@ -3152,6 +3177,7 @@ function AdminContractUploadDialog({
   const [progress, setProgress] = useState<UploadProgress | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const isIntercompany = contractType === "intercompany";
 
   useEffect(() => {
     function closeOnEscape(event: KeyboardEvent) {
@@ -3178,7 +3204,11 @@ function AdminContractUploadDialog({
         !ownerSignatoryEmail.trim() ||
         !counterpartySignatoryName.trim())
     ) {
-      setError("Enter the DeepBridge signatory and the person who already signed for the counterparty. Their email is optional.");
+      setError(
+        isIntercompany
+          ? "Enter the authorised signatory for each intercompany entity. The second email is optional."
+          : "Enter the DeepBridge signatory and the person who already signed for the counterparty. Their email is optional.",
+      );
       return;
     }
     setBusy(true);
@@ -3426,7 +3456,9 @@ function AdminContractUploadDialog({
               />
             </label>
             <label>
-              Person who already signed for the counterparty
+              {isIntercompany
+                ? "Authorised signatory for the second entity"
+                : "Person who already signed for the counterparty"}
               <input
                 value={counterpartySignatoryName}
                 onChange={(event) =>
@@ -3437,7 +3469,9 @@ function AdminContractUploadDialog({
               />
             </label>
             <label>
-              That signatory&apos;s business email
+              {isIntercompany
+                ? "Second entity signatory email"
+                : "That signatory's business email"}
               <input
                 type="email"
                 value={counterpartySignatoryEmail}
@@ -3648,7 +3682,9 @@ function AdminContractDetailsDialog({
   const counterpartyParty = contract.parties.find(
     (party) => party.organisationId === contract.counterparty.id,
   );
+  const isIntercompany = contract.contractType === "intercompany";
   const counterpartyMatchesDeepBridge = Boolean(
+    !isIntercompany &&
     counterpartyParty &&
       ((counterpartyParty.signatoryName &&
         counterpartyParty.signatoryName.trim().toLowerCase() ===
@@ -3752,8 +3788,18 @@ function AdminContractDetailsDialog({
               {organisations.filter((item) => item.id !== contract.owner.id).map((item) => <option value={item.id} key={item.id}>{item.tradingName || item.legalName}</option>)}
             </select>
           </label>
-          <label>Person who already signed for the counterparty<input value={signatoryName} onChange={(event) => setSignatoryName(event.target.value)} maxLength={160} /></label>
-          <label>That signatory&apos;s business email (optional)<input type="email" value={signatoryEmail} onChange={(event) => setSignatoryEmail(event.target.value)} maxLength={254} /></label>
+          <label>
+            {isIntercompany
+              ? "Authorised signatory for the second entity"
+              : "Person who already signed for the counterparty"}
+            <input value={signatoryName} onChange={(event) => setSignatoryName(event.target.value)} maxLength={160} />
+          </label>
+          <label>
+            {isIntercompany
+              ? "Second entity signatory email (optional)"
+              : "That signatory's business email (optional)"}
+            <input type="email" value={signatoryEmail} onChange={(event) => setSignatoryEmail(event.target.value)} maxLength={254} />
+          </label>
           {error ? <p className="portal-form-message error" role="alert">{error}</p> : null}
           <div className="portal-modal-actions">
             <button type="button" className="portal-button portal-button-secondary" onClick={onClose} disabled={busy}>Cancel</button>
@@ -3785,7 +3831,16 @@ function AdminContractCountersignDialog({
   const counterpartyParty = contract.parties.find(
     (party) => party.organisationId === contract.counterparty.id,
   );
+  const isIntercompany = contract.contractType === "intercompany";
+  const intercompanySigningOrder = version?.signatureEvents.length ? 2 : 1;
+  const activeIntercompanyParty =
+    intercompanySigningOrder === 1 ? ownerParty : counterpartyParty;
+  const activeIntercompanyOrganisation =
+    intercompanySigningOrder === 1
+      ? contract.owner.name
+      : contract.counterparty.name;
   const counterpartyMatchesDeepBridge = Boolean(
+    !isIntercompany &&
     counterpartyParty &&
       ((counterpartyParty.signatoryName &&
         counterpartyParty.signatoryName.trim().toLowerCase() ===
@@ -3799,7 +3854,9 @@ function AdminContractCountersignDialog({
               .toLowerCase())),
   );
   const [signerName, setSignerName] = useState(
-    ownerParty?.signatoryName || defaultSignerName || "Yon Wallace",
+    isIntercompany
+      ? defaultSignerName || "Yon Wallace"
+      : ownerParty?.signatoryName || defaultSignerName || "Yon Wallace",
   );
   const [signerTitle, setSignerTitle] = useState("Director");
   const [counterpartySignatoryName, setCounterpartySignatoryName] = useState(
@@ -3836,7 +3893,14 @@ function AdminContractCountersignDialog({
     try {
       if (demo) setReviewed(true);
       else {
-        await openSecureUrl(() => getAdminContractAccess(version.id, "source"));
+        await openSecureUrl(() =>
+          getAdminContractAccess(
+            version.id,
+            isIntercompany && intercompanySigningOrder === 2
+              ? "intermediate"
+              : "source",
+          ),
+        );
         setReviewed(true);
       }
     } catch (reviewError) {
@@ -3856,16 +3920,31 @@ function AdminContractCountersignDialog({
     try {
       if (!demo) {
         const signatureImageDataUrl = await typedSignatureImage(signerName.trim());
-        await countersignAdminContract({
-          contractId: contract.id,
-          versionId: version.id,
-          signerName: signerName.trim(),
-          signerTitle: signerTitle.trim(),
-          signatureImageDataUrl,
-          counterpartySignatoryName: counterpartySignatoryName.trim(),
-          counterpartySignatoryEmail: counterpartySignatoryEmail.trim(),
-          placement: manualPlacement ?? undefined,
-        });
+        if (isIntercompany) {
+          if (!manualPlacement)
+            throw new Error(
+              "Place the signature and date in the selected company execution block.",
+            );
+          await signIntercompanyAdminContract({
+            contractId: contract.id,
+            versionId: version.id,
+            signerName: signerName.trim(),
+            signerTitle: signerTitle.trim(),
+            signatureImageDataUrl,
+            placement: manualPlacement,
+          });
+        } else {
+          await countersignAdminContract({
+            contractId: contract.id,
+            versionId: version.id,
+            signerName: signerName.trim(),
+            signerTitle: signerTitle.trim(),
+            signatureImageDataUrl,
+            counterpartySignatoryName: counterpartySignatoryName.trim(),
+            counterpartySignatoryEmail: counterpartySignatoryEmail.trim(),
+            placement: manualPlacement ?? undefined,
+          });
+        }
       }
       await onCompleted();
     } catch (signError) {
@@ -3885,12 +3964,17 @@ function AdminContractCountersignDialog({
     try {
       if (demo)
         throw new Error("PDF placement is available for stored production contracts.");
-      const access = await getAdminContractAccess(version.id, "source");
+      const access = await getAdminContractAccess(
+        version.id,
+        isIntercompany && intercompanySigningOrder === 2
+          ? "intermediate"
+          : "source",
+      );
       if (!access.url)
         throw new Error("The secure PDF preview link could not be created.");
       const previewResponse = await fetch(access.url);
       if (!previewResponse.ok)
-        throw new Error("The counterparty-signed PDF could not be loaded.");
+        throw new Error("The protected signing PDF could not be loaded.");
       const bytes = new Uint8Array(await previewResponse.arrayBuffer());
       if (
         bytes.length < 5 ||
@@ -3934,42 +4018,63 @@ function AdminContractCountersignDialog({
         >
           ×
         </button>
-        <p className="portal-kicker">DeepBridge contract countersignature</p>
+        <p className="portal-kicker">
+          {isIntercompany
+            ? "Intercompany portal signing"
+            : "DeepBridge contract countersignature"}
+        </p>
         <h2 id="contract-countersign-title">{contract.title}</h2>
         <p>
-          Review the clean counterparty-signed PDF, place the DeepBridge
-          signature and date in its existing execution block, then countersign
-          it. The portal changes no contract wording and appends one corporate
-          countersignature record page.
+          {isIntercompany
+            ? intercompanySigningOrder === 1
+              ? `Review the clean agreement, place your signature and date in the ${contract.owner.name} execution block, and save the protected first-signed PDF. The original verified upload remains unchanged.`
+              : `Review the protected first-signed PDF, place your signature and date in the ${contract.counterparty.name} execution block, and complete the intercompany agreement. The portal will append the execution record and audit certificate.`
+            : "Review the clean counterparty-signed PDF, place the DeepBridge signature and date in its existing execution block, then countersign it. The portal changes no contract wording and appends one corporate countersignature record page."}
         </p>
         <form className="portal-form" onSubmit={submit}>
           <div className="portal-signing-step">
             <span>1</span>
             <div>
               <strong>Review source contract</strong>
-              <p>
-                Record the other person who already signed the source PDF for {contract.counterparty.name}. You are the DeepBridge countersignatory in step 3.
-              </p>
-              <label htmlFor="contract-counterparty-signer">Person who already signed for {contract.counterparty.name}</label>
-              <input
-                id="contract-counterparty-signer"
-                value={counterpartySignatoryName}
-                onChange={(event) => setCounterpartySignatoryName(event.target.value)}
-                required
-                minLength={2}
-                maxLength={160}
-                disabled={busy}
-              />
-              <label htmlFor="contract-counterparty-email">That signatory&apos;s business email</label>
-              <input
-                id="contract-counterparty-email"
-                type="email"
-                value={counterpartySignatoryEmail}
-                onChange={(event) => setCounterpartySignatoryEmail(event.target.value)}
-                maxLength={254}
-                disabled={busy}
-                placeholder="Optional"
-              />
+              {isIntercompany ? (
+                <>
+                  <p>
+                    {intercompanySigningOrder === 1
+                      ? `${contract.owner.name} signs first. The portal will then unlock a separate countersignature action for ${contract.counterparty.name}.`
+                      : `${version?.signatureEvents[0]?.signerName || "The first signatory"} signed for ${contract.owner.name}${version?.signatureEvents[0]?.signedAt ? ` on ${version.signatureEvents[0].signedAt}` : ""}. Review that protected PDF before countersigning for ${contract.counterparty.name}.`}
+                  </p>
+                  <p>
+                    <strong>Current company:</strong>{" "}
+                    {activeIntercompanyOrganisation}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p>
+                    Record the other person who already signed the source PDF for {contract.counterparty.name}. You are the DeepBridge countersignatory in step 3.
+                  </p>
+                  <label htmlFor="contract-counterparty-signer">Person who already signed for {contract.counterparty.name}</label>
+                  <input
+                    id="contract-counterparty-signer"
+                    value={counterpartySignatoryName}
+                    onChange={(event) => setCounterpartySignatoryName(event.target.value)}
+                    required
+                    minLength={2}
+                    maxLength={160}
+                    disabled={busy}
+                  />
+                  <label htmlFor="contract-counterparty-email">That signatory&apos;s business email</label>
+                  <input
+                    id="contract-counterparty-email"
+                    type="email"
+                    value={counterpartySignatoryEmail}
+                    onChange={(event) => setCounterpartySignatoryEmail(event.target.value)}
+                    maxLength={254}
+                    disabled={busy}
+                    placeholder="Optional"
+                  />
+                </>
+              )}
               <button
                 type="button"
                 className="portal-button portal-button-secondary"
@@ -3985,9 +4090,9 @@ function AdminContractCountersignDialog({
             <div>
               <strong>Place signature &amp; date</strong>
               <p>
-                Open the execution page and drag the two transparent items onto
-                the existing DeepBridge lines. No corporate stamp is placed on
-                the contract page; it remains only on the appended record page.
+                {isIntercompany
+                  ? `Open the execution page and drag the transparent signature and date onto the existing ${activeIntercompanyOrganisation} lines. This placement is required for each intercompany signing event.`
+                  : "Open the execution page and drag the two transparent items onto the existing DeepBridge lines. No corporate stamp is placed on the contract page; it remains only on the appended record page."}
               </p>
               {manualPlacement && placementBytes ? (
                 <>
@@ -4007,7 +4112,9 @@ function AdminContractCountersignDialog({
                       setManualPlacement(null);
                     }}
                   >
-                    Keep signature on record page only
+                    {isIntercompany
+                      ? "Choose a different execution position"
+                      : "Keep signature on record page only"}
                   </button>
                 </>
               ) : (
@@ -4026,6 +4133,11 @@ function AdminContractCountersignDialog({
             <span>3</span>
             <div>
               <strong>DeepBridge signatory</strong>
+              {isIntercompany ? (
+                <p>
+                  Signing for <strong>{activeIntercompanyOrganisation}</strong>
+                </p>
+              ) : null}
               <label htmlFor="contract-signer-name">Full name</label>
               <input
                 id="contract-signer-name"
@@ -4047,7 +4159,10 @@ function AdminContractCountersignDialog({
                 disabled={busy}
               />
               <p>
-                {ownerParty?.signatoryEmail || "yon.wallace@deepbridgeadvisory.co.uk"}
+                {(isIntercompany
+                  ? activeIntercompanyParty?.signatoryEmail
+                  : ownerParty?.signatoryEmail) ||
+                  "yon.wallace@deepbridgeadvisory.co.uk"}
               </p>
               <div className="portal-signature-preview" aria-label="Signature preview">
                 <div className="portal-signature-person">
@@ -4066,10 +4181,9 @@ function AdminContractCountersignDialog({
               disabled={busy}
             />
             <span>
-              I reviewed the complete counterparty-signed contract, I am
-              authorised to sign for DUSTDEEP LTD trading as DeepBridge
-              Advisory, and intend this electronic countersignature to bind
-              DeepBridge.
+              {isIntercompany
+                ? `I reviewed the complete agreement, I am authorised to sign for ${activeIntercompanyOrganisation}, and I intend this electronic ${intercompanySigningOrder === 1 ? "signature" : "countersignature"} to bind that company.`
+                : "I reviewed the complete counterparty-signed contract, I am authorised to sign for DUSTDEEP LTD trading as DeepBridge Advisory, and intend this electronic countersignature to bind DeepBridge."}
             </span>
           </label>
           {error ? (
@@ -4087,9 +4201,22 @@ function AdminContractCountersignDialog({
             <button
               type="submit"
               className="portal-button portal-button-primary"
-              disabled={busy || !reviewed || !confirmed}
+              disabled={
+                busy ||
+                !reviewed ||
+                !confirmed ||
+                (isIntercompany && !manualPlacement)
+              }
             >
-              {busy ? "Creating countersigned PDF…" : "Countersign for DeepBridge"}
+              {busy
+                ? intercompanySigningOrder === 1
+                  ? "Saving first signature…"
+                  : "Creating executed PDF…"
+                : isIntercompany
+                  ? intercompanySigningOrder === 1
+                    ? `Sign for ${contract.owner.name}`
+                    : `Countersign for ${contract.counterparty.name}`
+                  : "Countersign for DeepBridge"}
             </button>
           </div>
         </form>
@@ -6109,7 +6236,7 @@ function AdminSigningPage() {
 
   async function openSigningContract(
     contract: AdminContract,
-    kind: "source" | "final" | "certificate",
+    kind: "source" | "intermediate" | "final" | "certificate",
   ) {
     const version = contract.versions[0];
     if (!version) return;
@@ -6263,7 +6390,7 @@ function AdminSigningPage() {
       <PageHeader
         eyebrow="Administration"
         title="Document signing"
-        description="Use Google Workspace when available, or securely review a consultant-uploaded signed PDF before countersigning."
+        description="Countersign external agreements, or complete both ordered company signatures for intercompany contracts, with each event recorded separately."
         action={
           <a
             className="portal-button portal-button-primary"
@@ -6281,8 +6408,8 @@ function AdminSigningPage() {
           <p>
             <strong>Receive consultant signature</strong>
             <small>
-              Use Google Workspace or let the consultant return the complete
-              signed PDF through the protected portal.
+              External agreements begin with the other party&apos;s signed PDF.
+              Intercompany agreements begin with the verified unsigned PDF.
             </small>
           </p>
         </article>
@@ -6291,8 +6418,8 @@ function AdminSigningPage() {
           <p>
             <strong>Review &amp; sign</strong>
             <small>
-              Review every page, confirm your signing authority and add the
-              DeepBridge electronic countersignature.
+              Confirm the company you represent and place the authenticated
+              signature and date in its execution block.
             </small>
           </p>
         </article>
@@ -6301,8 +6428,8 @@ function AdminSigningPage() {
           <p>
             <strong>Download completion</strong>
             <small>
-              Portal-created signed PDFs are available immediately. Externally
-              uploaded packs appear after their security check.
+              Intercompany contracts unlock the second company action after
+              the first signature, then produce the final PDF and audit record.
             </small>
           </p>
         </article>
@@ -6388,8 +6515,22 @@ function AdminSigningPage() {
                     <span>{contract.reference} · Version {version?.versionLabel || "—"}</span>
                   </td>
                   <td>
-                    <strong>{contractStatusLabels[contract.status] || contract.status.replaceAll("_", " ")}</strong>
-                    <span>{contract.requiresSignature ? "DeepBridge signature required" : "No signature required"}</span>
+                    <strong>
+                      {contract.contractType === "intercompany" &&
+                      contract.status === "partially_signed"
+                        ? "First signature complete"
+                        : contractStatusLabels[contract.status] ||
+                          contract.status.replaceAll("_", " ")}
+                    </strong>
+                    <span>
+                      {contract.requiresSignature
+                        ? contract.contractType === "intercompany"
+                          ? version?.signatureEvents.length
+                            ? `${contract.counterparty.name} countersignature required`
+                            : `${contract.owner.name} signature required`
+                          : "DeepBridge signature required"
+                        : "No signature required"}
+                    </span>
                   </td>
                   <td>
                     <strong>
@@ -6410,10 +6551,23 @@ function AdminSigningPage() {
                       {version?.scanStatus === "clean" ? (
                         <button
                           type="button"
-                          disabled={busyId === `${version.id}-source`}
-                          onClick={() => void openSigningContract(contract, "source")}
+                          disabled={Boolean(busyId)}
+                          onClick={() =>
+                            void openSigningContract(
+                              contract,
+                              contract.contractType === "intercompany" &&
+                                version.intermediateAvailable &&
+                                !version.finalAvailable
+                                ? "intermediate"
+                                : "source",
+                            )
+                          }
                         >
-                          Review source
+                          {contract.contractType === "intercompany" &&
+                          version.intermediateAvailable &&
+                          !version.finalAvailable
+                            ? "Review first-signed PDF"
+                            : "Review source"}
                         </button>
                       ) : null}
                       {readyToCountersign ? (
@@ -6423,7 +6577,11 @@ function AdminSigningPage() {
                           disabled={Boolean(busyId)}
                           onClick={() => setContractCountersignSelected(contract)}
                         >
-                          Review, place &amp; sign
+                          {contract.contractType === "intercompany"
+                            ? version.signatureEvents.length
+                              ? `Countersign for ${contract.counterparty.name}`
+                              : `Sign for ${contract.owner.name}`
+                            : "Review, place & sign"}
                         </button>
                       ) : null}
                       {version?.finalAvailable ? (
@@ -6695,9 +6853,16 @@ function AdminSigningPage() {
           onClose={() => setContractCountersignSelected(null)}
           onCompleted={async () => {
             const reference = contractCountersignSelected.reference;
+            const intercompanyFirstSignature =
+              contractCountersignSelected.contractType === "intercompany" &&
+              !contractCountersignSelected.versions[0]?.signatureEvents.length;
             setContractCountersignSelected(null);
             setMessage(
-              `${reference} was countersigned. Its signed PDF and audit certificate are ready to download from this page.`,
+              intercompanyFirstSignature
+                ? `${reference} was signed for ${contractCountersignSelected.owner.name}. It is now ready for ${contractCountersignSelected.counterparty.name} to countersign.`
+                : contractCountersignSelected.contractType === "intercompany"
+                  ? `${reference} is fully executed. Its PDF and audit certificate are ready to download from this page.`
+                  : `${reference} was countersigned. Its signed PDF and audit certificate are ready to download from this page.`,
             );
             await refreshItems();
           }}

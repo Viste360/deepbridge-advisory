@@ -103,6 +103,18 @@ export interface AdminContract {
     certificateScanStatus: "pending" | "clean" | "infected" | "failed";
     finalAvailable: boolean;
     certificateAvailable: boolean;
+    intermediateAvailable: boolean;
+    signatureEvents: Array<{
+      id: string;
+      contractPartyId: string;
+      signingOrder: number;
+      eventRole: "signature" | "countersignature";
+      organisationName: string;
+      signerName: string;
+      signerEmail: string;
+      signerTitle: string;
+      signedAt: string;
+    }>;
     signedAt: string;
     createdAt: string;
   }>;
@@ -856,6 +868,23 @@ export async function listAdminContracts(): Promise<{
           ) as AdminContract["versions"][number]["certificateScanStatus"],
           finalAvailable: Boolean(version.final_storage_path),
           certificateAvailable: Boolean(version.certificate_storage_path),
+          intermediateAvailable: Boolean(version.intermediate_storage_path),
+          signatureEvents: records(version.contract_signature_events)
+            .map((event) => ({
+              id: text(event.id),
+              contractPartyId: text(event.contract_party_id),
+              signingOrder: Number(event.signing_order) || 1,
+              eventRole: text(
+                event.event_role,
+                "signature",
+              ) as "signature" | "countersignature",
+              organisationName: text(event.organisation_name),
+              signerName: text(event.signer_name),
+              signerEmail: text(event.signer_email),
+              signerTitle: text(event.signer_title),
+              signedAt: displayDateTime(event.signed_at),
+            }))
+            .sort((left, right) => left.signingOrder - right.signingOrder),
           signedAt: displayDateTime(version.signed_at),
           createdAt: text(version.created_at),
         })),
@@ -1117,7 +1146,7 @@ async function uploadSignedStorageFile(input: {
 
 export async function getAdminContractAccess(
   versionId: string,
-  kind: "source" | "final" | "certificate",
+  kind: "source" | "intermediate" | "final" | "certificate",
 ) {
   return post<{ url: string }>("/api/admin/contracts/access", {
     versionId,
@@ -1185,6 +1214,24 @@ export async function countersignAdminContract(input: {
     "/api/admin/contracts/countersign",
     { ...input, confirmed: true },
   );
+}
+
+export async function signIntercompanyAdminContract(input: {
+  contractId: string;
+  versionId: string;
+  signerName: string;
+  signerTitle: string;
+  signatureImageDataUrl: string;
+  placement: ManualPdfPlacement;
+}) {
+  return post<{
+    status: "partially_signed" | "completed";
+    signingOrder: 1 | 2;
+    envelopeId: string;
+  }>("/api/admin/contracts/intercompany-sign", {
+    ...input,
+    confirmed: true,
+  });
 }
 
 async function sha256(file: File) {

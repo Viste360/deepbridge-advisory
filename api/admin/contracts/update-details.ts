@@ -61,6 +61,7 @@ export default async function handler(
       (party) => party.organisation_id === contract.owner_organisation_id,
     );
     if (
+      contract.contract_type !== "intercompany" &&
       signatoryName &&
       ownerParty?.signatory_name &&
       signatoryName.toLocaleLowerCase("en-GB") ===
@@ -71,6 +72,7 @@ export default async function handler(
         "The person who signed for the counterparty must be different from the DeepBridge countersignatory.",
       );
     if (
+      contract.contract_type !== "intercompany" &&
       signatoryEmail &&
       ownerParty?.signatory_email &&
       signatoryEmail === ownerParty.signatory_email.toLowerCase()
@@ -106,7 +108,7 @@ export default async function handler(
         signatory_name: signatoryName || null,
         signatory_email: signatoryEmail || null,
         signature_required: true,
-        signing_order: 1,
+        signing_order: contract.contract_type === "intercompany" ? 2 : 1,
       },
       { onConflict: "contract_id,organisation_id,party_role" },
     );

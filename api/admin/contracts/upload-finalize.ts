@@ -90,9 +90,15 @@ export default async function handler(
         (counterpartySignatoryEmail &&
           !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(counterpartySignatoryEmail)))
     )
-      throw new PortalHttpError(400, "Record the DeepBridge signatory and the person who already signed for the counterparty. The counterparty email is optional.");
+      throw new PortalHttpError(
+        400,
+        contractType === "intercompany"
+          ? "Record the authorised signatory for each intercompany entity. The second email is optional."
+          : "Record the DeepBridge signatory and the person who already signed for the counterparty. The counterparty email is optional.",
+      );
     if (
       requiresSignature &&
+      contractType !== "intercompany" &&
       (ownerSignatoryName.toLocaleLowerCase("en-GB") ===
         counterpartySignatoryName.toLocaleLowerCase("en-GB") ||
         (counterpartySignatoryEmail &&
@@ -263,7 +269,7 @@ export default async function handler(
           signatory_name: ownerSignatoryName || null,
           signatory_email: ownerSignatoryEmail || null,
           signature_required: requiresSignature,
-          signing_order: 2,
+          signing_order: contractType === "intercompany" ? 1 : 2,
         },
         {
           contract_id: activeContractId,
@@ -279,7 +285,7 @@ export default async function handler(
           signatory_name: counterpartySignatoryName || null,
           signatory_email: counterpartySignatoryEmail || null,
           signature_required: requiresSignature,
-          signing_order: 1,
+          signing_order: contractType === "intercompany" ? 2 : 1,
         },
       ],
       { onConflict: "contract_id,organisation_id,party_role" },

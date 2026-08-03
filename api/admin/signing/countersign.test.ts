@@ -6,6 +6,7 @@ import {
   correctedSigningDocumentDetails,
   createAuditCertificate,
   createCountersignedPdf,
+  createPlacedSignaturePdf,
   locateDeepBridgeSignatureBlock,
   manualPlacementPageGeometry,
 } from "./countersign";
@@ -304,5 +305,37 @@ describe("portal countersignature PDFs", () => {
     );
     const finalDocument = await PDFDocument.load(countersigned.bytes);
     expect(finalDocument.getPageCount()).toBe(2);
+  });
+
+  it("creates a first-signed intercompany PDF without adding a record page", async () => {
+    const source = await PDFDocument.create();
+    const page = source.addPage([595.28, 841.89]);
+    page.drawText("Intercompany agreement execution page", {
+      x: 54,
+      y: 760,
+      size: 18,
+    });
+    const sourceBytes = await source.save();
+    const partiallySigned = await createPlacedSignaturePdf({
+      sourceBytes,
+      signatureBytes: transparentPng,
+      signerName: "Yon Wallace",
+      signedAt: new Date("2026-08-03T09:15:00.000Z"),
+      manualPlacement: {
+        pageIndex: 0,
+        signature: { x: 0.14, y: 0.74, size: 0.8 },
+        date: { x: 0.14, y: 0.8, size: 0.8 },
+      },
+      title: "Intercompany Services Agreement",
+    });
+
+    const result = await PDFDocument.load(partiallySigned);
+    expect(result.getPageCount()).toBe(1);
+    expect(result.getTitle()).toBe(
+      "Intercompany Services Agreement - partially signed",
+    );
+    expect(createHash("sha256").update(partiallySigned).digest("hex")).not.toBe(
+      createHash("sha256").update(sourceBytes).digest("hex"),
+    );
   });
 });
