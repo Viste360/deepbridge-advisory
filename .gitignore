@@ -4,3 +4,5 @@ dist
 .env
 .qa/
 scripts/__pycache__/
+.vercel
+.env.local
