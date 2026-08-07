@@ -156,11 +156,22 @@ function Header() {
   }, []);
 
   useEffect(() => {
-    document.documentElement.classList.toggle("menu-open", open);
-
     if (!open) {
-      return () => document.documentElement.classList.remove("menu-open");
+      document.documentElement.classList.remove("menu-open");
+      return;
     }
+
+    const scrollPosition = window.scrollY;
+    const previousBodyStyles = {
+      position: document.body.style.position,
+      top: document.body.style.top,
+      width: document.body.style.width,
+    };
+
+    document.documentElement.classList.add("menu-open");
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollPosition}px`;
+    document.body.style.width = "100%";
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -193,6 +204,14 @@ function Header() {
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.documentElement.classList.remove("menu-open");
+      document.body.style.position = previousBodyStyles.position;
+      document.body.style.top = previousBodyStyles.top;
+      document.body.style.width = previousBodyStyles.width;
+      const previousScrollBehavior =
+        document.documentElement.style.scrollBehavior;
+      document.documentElement.style.scrollBehavior = "auto";
+      window.scrollTo({ top: scrollPosition, behavior: "auto" });
+      document.documentElement.style.scrollBehavior = previousScrollBehavior;
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [open]);
