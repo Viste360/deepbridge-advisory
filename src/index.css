@@ -1797,16 +1797,32 @@ a {
 }
 
 @media (max-width: 820px) {
+  :root {
+    --mobile-header-height: 74px;
+  }
+
   .shell {
     width: min(100% - 36px, 680px);
   }
 
   .site-header {
-    --mobile-header-height: 74px;
+    position: fixed;
+    right: 0;
+    left: 0;
+    background: var(--ink);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    isolation: isolate;
   }
 
   .header-inner {
+    position: relative;
+    z-index: 1;
     min-height: var(--mobile-header-height);
+  }
+
+  .site-header + #main-content {
+    padding-top: var(--mobile-header-height);
   }
 
   .desktop-nav {
@@ -1819,13 +1835,13 @@ a {
   }
 
   .mobile-nav {
-    position: absolute;
-    top: 100%;
+    position: fixed;
+    top: var(--mobile-header-height);
     right: 0;
+    bottom: 0;
     left: 0;
     display: block;
-    height: calc(100vh - var(--mobile-header-height));
-    height: calc(100dvh - var(--mobile-header-height));
+    height: auto;
     overflow: hidden;
     visibility: hidden;
     background: var(--ink);
@@ -2059,12 +2075,12 @@ a {
 }
 
 @media (max-width: 600px) {
-  .shell {
-    width: min(100% - 28px, 520px);
+  :root {
+    --mobile-header-height: 68px;
   }
 
-  .site-header {
-    --mobile-header-height: 68px;
+  .shell {
+    width: min(100% - 28px, 520px);
   }
 
   .brand-logo {
