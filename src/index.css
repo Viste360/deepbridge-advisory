@@ -1835,13 +1835,13 @@ a {
   }
 
   .mobile-nav {
-    position: fixed;
-    top: var(--mobile-header-height);
+    position: absolute;
+    top: 100%;
     right: 0;
-    bottom: 0;
     left: 0;
     display: block;
-    height: auto;
+    height: calc(100vh - var(--mobile-header-height));
+    height: calc(100dvh - var(--mobile-header-height));
     overflow: hidden;
     visibility: hidden;
     background: var(--ink);
