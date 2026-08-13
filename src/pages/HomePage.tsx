@@ -7,50 +7,12 @@ import {
   SectionHeading,
   SplitCta,
 } from "../components/Ui";
-import { company, siteConfig } from "../config/site";
+import { commonQuestions, homeSchema } from "../config/structuredData";
+import { insights } from "../content/insights";
 import {
   engagementModels,
   industries,
 } from "../content/siteContent";
-
-const organisationSchema = {
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": ["Organization", "ProfessionalService"],
-      "@id": `${siteConfig.siteUrl}/#organisation`,
-      name: company.tradingName,
-      legalName: company.legalName,
-      url: siteConfig.siteUrl,
-      email: company.contactEmail,
-      sameAs: [siteConfig.linkedInUrl],
-      areaServed: ["United Kingdom", "Europe"],
-      knowsAbout: [
-        "SAP S/4HANA transformation",
-        "Enterprise resource planning",
-        "Supply chain transformation",
-        "Data and business intelligence",
-        "Programme leadership",
-      ],
-      description:
-        "A specialist advisory and delivery partner supporting transformation programmes with experienced independent consultants.",
-      address: {
-        "@type": "PostalAddress",
-        streetAddress: "Kemp House, 152-160 City Road",
-        addressLocality: "London",
-        postalCode: "EC1V 2NX",
-        addressCountry: "GB",
-      },
-    },
-    {
-      "@type": "WebSite",
-      "@id": `${siteConfig.siteUrl}/#website`,
-      url: siteConfig.siteUrl,
-      name: company.tradingName,
-      publisher: { "@id": `${siteConfig.siteUrl}/#organisation` },
-    },
-  ],
-};
 
 function HeroField() {
   return (
@@ -74,7 +36,7 @@ function HeroField() {
 export function HomePage() {
   return (
     <>
-      <PageMeta path="/" schema={organisationSchema} />
+      <PageMeta path="/" schema={homeSchema} />
       <section className="home-hero">
         <div className="shell home-hero-grid">
           <div className="hero-copy">
@@ -153,6 +115,30 @@ export function HomePage() {
         </div>
       </section>
 
+      <section className="section entity-section" aria-labelledby="deepbridge-overview">
+        <div className="shell entity-grid">
+          <div className="entity-intro">
+            <p className="eyebrow">DeepBridge at a glance</p>
+            <h2 id="deepbridge-overview">What DeepBridge Advisory does</h2>
+            <p>
+              A concise view of who we support, where we operate and how an
+              engagement begins.
+            </p>
+          </div>
+          <dl className="entity-answers">
+            {commonQuestions.map((item, index) => (
+              <div key={item.question}>
+                <span aria-hidden="true">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <dt>{item.question}</dt>
+                <dd>{item.answer}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
+
       <section className="section process-section">
         <div className="shell">
           <SectionHeading
@@ -215,6 +201,38 @@ export function HomePage() {
                 →
               </span>
             </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="section home-insights-section">
+        <div className="shell">
+          <div className="section-heading-row">
+            <SectionHeading
+              eyebrow="Transformation insights"
+              title="Useful thinking before the next delivery decision"
+              text="Practical guidance for defining requirements, strengthening programme teams and working across borders."
+            />
+            <ButtonLink to="/insights" variant="text">
+              View all insights
+            </ButtonLink>
+          </div>
+          <div className="home-insights-grid">
+            {insights.map((insight, index) => (
+              <article key={insight.slug}>
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <p>{insight.eyebrow}</p>
+                <h3>
+                  <Link to={`/insights/${insight.slug}`}>{insight.title}</Link>
+                </h3>
+                <Link className="text-link" to={`/insights/${insight.slug}`}>
+                  Read insight
+                  <span className="direction-arrow" aria-hidden="true">
+                    →
+                  </span>
+                </Link>
+              </article>
+            ))}
           </div>
         </div>
       </section>

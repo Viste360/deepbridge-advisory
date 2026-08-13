@@ -5,47 +5,87 @@
   "pages": {
     "/": {
       "title": "DeepBridge Advisory | SAP, Supply Chain & Transformation Consultants",
-      "description": "DeepBridge helps organisations across the UK and Europe build experienced project teams for SAP, supply chain, data and business transformation programmes."
+      "description": "DeepBridge helps organisations across the UK and Europe build experienced project teams for SAP, supply chain, data and business transformation programmes.",
+      "lastModified": "2026-08-13"
     },
     "/expertise": {
       "title": "Transformation Expertise | DeepBridge Advisory",
-      "description": "Specialist independent consultants across SAP and ERP, supply chain, data and business intelligence, and programme leadership."
+      "description": "Specialist independent consultants across SAP and ERP, supply chain, data and business intelligence, and programme leadership.",
+      "lastModified": "2026-08-13"
     },
     "/for-clients": {
       "title": "For Clients | DeepBridge Advisory",
-      "description": "Focused specialist search, team build-out and engagement coordination for demanding transformation programmes."
+      "description": "Focused specialist search, team build-out and engagement coordination for demanding transformation programmes.",
+      "lastModified": "2026-08-13"
     },
     "/for-consultants": {
       "title": "For Independent Consultants | DeepBridge Advisory",
-      "description": "Join the DeepBridge network for relevant transformation opportunities across the UK and Europe."
+      "description": "Join the DeepBridge network for relevant transformation opportunities across the UK and Europe.",
+      "lastModified": "2026-08-13"
     },
     "/about": {
       "title": "About DeepBridge Advisory",
-      "description": "A focused advisory and delivery partner connecting organisations with experienced independent transformation specialists."
+      "description": "A focused advisory and delivery partner connecting organisations with experienced independent transformation specialists.",
+      "lastModified": "2026-08-13"
+    },
+    "/insights": {
+      "title": "Transformation Insights | DeepBridge Advisory",
+      "description": "Practical guidance on transformation requirements, SAP programme support and building specialist teams across the UK and Europe.",
+      "lastModified": "2026-08-13"
+    },
+    "/insights/defining-transformation-consultant-requirement": {
+      "title": "How to Define a Transformation Consultant Requirement | DeepBridge",
+      "description": "A practical framework for turning a broad transformation need into a focused consultant brief that can be assessed and delivered.",
+      "type": "article",
+      "published": "2026-08-13T09:00:00+01:00",
+      "modified": "2026-08-13T09:00:00+01:00",
+      "lastModified": "2026-08-13"
+    },
+    "/insights/when-sap-programme-needs-independent-specialist-support": {
+      "title": "When an SAP Programme Needs Independent Specialist Support | DeepBridge",
+      "description": "The practical signals that an SAP transformation may need focused independent expertise alongside internal teams and delivery partners.",
+      "type": "article",
+      "published": "2026-08-13T09:00:00+01:00",
+      "modified": "2026-08-13T09:00:00+01:00",
+      "lastModified": "2026-08-13"
+    },
+    "/insights/building-cross-border-transformation-teams-uk-europe": {
+      "title": "Building Cross-Border Transformation Teams | DeepBridge Advisory",
+      "description": "A practical guide to capability, governance, location and engagement considerations when transformation teams span the UK and Europe.",
+      "type": "article",
+      "published": "2026-08-13T09:00:00+01:00",
+      "modified": "2026-08-13T09:00:00+01:00",
+      "lastModified": "2026-08-13"
     },
     "/opportunities": {
       "title": "Current Opportunities | DeepBridge Advisory",
-      "description": "View current independent consulting opportunities managed by DeepBridge Advisory."
+      "description": "View current independent consulting opportunities managed by DeepBridge Advisory.",
+      "lastModified": "2026-07-26"
     },
     "/contact": {
       "title": "Contact DeepBridge Advisory",
-      "description": "Discuss a transformation requirement, join our consultant network or make a general enquiry."
+      "description": "Discuss a transformation requirement, join our consultant network or make a general enquiry.",
+      "lastModified": "2026-07-26"
     },
     "/privacy": {
       "title": "Privacy Notice | DeepBridge Advisory",
-      "description": "How DeepBridge Advisory collects, uses, retains and protects personal information."
+      "description": "How DeepBridge Advisory collects, uses, retains and protects personal information.",
+      "lastModified": "2026-07-26"
     },
     "/cookies": {
       "title": "Cookie Information | DeepBridge Advisory",
-      "description": "Information about the essential technologies used by the DeepBridge Advisory website."
+      "description": "Information about the essential technologies used by the DeepBridge Advisory website.",
+      "lastModified": "2026-07-26"
     },
     "/legal": {
       "title": "Legal Notice | DeepBridge Advisory",
-      "description": "Corporate details and legal information for the DeepBridge Advisory website."
+      "description": "Corporate details and legal information for the DeepBridge Advisory website.",
+      "lastModified": "2026-07-26"
     },
     "/accessibility": {
       "title": "Accessibility | DeepBridge Advisory",
-      "description": "Our approach to making the DeepBridge Advisory website accessible."
+      "description": "Our approach to making the DeepBridge Advisory website accessible.",
+      "lastModified": "2026-07-26"
     },
     "/404": {
       "title": "Page Not Found | DeepBridge Advisory",
