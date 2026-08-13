@@ -29,6 +29,7 @@ export const primaryNavigation = [
   { label: "For Clients", href: "/for-clients" },
   { label: "For Consultants", href: "/for-consultants" },
   { label: "About", href: "/about" },
+  { label: "Insights", href: "/insights" },
   { label: "Contact", href: "/contact" },
 ] as const;
 
@@ -42,6 +43,10 @@ export const legalNavigation = [
 export type MetaEntry = {
   title: string;
   description: string;
+  type?: "website" | "article";
+  published?: string;
+  modified?: string;
+  lastModified?: string;
 };
 
 export const pageMeta = seo.pages as Record<string, MetaEntry>;

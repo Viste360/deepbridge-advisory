@@ -104,9 +104,39 @@ export function PageMeta({
     setMeta('meta[property="og:description"]', "content", meta.description);
     setMeta('meta[property="og:url"]', "content", pageUrl);
     setMeta('meta[property="og:image"]', "content", socialImageUrl);
+    setMeta('meta[property="og:type"]', "content", meta.type ?? "website");
+    setMeta(
+      'meta[property="og:image:alt"]',
+      "content",
+      "DeepBridge Advisory — specialist transformation consultants",
+    );
     setMeta('meta[name="twitter:title"]', "content", meta.title);
     setMeta('meta[name="twitter:description"]', "content", meta.description);
     setMeta('meta[name="twitter:image"]', "content", socialImageUrl);
+    setMeta(
+      'meta[name="twitter:image:alt"]',
+      "content",
+      "DeepBridge Advisory — specialist transformation consultants",
+    );
+
+    const setOptionalMeta = (property: string, value?: string) => {
+      let element = document.querySelector<HTMLMetaElement>(
+        `meta[property="${property}"]`,
+      );
+      if (!value) {
+        element?.remove();
+        return;
+      }
+      if (!element) {
+        element = document.createElement("meta");
+        element.setAttribute("property", property);
+        document.head.append(element);
+      }
+      element.content = value;
+    };
+
+    setOptionalMeta("article:published_time", meta.published);
+    setOptionalMeta("article:modified_time", meta.modified);
 
     let canonical = document.querySelector<HTMLLinkElement>(
       'link[rel="canonical"]',
@@ -120,16 +150,33 @@ export function PageMeta({
 
     const scriptId = "deepbridge-structured-data";
     document.getElementById(scriptId)?.remove();
-    if (schema) {
-      const script = document.createElement("script");
-      script.id = scriptId;
-      script.type = "application/ld+json";
-      script.text = JSON.stringify(schema);
-      document.head.append(script);
-    }
+    const resolvedSchema = schema ?? {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "@id": `${pageUrl}#webpage`,
+      url: pageUrl,
+      name: meta.title,
+      description: meta.description,
+      inLanguage: "en-GB",
+      isPartOf: { "@id": `${siteConfig.siteUrl}/#website` },
+      about: { "@id": `${siteConfig.siteUrl}/#organisation` },
+    };
+    const script = document.createElement("script");
+    script.id = scriptId;
+    script.type = "application/ld+json";
+    script.text = JSON.stringify(resolvedSchema);
+    document.head.append(script);
 
     return () => document.getElementById(scriptId)?.remove();
-  }, [meta.description, meta.title, path, schema]);
+  }, [
+    meta.description,
+    meta.modified,
+    meta.published,
+    meta.title,
+    meta.type,
+    path,
+    schema,
+  ]);
 
   return null;
 }
@@ -325,6 +372,7 @@ function Footer() {
               {item.label}
             </Link>
           ))}
+          <a href="/llms.txt">AI site overview</a>
         </div>
         <div>
           <h3>Contact</h3>

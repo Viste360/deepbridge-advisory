@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { SiteShell } from "./components/SiteShell";
 import {
@@ -10,13 +11,17 @@ import {
 } from "./pages/CorePages";
 import { ContactPage } from "./pages/ContactPage";
 import { HomePage } from "./pages/HomePage";
+import { InsightArticlePage, InsightsPage } from "./pages/InsightsPages";
 import {
   AccessibilityPage,
   CookiesPage,
   LegalNoticePage,
   PrivacyPage,
 } from "./pages/LegalPages";
-import { PortalApp } from "./portal/PortalApp";
+
+const PortalApp = lazy(() =>
+  import("./portal/PortalApp").then((module) => ({ default: module.PortalApp })),
+);
 
 const portalPathPrefixes = [
   "/login",
@@ -45,7 +50,15 @@ export default function App() {
   return (
     <BrowserRouter>
       {portalHostname || portalPath ? (
-        <PortalApp />
+        <Suspense
+          fallback={
+            <div className="portal-loading" role="status" aria-live="polite">
+              Loading secure portal…
+            </div>
+          }
+        >
+          <PortalApp />
+        </Suspense>
       ) : (
         <SiteShell>
           <Routes>
@@ -54,6 +67,8 @@ export default function App() {
             <Route path="/for-clients" element={<ClientsPage />} />
             <Route path="/for-consultants" element={<ConsultantsPage />} />
             <Route path="/about" element={<AboutPage />} />
+            <Route path="/insights" element={<InsightsPage />} />
+            <Route path="/insights/:slug" element={<InsightArticlePage />} />
             <Route path="/opportunities" element={<OpportunitiesPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />

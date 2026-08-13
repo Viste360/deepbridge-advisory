@@ -17,11 +17,12 @@ import {
   consultantJourney,
   principles,
 } from "../content/siteContent";
+import { buildServiceSchema } from "../config/structuredData";
 
 export function ExpertisePage() {
   return (
     <>
-      <PageMeta path="/expertise" />
+      <PageMeta path="/expertise" schema={buildServiceSchema()} />
       <PageHero
         eyebrow="Expertise"
         title="Specialist capability where transformation gets complex."
