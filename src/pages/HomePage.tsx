@@ -12,24 +12,27 @@ import { insights } from "../content/insights";
 import {
   engagementModels,
   industries,
+  transformationFoundations,
+  transformationStages,
 } from "../content/siteContent";
 
-function HeroField() {
+function HeroVisual() {
   return (
-    <div className="hero-field" aria-hidden="true">
-      <div className="field-grid" />
-      <div className="field-ring field-ring-one" />
-      <div className="field-ring field-ring-two" />
-      <div className="field-axis field-axis-x" />
-      <div className="field-axis field-axis-y" />
-      <span className="field-label field-label-one">Business</span>
-      <span className="field-label field-label-two">Technology</span>
-      <span className="field-label field-label-three">Delivery</span>
-      <p>
-        <strong>One requirement.</strong>
-        <span>A focused route to the right expertise.</span>
-      </p>
-    </div>
+    <figure className="hero-visual">
+      <img
+        src="/images/transformation/deepbridge-transformation-hero.webp"
+        width="1122"
+        height="1402"
+        alt="Transformation professionals reviewing a modern industrial operation"
+        fetchPriority="high"
+      />
+      <div className="hero-visual-shade" aria-hidden="true" />
+      <div className="hero-visual-grid" aria-hidden="true" />
+      <figcaption>
+        <span>Transformation, built deliberately</span>
+        <strong>Define · Mobilise · Deliver</strong>
+      </figcaption>
+    </figure>
   );
 }
 
@@ -40,14 +43,15 @@ export function HomePage() {
       <section className="home-hero">
         <div className="shell home-hero-grid">
           <div className="hero-copy">
-            <p className="eyebrow">European transformation expertise</p>
+            <p className="eyebrow">Transformation advisory &amp; delivery</p>
             <h1>
-              Specialist consultants for complex{" "}
-              <em>transformation programmes.</em>
+              Build the transformation. <em>From first decision to delivery.</em>
             </h1>
             <p className="hero-intro">
-              DeepBridge helps organisations build experienced project teams
-              across SAP, supply chain, data and business transformation.
+              DeepBridge brings transformation consultancy experience to the
+              point programmes are shaped—defining the need, structuring the
+              capability and assembling experienced specialists across SAP,
+              supply chain, data and business transformation.
             </p>
             <div className="hero-actions">
               <ButtonLink to="/contact?type=client#contact-form">
@@ -59,43 +63,65 @@ export function HomePage() {
             </div>
             <p className="hero-trust">
               <span aria-hidden="true" />
-              Supporting international programmes across the UK and Europe.
+              Independent expertise. International reach. Continued delivery support.
             </p>
           </div>
-          <HeroField />
+          <HeroVisual />
         </div>
         <div className="shell hero-proof" aria-label="How DeepBridge works">
           <p>
-            <span>01</span> Selective specialist network
+            <span>01</span> Define the transformation need
           </p>
           <p>
-            <span>02</span> Cross-border programme coverage
+            <span>02</span> Build the right capability
           </p>
           <p>
-            <span>03</span> Support through delivery
+            <span>03</span> Stay close through delivery
           </p>
         </div>
       </section>
 
       <section className="section problem-section">
         <div className="shell editorial-grid">
-          <p className="eyebrow">The delivery challenge</p>
+          <p className="eyebrow">Start before the job title</p>
           <div>
-            <h2>The right expertise, without the unnecessary noise.</h2>
+            <h2>A transformation is designed before it is staffed.</h2>
             <div className="two-column-copy">
               <p>
-                Transformation programmes rarely fail because organisations
-                lack ambition. They stall when the right expertise is
-                unavailable, responsibilities are unclear or teams cannot scale
-                at the pace the programme demands.
+                The earliest decisions shape everything that follows: which
+                outcomes matter, how workstreams connect, where ownership sits
+                and what capability is genuinely missing.
               </p>
               <p>
-                DeepBridge takes a focused approach: understand the requirement,
-                identify credible specialists and remain involved through
-                contracting, onboarding and delivery.
+                DeepBridge helps turn that context into a practical capability
+                model, then identifies credible specialists and stays involved
+                through mobilisation, onboarding and delivery.
               </p>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="section transformation-lifecycle-section">
+        <div className="shell lifecycle-intro-grid">
+          <div>
+            <p className="eyebrow">End-to-end perspective</p>
+            <h2>From first brief to operating reality.</h2>
+          </div>
+          <p>
+            DeepBridge can engage while the requirement is still taking shape,
+            helping organisations connect programme design with the specialist
+            capability needed to carry it forward.
+          </p>
+        </div>
+        <div className="shell lifecycle-grid">
+          {transformationStages.map((stage) => (
+            <article key={stage.number}>
+              <span>{stage.number}</span>
+              <h3>{stage.title}</h3>
+              <p>{stage.text}</p>
+            </article>
+          ))}
         </div>
       </section>
 
@@ -173,6 +199,31 @@ export function HomePage() {
               </article>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section className="transformation-media-section">
+        <div className="shell transformation-media-frame">
+          <img
+            src="/images/transformation/industrial-delivery.webp"
+            width="1672"
+            height="941"
+            loading="lazy"
+            alt="A connected manufacturing and logistics operation"
+          />
+          <div className="transformation-media-overlay">
+            <p className="eyebrow">Where transformation becomes real</p>
+            <h2>Business, technology and operations—moving together.</h2>
+          </div>
+        </div>
+        <div className="shell foundation-grid">
+          {transformationFoundations.map((item, index) => (
+            <article key={item.title}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <h3>{item.title}</h3>
+              <p>{item.text}</p>
+            </article>
+          ))}
         </div>
       </section>
 

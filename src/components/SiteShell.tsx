@@ -79,7 +79,7 @@ export function PageMeta({
   const meta = pageMeta[path] ?? {
     title: "DeepBridge Advisory",
     description:
-      "Specialist consultants for complex transformation programmes.",
+      "Transformation advisory and specialist delivery for complex programmes.",
   };
 
   useEffect(() => {
@@ -108,7 +108,7 @@ export function PageMeta({
     setMeta(
       'meta[property="og:image:alt"]',
       "content",
-      "DeepBridge Advisory — specialist transformation consultants",
+      "DeepBridge Advisory — transformation advisory and specialist delivery",
     );
     setMeta('meta[name="twitter:title"]', "content", meta.title);
     setMeta('meta[name="twitter:description"]', "content", meta.description);
@@ -116,7 +116,7 @@ export function PageMeta({
     setMeta(
       'meta[name="twitter:image:alt"]',
       "content",
-      "DeepBridge Advisory — specialist transformation consultants",
+      "DeepBridge Advisory — transformation advisory and specialist delivery",
     );
 
     const setOptionalMeta = (property: string, value?: string) => {
@@ -352,8 +352,8 @@ function Footer() {
         <div className="footer-brand">
           <Brand />
           <p>
-            Specialist consultants for complex transformation programmes across
-            the UK and Europe.
+            Transformation advisory and specialist delivery for complex
+            programmes across the UK and Europe.
           </p>
         </div>
         <div>

@@ -61,9 +61,9 @@ const organisation = {
     "Programme leadership",
     "Business transformation",
   ],
-  slogan: "Specialist consultants for complex transformation programmes.",
+  slogan: "From first decision to transformation delivery.",
   description:
-    "A specialist advisory and delivery partner helping organisations build experienced independent project teams for complex transformation programmes across the UK and Europe.",
+    "A specialist transformation advisory and delivery partner helping organisations shape programme requirements, build experienced independent project teams and support complex delivery across the UK and Europe.",
   address: {
     "@type": "PostalAddress",
     streetAddress: "Kemp House, 152-160 City Road",
@@ -105,7 +105,7 @@ const commonQuestions = [
   {
     question: "What is DeepBridge Advisory?",
     answer:
-      "DeepBridge Advisory is a UK-based specialist advisory and delivery partner that helps organisations build experienced independent teams for complex transformation programmes.",
+      "DeepBridge Advisory is a UK-based transformation advisory and delivery partner that helps organisations shape programme requirements, build experienced independent teams and support complex delivery.",
   },
   {
     question: "Which transformation programmes does DeepBridge support?",
@@ -120,7 +120,7 @@ const commonQuestions = [
   {
     question: "How does DeepBridge engage consultants?",
     answer:
-      "DeepBridge clarifies the delivery requirement, identifies a focused group of relevant independent specialists and supports contracting, onboarding and delivery coordination.",
+      "DeepBridge frames the delivery requirement, connects programme design with the capability needed, identifies a focused group of relevant independent specialists and supports contracting, onboarding and delivery coordination.",
   },
 ] as const;
 
@@ -171,6 +171,14 @@ export const homeSchema: Record<string, unknown> = {
       about: { "@id": organisationId },
       inLanguage: "en-GB",
       mainEntity: { "@id": organisationId },
+      primaryImageOfPage: {
+        "@type": "ImageObject",
+        url: `${siteConfig.siteUrl}/images/transformation/deepbridge-transformation-hero.webp`,
+        width: 1122,
+        height: 1402,
+        caption:
+          "DeepBridge Advisory transformation consultancy and industrial delivery",
+      },
     },
     {
       "@type": "FAQPage",
@@ -199,6 +207,13 @@ export function buildServiceSchema(): Record<string, unknown> {
         isPartOf: { "@id": websiteId },
         about: { "@id": organisationId },
         breadcrumb: { "@id": `${siteConfig.siteUrl}${path}#breadcrumb` },
+        primaryImageOfPage: {
+          "@type": "ImageObject",
+          url: `${siteConfig.siteUrl}/images/transformation/transformation-planning.webp`,
+          width: 1536,
+          height: 1024,
+          caption: "Transformation programme framing and capability planning",
+        },
         mainEntity: {
           "@type": "ItemList",
           itemListElement: services.map((service, index) => ({

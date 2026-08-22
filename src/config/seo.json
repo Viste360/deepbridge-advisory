@@ -4,14 +4,14 @@
   "socialImagePath": "/og.png",
   "pages": {
     "/": {
-      "title": "DeepBridge Advisory | SAP, Supply Chain & Transformation Consultants",
-      "description": "DeepBridge helps organisations across the UK and Europe build experienced project teams for SAP, supply chain, data and business transformation programmes.",
-      "lastModified": "2026-08-13"
+      "title": "DeepBridge Advisory | Transformation Advisory & Specialist Delivery",
+      "description": "DeepBridge helps organisations shape transformation programmes from the first brief, build experienced specialist teams and support delivery across SAP, supply chain, data and business transformation.",
+      "lastModified": "2026-08-22"
     },
     "/expertise": {
       "title": "Transformation Expertise | DeepBridge Advisory",
-      "description": "Specialist independent consultants across SAP and ERP, supply chain, data and business intelligence, and programme leadership.",
-      "lastModified": "2026-08-13"
+      "description": "Transformation capability shaped from the start across SAP and ERP, supply chain, data and business intelligence, and programme leadership.",
+      "lastModified": "2026-08-22"
     },
     "/for-clients": {
       "title": "For Clients | DeepBridge Advisory",
