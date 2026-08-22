@@ -63,7 +63,7 @@ export function HomePage() {
             </div>
             <p className="hero-trust">
               <span aria-hidden="true" />
-              Independent expertise. International reach. Continued delivery support.
+              UK · Spain · DACH · US · Central &amp; South America
             </p>
           </div>
           <HeroVisual />

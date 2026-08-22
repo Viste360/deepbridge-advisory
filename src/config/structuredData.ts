@@ -4,6 +4,17 @@ import type { Insight } from "../content/insights";
 const organisationId = `${siteConfig.siteUrl}/#organisation`;
 const websiteId = `${siteConfig.siteUrl}/#website`;
 
+const operatingAreas = [
+  { "@type": "Country", name: "United Kingdom" },
+  { "@type": "Country", name: "Spain" },
+  { "@type": "Country", name: "Germany" },
+  { "@type": "Country", name: "Austria" },
+  { "@type": "Country", name: "Switzerland" },
+  { "@type": "Country", name: "United States" },
+  { "@type": "Place", name: "Central America" },
+  { "@type": "Place", name: "South America" },
+] as const;
+
 export const services = [
   {
     name: "SAP and ERP transformation consulting",
@@ -49,10 +60,7 @@ const organisation = {
     value: company.companyNumber,
   },
   sameAs: [siteConfig.linkedInUrl],
-  areaServed: [
-    { "@type": "Country", name: "United Kingdom" },
-    { "@type": "Place", name: "Europe" },
-  ],
+  areaServed: operatingAreas,
   knowsAbout: [
     "SAP S/4HANA transformation",
     "Enterprise resource planning",
@@ -63,7 +71,7 @@ const organisation = {
   ],
   slogan: "From first decision to transformation delivery.",
   description:
-    "A specialist transformation advisory and delivery partner helping organisations shape programme requirements, build experienced independent project teams and support complex delivery across the UK and Europe.",
+    "A specialist transformation advisory and delivery partner helping organisations shape programme requirements, build experienced independent project teams and support complex delivery across the UK, Spain, DACH, the United States, Central America and South America.",
   address: {
     "@type": "PostalAddress",
     streetAddress: "Kemp House, 152-160 City Road",
@@ -86,7 +94,7 @@ const organisation = {
         "@type": "Service",
         ...service,
         provider: { "@id": organisationId },
-        areaServed: ["United Kingdom", "Europe"],
+        areaServed: operatingAreas,
       },
     })),
   },
@@ -115,7 +123,7 @@ const commonQuestions = [
   {
     question: "Where does DeepBridge Advisory operate?",
     answer:
-      "DeepBridge supports programmes and independent consultants across the United Kingdom and Europe from its base in London.",
+      "DeepBridge supports programmes and independent consultants across the United Kingdom, Spain, DACH, the United States, Central America and South America from its base in London.",
   },
   {
     question: "How does DeepBridge engage consultants?",
@@ -223,7 +231,7 @@ export function buildServiceSchema(): Record<string, unknown> {
               "@type": "Service",
               ...service,
               provider: { "@id": organisationId },
-              areaServed: ["United Kingdom", "Europe"],
+              areaServed: operatingAreas,
             },
           })),
         },
