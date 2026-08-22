@@ -65,7 +65,7 @@ export const processSteps = [
   {
     number: "02",
     title: "Identify",
-    text: "We search selectively across our European network and evaluate relevant experience.",
+    text: "We search selectively across our international network and evaluate relevant experience.",
   },
   {
     number: "03",
@@ -148,6 +148,33 @@ export const industries = [
   "Technology-enabled transformation",
 ];
 
+export const operatingRegions = [
+  {
+    name: "United Kingdom",
+    detail: "Our home market and London base.",
+  },
+  {
+    name: "Spain",
+    detail: "Strategic coverage for Iberian and international delivery.",
+  },
+  {
+    name: "DACH",
+    detail: "Germany, Austria and Switzerland.",
+  },
+  {
+    name: "United States",
+    detail: "North American transformation requirements and specialist reach.",
+  },
+  {
+    name: "Central America",
+    detail: "Cross-border programmes requiring regional delivery context.",
+  },
+  {
+    name: "South America",
+    detail: "International capability across complex transformation markets.",
+  },
+];
+
 export const clientServices = [
   {
     title: "Specialist Search",
@@ -163,7 +190,7 @@ export const clientServices = [
   },
   {
     title: "Advisory Support",
-    text: "Structured input on role definition, European talent markets and realistic engagement models. This does not constitute legal, tax or immigration advice.",
+    text: "Structured input on role definition, international talent markets and realistic engagement models. This does not constitute legal, tax or immigration advice.",
   },
 ];
 

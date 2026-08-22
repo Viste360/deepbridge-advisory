@@ -127,8 +127,8 @@ export function SplitCta() {
           <p className="eyebrow">For independent specialists</p>
           <h2>Looking for your next meaningful programme?</h2>
           <p>
-            Join our network for relevant project opportunities across the UK
-            and Europe.
+            Join our international network for relevant transformation project
+            opportunities across our core markets.
           </p>
           <ButtonLink to="/contact?type=consultant" variant="secondary">
             Join our network

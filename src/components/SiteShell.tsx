@@ -353,7 +353,8 @@ function Footer() {
           <Brand />
           <p>
             Transformation advisory and specialist delivery for complex
-            programmes across the UK and Europe.
+            programmes across the UK, Spain, DACH, the US, Central and South
+            America.
           </p>
         </div>
         <div>

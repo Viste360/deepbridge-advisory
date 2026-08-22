@@ -15,6 +15,7 @@ import {
   consultantExpectations,
   consultantInformation,
   consultantJourney,
+  operatingRegions,
   principles,
 } from "../content/siteContent";
 import { buildServiceSchema } from "../config/structuredData";
@@ -319,7 +320,8 @@ export function AboutPage() {
               search and stays involved after an introduction has been made.
             </p>
             <p>
-              We work across the UK and Europe, bringing together organisations
+              We work across the United Kingdom, Spain, DACH, the United States,
+              Central America and South America, bringing together organisations
               and experienced independent specialists in SAP, supply chain,
               data and business transformation.
             </p>
@@ -348,23 +350,40 @@ export function AboutPage() {
         <div className="shell international-grid">
           <div>
             <p className="eyebrow">International by design</p>
-            <h2>Cross-border work needs local clarity.</h2>
+            <h2>International reach. Local delivery context.</h2>
           </div>
           <div>
             <p>
-              European programmes often bring together organisations,
-              consultants and work locations across several jurisdictions.
-              DeepBridge helps align the practical details early while
-              recognising that legal, tax, immigration and employment-status
-              questions require appropriately qualified advice.
+              Transformation programmes increasingly connect decision-makers,
+              specialists and operations across regions. DeepBridge combines an
+              international network with a clear understanding that each market
+              brings its own working culture, stakeholder environment and
+              engagement considerations.
             </p>
-            <Link className="text-link" to="/legal">
-              Read our legal notice
-              <span className="direction-arrow" aria-hidden="true">
-                →
-              </span>
-            </Link>
           </div>
+        </div>
+        <div className="shell region-grid" aria-label="DeepBridge international coverage">
+          {operatingRegions.map((region, index) => (
+            <article key={region.name}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <h3>{region.name}</h3>
+              <p>{region.detail}</p>
+            </article>
+          ))}
+        </div>
+        <div className="shell international-note">
+          <p>
+            Our reach reflects the programmes, networks and markets we support;
+            it does not imply a physical DeepBridge office in every location.
+            Cross-border legal, tax, immigration and employment-status questions
+            should be reviewed by appropriately qualified advisers.
+          </p>
+          <Link className="text-link" to="/legal">
+            Read our legal notice
+            <span className="direction-arrow" aria-hidden="true">
+              →
+            </span>
+          </Link>
         </div>
       </section>
       <SplitCta />

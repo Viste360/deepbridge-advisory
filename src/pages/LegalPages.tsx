@@ -130,12 +130,12 @@ export function PrivacyPage() {
         <section>
           <h2>International transfers</h2>
           <p>
-            DeepBridge supports work across the UK and Europe and some service
-            providers may process information in other countries. Where
-            personal information is transferred outside the UK or European
-            Economic Area, the parties responsible for the transfer should use
-            an appropriate safeguard, such as an adequacy decision or approved
-            contractual clauses, where required.
+            DeepBridge supports international work across the UK, Europe and the
+            Americas, and some service providers may process information in
+            other countries. Where personal information is transferred outside
+            the UK or European Economic Area, the parties responsible for the
+            transfer should use an appropriate safeguard, such as an adequacy
+            decision or approved contractual clauses, where required.
           </p>
         </section>
 

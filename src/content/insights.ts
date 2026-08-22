@@ -142,14 +142,14 @@ export const insights: Insight[] = [
   },
   {
     slug: "building-cross-border-transformation-teams-uk-europe",
-    title: "Building cross-border transformation teams across the UK and Europe",
+    title: "Building cross-border transformation teams across international markets",
     description:
-      "A practical guide to capability, governance, location and engagement considerations when transformation teams span the UK and Europe.",
+      "A practical guide to capability, governance, location and engagement considerations when transformation teams span the UK, Europe and the Americas.",
     eyebrow: "Cross-border delivery",
     introduction:
       "International programmes need more than people in multiple locations. They need a shared delivery model that makes accountability, working patterns and local constraints clear from the beginning.",
     published: "2026-08-13",
-    updated: "2026-08-13",
+    updated: "2026-08-22",
     readingTime: "7 minute read",
     keyPoints: [
       "Design around outcomes and decision coverage.",
@@ -161,7 +161,7 @@ export const insights: Insight[] = [
       {
         heading: "Build capability around the programme map",
         paragraphs: [
-          "A cross-border team should reflect where processes are owned, where decisions are made and where implementation happens. A role described as European may still need deep engagement with a central design authority, local business leads or deployment teams in particular markets.",
+          "A cross-border team should reflect where processes are owned, where decisions are made and where implementation happens. A role described as international may still need deep engagement with a central design authority, local business leads or deployment teams in particular markets.",
           "Map the key outcomes, workstreams, countries and decision forums before deciding where each specialist should sit. This exposes gaps in language, time-zone coverage, local process knowledge and stakeholder access.",
         ],
       },
@@ -196,7 +196,7 @@ export const insights: Insight[] = [
       {
         heading: "Focused international support",
         paragraphs: [
-          "DeepBridge supports organisations building transformation teams across the UK and Europe. We focus on the practical delivery requirement, identify relevant independent specialists and coordinate the engagement while recognising where qualified external advice is needed.",
+          "DeepBridge supports organisations building transformation teams across the United Kingdom, Spain, DACH, the United States, Central America and South America. We focus on the practical delivery requirement, identify relevant independent specialists and coordinate the engagement while recognising where qualified external advice is needed.",
         ],
       },
     ],

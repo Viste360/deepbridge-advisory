@@ -5,7 +5,7 @@
   "pages": {
     "/": {
       "title": "DeepBridge Advisory | Transformation Advisory & Specialist Delivery",
-      "description": "DeepBridge helps organisations shape transformation programmes from the first brief, build experienced specialist teams and support delivery across SAP, supply chain, data and business transformation.",
+      "description": "DeepBridge helps organisations shape transformation programmes, build experienced specialist teams and support delivery across the UK, Spain, DACH, the US and Latin America.",
       "lastModified": "2026-08-22"
     },
     "/expertise": {
@@ -15,23 +15,23 @@
     },
     "/for-clients": {
       "title": "For Clients | DeepBridge Advisory",
-      "description": "Focused specialist search, team build-out and engagement coordination for demanding transformation programmes.",
-      "lastModified": "2026-08-13"
+      "description": "Focused specialist search, team build-out and engagement coordination for demanding international transformation programmes.",
+      "lastModified": "2026-08-22"
     },
     "/for-consultants": {
       "title": "For Independent Consultants | DeepBridge Advisory",
-      "description": "Join the DeepBridge network for relevant transformation opportunities across the UK and Europe.",
-      "lastModified": "2026-08-13"
+      "description": "Join the DeepBridge international network for relevant transformation opportunities across the UK, Spain, DACH, the US and Latin America.",
+      "lastModified": "2026-08-22"
     },
     "/about": {
       "title": "About DeepBridge Advisory",
-      "description": "A focused advisory and delivery partner connecting organisations with experienced independent transformation specialists.",
-      "lastModified": "2026-08-13"
+      "description": "An international transformation advisory and delivery partner supporting organisations across the UK, Spain, DACH, the US, Central and South America.",
+      "lastModified": "2026-08-22"
     },
     "/insights": {
       "title": "Transformation Insights | DeepBridge Advisory",
-      "description": "Practical guidance on transformation requirements, SAP programme support and building specialist teams across the UK and Europe.",
-      "lastModified": "2026-08-13"
+      "description": "Practical guidance on transformation requirements, SAP programme support and building specialist teams across international markets.",
+      "lastModified": "2026-08-22"
     },
     "/insights/defining-transformation-consultant-requirement": {
       "title": "How to Define a Transformation Consultant Requirement | DeepBridge",
@@ -51,11 +51,11 @@
     },
     "/insights/building-cross-border-transformation-teams-uk-europe": {
       "title": "Building Cross-Border Transformation Teams | DeepBridge Advisory",
-      "description": "A practical guide to capability, governance, location and engagement considerations when transformation teams span the UK and Europe.",
+      "description": "A practical guide to capability, governance, location and engagement considerations when transformation teams span the UK, Europe and the Americas.",
       "type": "article",
       "published": "2026-08-13T09:00:00+01:00",
-      "modified": "2026-08-13T09:00:00+01:00",
-      "lastModified": "2026-08-13"
+      "modified": "2026-08-22T12:00:00+02:00",
+      "lastModified": "2026-08-22"
     },
     "/opportunities": {
       "title": "Current Opportunities | DeepBridge Advisory",
@@ -64,8 +64,8 @@
     },
     "/contact": {
       "title": "Contact DeepBridge Advisory",
-      "description": "Discuss a transformation requirement, join our consultant network or make a general enquiry.",
-      "lastModified": "2026-07-26"
+      "description": "Discuss an international transformation requirement, join our consultant network or make a general enquiry.",
+      "lastModified": "2026-08-22"
     },
     "/privacy": {
       "title": "Privacy Notice | DeepBridge Advisory",
@@ -80,7 +80,7 @@
     "/legal": {
       "title": "Legal Notice | DeepBridge Advisory",
       "description": "Corporate details and legal information for the DeepBridge Advisory website.",
-      "lastModified": "2026-07-26"
+      "lastModified": "2026-08-22"
     },
     "/accessibility": {
       "title": "Accessibility | DeepBridge Advisory",

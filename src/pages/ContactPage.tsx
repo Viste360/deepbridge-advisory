@@ -140,7 +140,7 @@ export function ContactPage() {
               </div>
               <div>
                 <span>Coverage</span>
-                <p>United Kingdom and Europe</p>
+                <p>UK · Spain · DACH · US · Central &amp; South America</p>
               </div>
               <div>
                 <span>Response</span>

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { consultantJourney, expertise, processSteps } from "./siteContent";
+import {
+  consultantJourney,
+  expertise,
+  operatingRegions,
+  processSteps,
+} from "./siteContent";
 import { company, pageMeta, primaryNavigation } from "../config/site";
 import seo from "../config/seo.json";
 
@@ -10,6 +15,14 @@ describe("site content integrity", () => {
     expect(expertise).toHaveLength(4);
     expect(processSteps).toHaveLength(4);
     expect(consultantJourney).toHaveLength(5);
+    expect(operatingRegions.map((region) => region.name)).toEqual([
+      "United Kingdom",
+      "Spain",
+      "DACH",
+      "United States",
+      "Central America",
+      "South America",
+    ]);
     expect(primaryNavigation.some((item) => item.href === "/for-clients")).toBe(
       true,
     );
