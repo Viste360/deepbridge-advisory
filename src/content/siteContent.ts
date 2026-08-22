@@ -79,6 +79,49 @@ export const processSteps = [
   },
 ];
 
+export const transformationStages = [
+  {
+    number: "01",
+    title: "Frame",
+    text: "Clarify the ambition, operating context, constraints and decisions the programme must enable.",
+  },
+  {
+    number: "02",
+    title: "Design",
+    text: "Shape the workstreams, capability model, governance and interfaces between business and technology.",
+  },
+  {
+    number: "03",
+    title: "Mobilise",
+    text: "Bring together experienced specialists, align the delivery model and establish a credible route into execution.",
+  },
+  {
+    number: "04",
+    title: "Deliver",
+    text: "Keep capability aligned as the programme moves through implementation, decision points and changing priorities.",
+  },
+  {
+    number: "05",
+    title: "Embed",
+    text: "Plan knowledge transfer, operational ownership and continuity so the transformation can hold beyond launch.",
+  },
+];
+
+export const transformationFoundations = [
+  {
+    title: "Business architecture",
+    text: "Outcomes, operating model, process ownership and the decisions that connect strategy to delivery.",
+  },
+  {
+    title: "Technology & data",
+    text: "SAP and ERP, integration, information, reporting and the technical dependencies behind change.",
+  },
+  {
+    title: "Programme delivery",
+    text: "Leadership, governance, workstream ownership and specialist capability that keep execution moving.",
+  },
+];
+
 export const engagementModels = [
   {
     number: "01",

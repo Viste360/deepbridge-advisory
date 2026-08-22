@@ -10,7 +10,9 @@ DeepBridge supports organisations and independent consultants across the United 
 
 ## What the company does
 
-DeepBridge helps organisations clarify specialist transformation requirements, identify a focused group of relevant independent consultants, and coordinate the practical route through contracting, onboarding and delivery. The operating model prioritises relevance and continued involvement over high-volume candidate submissions.
+DeepBridge helps organisations shape transformation requirements from the first brief, connect programme design with the capability required, identify a focused group of relevant independent consultants, and coordinate the practical route through contracting, onboarding and delivery. The operating model prioritises relevance and continued involvement over high-volume candidate submissions.
+
+The transformation approach spans five connected stages: frame the ambition, operating context and constraints; design workstreams, governance and capability; mobilise experienced specialists; keep capability aligned through delivery; and plan knowledge transfer and operational ownership so the change can hold beyond launch.
 
 The four connected areas of expertise are:
 
@@ -77,4 +79,4 @@ Source: https://www.deepbridgeadvisory.co.uk/insights/building-cross-border-tran
 
 Email: hello@deepbridgeadvisory.co.uk
 
-Last reviewed: 13 August 2026.
+Last reviewed: 22 August 2026.

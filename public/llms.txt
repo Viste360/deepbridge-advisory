@@ -1,6 +1,6 @@
 # DeepBridge Advisory
 
-> DeepBridge Advisory is a UK-based specialist advisory and delivery partner helping organisations build experienced independent teams for complex transformation programmes across the UK and Europe.
+> DeepBridge Advisory is a UK-based transformation advisory and delivery partner helping organisations shape programmes from the first brief, build experienced independent teams and support complex delivery across the UK and Europe.
 
 DeepBridge Advisory is the trading name of DUSTDEEP LTD, company number 16775578, registered in England and Wales. The registered office is Kemp House, 152-160 City Road, London, United Kingdom, EC1V 2NX.
 
@@ -10,6 +10,10 @@ DeepBridge Advisory is the trading name of DUSTDEEP LTD, company number 16775578
 - [Supply chain transformation](https://www.deepbridgeadvisory.co.uk/expertise): specialist capability across planning, procurement, logistics, manufacturing and operating-model change.
 - [Data and business intelligence](https://www.deepbridgeadvisory.co.uk/expertise): expertise spanning data strategy, governance, migration, analytics and business intelligence.
 - [Programme leadership and delivery](https://www.deepbridgeadvisory.co.uk/expertise): experienced programme, workstream and change leadership for complex delivery.
+
+## Transformation approach
+
+DeepBridge can engage while a requirement is still taking shape. The approach connects five stages: frame the ambition and constraints; design workstreams and governance; mobilise specialist capability; support delivery as priorities evolve; and plan for knowledge transfer and operational ownership.
 
 ## Who DeepBridge supports
 
@@ -33,4 +37,4 @@ DeepBridge Advisory is the trading name of DUSTDEEP LTD, company number 16775578
 - Sitemap: https://www.deepbridgeadvisory.co.uk/sitemap.xml
 - Extended company briefing: https://www.deepbridgeadvisory.co.uk/llms-full.txt
 
-Last updated: 13 August 2026.
+Last updated: 22 August 2026.

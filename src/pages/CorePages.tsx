@@ -25,20 +25,48 @@ export function ExpertisePage() {
       <PageMeta path="/expertise" schema={buildServiceSchema()} />
       <PageHero
         eyebrow="Expertise"
-        title="Specialist capability where transformation gets complex."
-        intro="DeepBridge focuses on the programme environments where operational context, technology and delivery discipline must work together."
+        title="Transformation capability, shaped from the start."
+        intro="DeepBridge works where operating context, technology and delivery discipline must be designed together—then supported by specialists who can make the work real."
         aside={
           <ButtonLink to="/contact?type=client#contact-form">
             Discuss your requirement
           </ButtonLink>
         }
       />
+      <section className="section expertise-architecture-section">
+        <div className="shell expertise-architecture-grid">
+          <figure>
+            <img
+              src="/images/transformation/transformation-planning.webp"
+              width="1536"
+              height="1024"
+              loading="lazy"
+              alt="Transformation specialists shaping a programme plan"
+            />
+            <figcaption>Programme framing · capability architecture · mobilisation</figcaption>
+          </figure>
+          <div>
+            <p className="eyebrow">Before mobilisation</p>
+            <h2>Build the programme before you build the team.</h2>
+            <p>
+              A strong transformation team begins with a coherent view of the
+              work: the business outcome, programme stage, decision rights,
+              dependencies and delivery environment.
+            </p>
+            <p>
+              DeepBridge uses that context to shape clearer requirements and
+              identify specialists whose experience fits the programme—not only
+              the role title.
+            </p>
+          </div>
+        </div>
+      </section>
       <section className="section">
         <div className="shell">
           <SectionHeading
             eyebrow="Transformation capability"
             title="Four connected areas of expertise"
-            text="We identify independent specialists whose experience is relevant to the workstream, industry setting and stage of delivery."
+            text="We connect programme design with independent specialists whose experience is relevant to the workstream, industry setting and stage of delivery."
           />
           <ExpertiseGrid detailed />
         </div>
