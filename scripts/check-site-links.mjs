@@ -21,8 +21,9 @@ function decodeHtml(value) {
 
 // The generator emits ordinary, quoted HTML. Ignore raw script/style contents so
 // strings inside bundles or JSON-LD cannot be mistaken for actual DOM links.
-function parseMarkup(html) {
-  const markup = html.replace(/<!--[\s\S]*?-->/g, "")
+export function parseMarkup(html) {
+  // Keep a boundary so removing a comment cannot join surrounding HTML tokens.
+  const markup = html.replace(/<!--[\s\S]*?-->/g, " ")
     .replace(/(<(script|style)\b[^>]*>)[\s\S]*?<\/\2\s*>/gi, "$1");
   const tags = [];
   const ids = new Set();
