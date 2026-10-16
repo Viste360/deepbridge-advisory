@@ -136,13 +136,13 @@ describe("portal countersignature PDFs", () => {
     expect(countersignatureRecord).toContain("CORPORATE EXECUTION STAMP");
     expect(countersignatureRecord).toContain("COUNTERSIGNED AT");
     expect(countersignatureRecord).not.toMatch(/(?:^|\s)SIGNED AT(?:$|\s)/);
-    expect(countersignatureRecord).toContain("DUSTDEEP LTD");
+    expect(countersignatureRecord).toContain("DEEPBRIDGE ADVISORY LTD");
     expect(countersignatureRecord).toContain("Company no. 16775578");
     expect(countersignatureRecord).toContain(
-      "Kemp House, 152-160 City Road",
+      "71–75 Shelton Street, Covent Garden",
     );
     expect(countersignatureRecord).toContain(
-      "London, United Kingdom, EC1V 2NX",
+      "London WC2H 9JQ, United Kingdom",
     );
     await extracted.destroy();
 

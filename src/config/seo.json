@@ -1,37 +1,37 @@
 {
-  "siteUrl": "https://www.deepbridgeadvisory.co.uk",
+  "siteUrl": "https://deepbridgeadvisory.com",
   "siteName": "DeepBridge Advisory",
   "socialImagePath": "/og.png",
   "pages": {
     "/": {
-      "title": "DeepBridge Advisory | Transformation Advisory & Specialist Delivery",
-      "description": "DeepBridge helps organisations shape transformation programmes, build experienced specialist teams and support delivery across the UK, Spain, DACH, the US and Latin America.",
-      "lastModified": "2026-08-22"
+      "title": "DeepBridge Advisory | Industrial Transformation & Project Delivery",
+      "description": "DeepBridge supports industrial businesses through SAP transformation, operations and interim leadership, with project coordination and a European focus on Germany.",
+      "lastModified": "2026-10-16"
     },
     "/expertise": {
-      "title": "Transformation Expertise | DeepBridge Advisory",
-      "description": "Transformation capability shaped from the start across SAP and ERP, supply chain, data and business intelligence, and programme leadership.",
-      "lastModified": "2026-08-22"
+      "title": "Industrial Expertise | DeepBridge Advisory",
+      "description": "Explore support across SAP and business transformation, operations and supply chain, interim leadership and finance for demanding industrial projects.",
+      "lastModified": "2026-10-16"
     },
     "/for-clients": {
-      "title": "For Clients | DeepBridge Advisory",
-      "description": "Focused specialist search, team build-out and engagement coordination for demanding international transformation programmes.",
-      "lastModified": "2026-08-22"
+      "title": "How We Work | DeepBridge Advisory",
+      "description": "From clear scope and professional selection to mobilisation, progress reviews, issue coordination and handover. Involvement agreed for each assignment.",
+      "lastModified": "2026-10-16"
     },
     "/for-consultants": {
-      "title": "For Independent Consultants | DeepBridge Advisory",
-      "description": "Join the DeepBridge international network for relevant transformation opportunities across the UK, Spain, DACH, the US and Latin America.",
-      "lastModified": "2026-08-22"
+      "title": "For Professionals | DeepBridge Advisory",
+      "description": "Bring your expertise to industrial projects. Join our network of independent professionals across SAP, operations, supply chain, data, finance and programme leadership.",
+      "lastModified": "2026-10-16"
     },
     "/about": {
       "title": "About DeepBridge Advisory",
-      "description": "An international transformation advisory and delivery partner supporting organisations across the UK, Spain, DACH, the US, Central and South America.",
-      "lastModified": "2026-08-22"
+      "description": "DeepBridge connects industrial project needs with experienced professionals and practical delivery coordination. European focus: London, Munich and Madrid.",
+      "lastModified": "2026-10-16"
     },
     "/insights": {
-      "title": "Transformation Insights | DeepBridge Advisory",
-      "description": "Practical guidance on transformation requirements, SAP programme support and building specialist teams across international markets.",
-      "lastModified": "2026-08-22"
+      "title": "Industrial Transformation Insights | DeepBridge Advisory",
+      "description": "Practical guidance on defining transformation assignments, independent SAP expertise and building teams for cross-border programmes.",
+      "lastModified": "2026-10-16"
     },
     "/insights/defining-transformation-consultant-requirement": {
       "title": "How to Define a Transformation Consultant Requirement | DeepBridge",
@@ -59,37 +59,213 @@
     },
     "/opportunities": {
       "title": "Current Opportunities | DeepBridge Advisory",
-      "description": "View current independent consulting opportunities managed by DeepBridge Advisory.",
-      "lastModified": "2026-07-26"
+      "description": "Explore the route to current independent professional and interim management assignments with DeepBridge Advisory.",
+      "lastModified": "2026-10-16"
     },
     "/contact": {
-      "title": "Contact DeepBridge Advisory",
-      "description": "Discuss an international transformation requirement, join our consultant network or make a general enquiry.",
-      "lastModified": "2026-08-22"
+      "title": "Discuss Your Project | DeepBridge Advisory",
+      "description": "Discuss an industrial project or join the DeepBridge professional network. European focus: London, Munich and Madrid.",
+      "lastModified": "2026-10-16"
     },
     "/privacy": {
       "title": "Privacy Notice | DeepBridge Advisory",
       "description": "How DeepBridge Advisory collects, uses, retains and protects personal information.",
-      "lastModified": "2026-07-26"
+      "lastModified": "2026-10-16"
     },
     "/cookies": {
       "title": "Cookie Information | DeepBridge Advisory",
       "description": "Information about the essential technologies used by the DeepBridge Advisory website.",
-      "lastModified": "2026-07-26"
+      "lastModified": "2026-10-16"
     },
     "/legal": {
       "title": "Legal Notice | DeepBridge Advisory",
-      "description": "Corporate details and legal information for the DeepBridge Advisory website.",
-      "lastModified": "2026-08-22"
+      "description": "Corporate details and legal information for DEEPBRIDGE ADVISORY LTD, registered in England and Wales under company number 16775578.",
+      "lastModified": "2026-10-16"
     },
     "/accessibility": {
       "title": "Accessibility | DeepBridge Advisory",
       "description": "Our approach to making the DeepBridge Advisory website accessible.",
-      "lastModified": "2026-07-26"
+      "lastModified": "2026-10-16"
     },
     "/404": {
       "title": "Page Not Found | DeepBridge Advisory",
       "description": "The requested page could not be found."
+    },
+    "/de": {
+      "title": "DeepBridge Advisory | Industrieprojekte & Interim Management",
+      "description": "DeepBridge unterstützt Industrieunternehmen bei SAP-Transformationen, operativen Verbesserungen und Interim Management. Europäischer Fokus mit Schwerpunkt Deutschland.",
+      "lastModified": "2026-10-16"
+    },
+    "/de/expertise": {
+      "title": "Leistungen für Industrieprojekte | DeepBridge Advisory",
+      "description": "Unterstützung für SAP und Unternehmenstransformation, Operations und Supply Chain sowie Interim Management und Finance in anspruchsvollen Industrieprojekten.",
+      "lastModified": "2026-10-16"
+    },
+    "/de/for-clients": {
+      "title": "Zusammenarbeit | DeepBridge Advisory",
+      "description": "Von Auftragsklärung und Expertenauswahl bis zu Einsatzvorbereitung, Fortschrittsgesprächen und Übergabe. Der Umfang unserer Begleitung wird individuell vereinbart.",
+      "lastModified": "2026-10-16"
+    },
+    "/de/for-consultants": {
+      "title": "Für Experten | DeepBridge Advisory",
+      "description": "Bringen Sie Ihre Expertise in Industrieprojekte ein. Unser Netzwerk verbindet Fachleute für SAP, Operations, Supply Chain, Daten, Finance und Projektführung.",
+      "lastModified": "2026-10-16"
+    },
+    "/de/about": {
+      "title": "Über DeepBridge Advisory",
+      "description": "DeepBridge verbindet Industrieprojekte mit erfahrenen Fachleuten und einer praxisnahen Begleitung der Umsetzung. Europäischer Fokus: London, München und Madrid.",
+      "lastModified": "2026-10-16"
+    },
+    "/de/insights": {
+      "title": "Einblicke in Industrieprojekte | DeepBridge Advisory",
+      "description": "Praktische Orientierung zur Auftragsklärung, unabhängiger SAP-Expertise und zum Aufbau von Teams für grenzüberschreitende Transformationsprogramme.",
+      "lastModified": "2026-10-16"
+    },
+    "/de/insights/defining-transformation-consultant-requirement": {
+      "title": "Bedarf an Transformationsberatern definieren | DeepBridge",
+      "description": "Ein praktischer Leitfaden, um einen allgemeinen Transformationsbedarf in einen klaren, prüfbaren und umsetzbaren Beratungsauftrag zu übersetzen.",
+      "type": "article",
+      "published": "2026-08-13T09:00:00+01:00",
+      "modified": "2026-08-13T09:00:00+01:00",
+      "lastModified": "2026-10-16"
+    },
+    "/de/insights/when-sap-programme-needs-independent-specialist-support": {
+      "title": "Wann ein SAP-Programm unabhängige Experten braucht | DeepBridge",
+      "description": "Praktische Anzeichen dafür, dass eine SAP-Transformation gezielte unabhängige Expertise neben internen Teams und Umsetzungspartnern benötigt.",
+      "type": "article",
+      "published": "2026-08-13T09:00:00+01:00",
+      "modified": "2026-08-13T09:00:00+01:00",
+      "lastModified": "2026-10-16"
+    },
+    "/de/insights/building-cross-border-transformation-teams-uk-europe": {
+      "title": "Internationale Transformationsteams aufbauen | DeepBridge",
+      "description": "Ein praktischer Leitfaden zu Kompetenzen, Steuerung, Einsatzorten und Rahmenbedingungen für Transformationsteams in Großbritannien, Europa und Amerika.",
+      "type": "article",
+      "published": "2026-08-13T09:00:00+01:00",
+      "modified": "2026-08-22T12:00:00+02:00",
+      "lastModified": "2026-10-16"
+    },
+    "/de/opportunities": {
+      "title": "Projektmöglichkeiten | DeepBridge Advisory",
+      "description": "Erfahren Sie, wie Sie passende Projekteinsätze als selbstständiger Experte oder Interim-Manager mit DeepBridge Advisory finden können.",
+      "lastModified": "2026-10-16"
+    },
+    "/de/contact": {
+      "title": "Projekt besprechen | DeepBridge Advisory",
+      "description": "Besprechen Sie Ihr Industrieprojekt oder werden Sie Teil des DeepBridge-Expertennetzwerks. Europäischer Fokus: London, München und Madrid.",
+      "lastModified": "2026-10-16"
+    },
+    "/de/privacy": {
+      "title": "Datenschutz | DeepBridge Advisory",
+      "description": "Informationen zur Erhebung, Verwendung, Speicherung und zum Schutz personenbezogener Daten durch DeepBridge Advisory.",
+      "lastModified": "2026-10-16"
+    },
+    "/de/cookies": {
+      "title": "Cookie-Informationen | DeepBridge Advisory",
+      "description": "Informationen zu den erforderlichen Technologien auf der Website von DeepBridge Advisory.",
+      "lastModified": "2026-10-16"
+    },
+    "/de/legal": {
+      "title": "Impressum | DeepBridge Advisory",
+      "description": "Unternehmensangaben und rechtliche Informationen zu DEEPBRIDGE ADVISORY LTD, registriert in England und Wales unter der Nummer 16775578.",
+      "lastModified": "2026-10-16"
+    },
+    "/de/accessibility": {
+      "title": "Barrierefreiheit | DeepBridge Advisory",
+      "description": "Unser Ansatz für eine zugängliche Website von DeepBridge Advisory und Kontaktmöglichkeiten bei Barrieren.",
+      "lastModified": "2026-10-16"
+    },
+    "/de/404": {
+      "title": "Seite nicht gefunden | DeepBridge Advisory",
+      "description": "Die angeforderte Seite wurde nicht gefunden."
+    },
+    "/es": {
+      "title": "DeepBridge Advisory | Transformación industrial y ejecución de proyectos",
+      "description": "DeepBridge apoya a empresas industriales en transformación SAP, mejora operativa y dirección interina, con coordinación de proyectos y enfoque europeo.",
+      "lastModified": "2026-10-16"
+    },
+    "/es/expertise": {
+      "title": "Especialidades para proyectos industriales | DeepBridge Advisory",
+      "description": "Apoyo para SAP y transformación empresarial, operaciones y cadena de suministro, dirección interina y finanzas en proyectos industriales exigentes.",
+      "lastModified": "2026-10-16"
+    },
+    "/es/for-clients": {
+      "title": "Cómo trabajamos | DeepBridge Advisory",
+      "description": "Del alcance y la selección de profesionales a la incorporación, el seguimiento, la coordinación de incidencias y el traspaso. Implicación acordada en cada encargo.",
+      "lastModified": "2026-10-16"
+    },
+    "/es/for-consultants": {
+      "title": "Para profesionales | DeepBridge Advisory",
+      "description": "Aporte su experiencia a proyectos industriales. Nuestra red conecta especialistas en SAP, operaciones, cadena de suministro, datos, finanzas y dirección de programas.",
+      "lastModified": "2026-10-16"
+    },
+    "/es/about": {
+      "title": "Quiénes somos | DeepBridge Advisory",
+      "description": "DeepBridge conecta las necesidades de proyectos industriales con profesionales experimentados y coordinación práctica. Enfoque europeo: Londres, Múnich y Madrid.",
+      "lastModified": "2026-10-16"
+    },
+    "/es/insights": {
+      "title": "Perspectivas sobre transformación industrial | DeepBridge Advisory",
+      "description": "Orientación práctica para definir encargos de transformación, incorporar especialistas SAP independientes y formar equipos para programas internacionales.",
+      "lastModified": "2026-10-16"
+    },
+    "/es/insights/defining-transformation-consultant-requirement": {
+      "title": "Cómo definir un encargo de consultoría de transformación | DeepBridge",
+      "description": "Un marco práctico para convertir una necesidad general de transformación en un encargo de consultoría concreto que pueda evaluarse y ejecutarse.",
+      "type": "article",
+      "published": "2026-08-13T09:00:00+01:00",
+      "modified": "2026-08-13T09:00:00+01:00",
+      "lastModified": "2026-10-16"
+    },
+    "/es/insights/when-sap-programme-needs-independent-specialist-support": {
+      "title": "Cuándo necesita un programa SAP apoyo independiente | DeepBridge",
+      "description": "Señales prácticas de que una transformación SAP puede necesitar experiencia independiente específica junto a los equipos internos y los socios de implantación.",
+      "type": "article",
+      "published": "2026-08-13T09:00:00+01:00",
+      "modified": "2026-08-13T09:00:00+01:00",
+      "lastModified": "2026-10-16"
+    },
+    "/es/insights/building-cross-border-transformation-teams-uk-europe": {
+      "title": "Equipos de transformación para programas internacionales | DeepBridge",
+      "description": "Una guía práctica sobre capacidades, gobernanza, ubicación y condiciones de colaboración cuando los equipos abarcan Reino Unido, Europa y América.",
+      "type": "article",
+      "published": "2026-08-13T09:00:00+01:00",
+      "modified": "2026-08-22T12:00:00+02:00",
+      "lastModified": "2026-10-16"
+    },
+    "/es/opportunities": {
+      "title": "Oportunidades profesionales | DeepBridge Advisory",
+      "description": "Conozca cómo acceder a encargos de consultoría independiente y dirección interina adecuados a su experiencia con DeepBridge Advisory.",
+      "lastModified": "2026-10-16"
+    },
+    "/es/contact": {
+      "title": "Hablemos de su proyecto | DeepBridge Advisory",
+      "description": "Háblenos de su proyecto industrial o únase a la red de profesionales de DeepBridge. Enfoque europeo: Londres, Múnich y Madrid.",
+      "lastModified": "2026-10-16"
+    },
+    "/es/privacy": {
+      "title": "Privacidad | DeepBridge Advisory",
+      "description": "Información sobre cómo DeepBridge Advisory recoge, utiliza, conserva y protege los datos personales.",
+      "lastModified": "2026-10-16"
+    },
+    "/es/cookies": {
+      "title": "Información sobre cookies | DeepBridge Advisory",
+      "description": "Información sobre las tecnologías esenciales utilizadas en el sitio web de DeepBridge Advisory.",
+      "lastModified": "2026-10-16"
+    },
+    "/es/legal": {
+      "title": "Aviso legal | DeepBridge Advisory",
+      "description": "Datos societarios e información legal de DEEPBRIDGE ADVISORY LTD, registrada en Inglaterra y Gales con el número de sociedad 16775578.",
+      "lastModified": "2026-10-16"
+    },
+    "/es/accessibility": {
+      "title": "Accesibilidad | DeepBridge Advisory",
+      "description": "Nuestro enfoque para un sitio web accesible de DeepBridge Advisory y cómo comunicar dificultades de acceso.",
+      "lastModified": "2026-10-16"
+    },
+    "/es/404": {
+      "title": "Página no encontrada | DeepBridge Advisory",
+      "description": "No se ha encontrado la página solicitada."
     }
   }
 }

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { expertise, processSteps } from "../content/siteContent";
+import { getExpertise, getProcessSteps } from "../content/siteContent";
+import { useLocale } from "../i18n";
 
 export function SectionHeading({
   eyebrow,
@@ -31,8 +32,9 @@ export function ButtonLink({
   children: ReactNode;
   variant?: "primary" | "secondary" | "text";
 }) {
+  const { path } = useLocale();
   return (
-    <Link className={`button button-${variant}`} to={to}>
+    <Link className={`button button-${variant}`} to={path(to)}>
       {children}
       <span className="direction-arrow" aria-hidden="true">
         →
@@ -69,9 +71,11 @@ export function PageHero({
 }
 
 export function ExpertiseGrid({ detailed = false }: { detailed?: boolean }) {
+  const { locale, path, t } = useLocale();
+  const expertise = getExpertise(locale);
   return (
     <div className={`expertise-grid ${detailed ? "is-detailed" : ""}`}>
-      {expertise.map((item) => (
+      {expertise.map((item, index) => (
         <article className="expertise-item" key={item.code}>
           <div className="expertise-topline">
             <span>{item.code}</span>
@@ -88,6 +92,7 @@ export function ExpertiseGrid({ detailed = false }: { detailed?: boolean }) {
               ))}
             </ul>
           )}
+          <Link className="expertise-link" to={path(`/expertise#${["sap", "operations", "leadership"][index]}`)}>{t("Explore this expertise", "Mehr erfahren", "Más información")} <span aria-hidden="true">↗</span></Link>
         </article>
       ))}
     </div>
@@ -95,6 +100,8 @@ export function ExpertiseGrid({ detailed = false }: { detailed?: boolean }) {
 }
 
 export function ProcessSection({ compact = false }: { compact?: boolean }) {
+  const { locale } = useLocale();
+  const processSteps = getProcessSteps(locale);
   return (
     <div className={`process-grid ${compact ? "is-compact" : ""}`}>
       {processSteps.map((step) => (
@@ -109,34 +116,11 @@ export function ProcessSection({ compact = false }: { compact?: boolean }) {
 }
 
 export function SplitCta() {
-  return (
-    <section className="split-cta">
-      <div className="shell split-cta-grid">
-        <article>
-          <p className="eyebrow">For organisations</p>
-          <h2>Building or strengthening a transformation team?</h2>
-          <p>
-            Tell us what the programme needs, where the work will take place and
-            when support is required.
-          </p>
-          <ButtonLink to="/contact?type=client#contact-form">
-            Discuss your requirement
-          </ButtonLink>
-        </article>
-        <article>
-          <p className="eyebrow">For independent specialists</p>
-          <h2>Looking for your next meaningful programme?</h2>
-          <p>
-            Join our international network for relevant transformation project
-            opportunities across our core markets.
-          </p>
-          <ButtonLink to="/contact?type=consultant" variant="secondary">
-            Join our network
-          </ButtonLink>
-        </article>
-      </div>
-    </section>
-  );
+  const { t } = useLocale();
+  return <section className="split-cta"><div className="shell split-cta-grid">
+    <article><p className="eyebrow">{t("For organisations", "Für Unternehmen", "Para empresas")}</p><h2>{t("What does your project need next?", "Was braucht Ihr Projekt als Nächstes?", "¿Qué necesita su proyecto para avanzar?")}</h2><p>{t("Tell us about the assignment, the operating challenge and the expertise you need. We will help clarify the next step.", "Beschreiben Sie uns die Aufgabe, die operative Herausforderung und die benötigte Expertise. Gemeinsam klären wir den nächsten Schritt.", "Cuéntenos el objetivo, el reto operativo y la experiencia que necesita. Le ayudaremos a definir el siguiente paso.")}</p><ButtonLink to="/contact?type=client#contact-form">{t("Discuss your project", "Projekt besprechen", "Hablemos de su proyecto")}</ButtonLink></article>
+    <article><p className="eyebrow">{t("For professionals", "Für Experten", "Para profesionales")}</p><h2>{t("Bring your expertise to the next challenge.", "Bringen Sie Ihre Expertise in die nächste Aufgabe ein.", "Aporte su experiencia al próximo reto.")}</h2><p>{t("Connect with us about industrial assignments across SAP, operations, supply chain, data, finance and programme leadership.", "Sprechen Sie mit uns über Industrieprojekte in SAP, Operations, Supply Chain, Daten, Finance und Projektführung.", "Hablemos de proyectos industriales en SAP, operaciones, cadena de suministro, datos, finanzas y dirección de programas.")}</p><ButtonLink to="/contact?type=consultant#contact-form" variant="secondary">{t("Join our network", "Teil unseres Netzwerks werden", "Únase a nuestra red")}</ButtonLink></article>
+  </div></section>;
 }
 
 export function Notice({ children }: { children: ReactNode }) {
@@ -157,14 +141,15 @@ export function LegalPage({
   intro: string;
   children: ReactNode;
 }) {
+  const { t } = useLocale();
   return (
     <>
-      <PageHero eyebrow="Website information" title={title} intro={intro} />
+      <PageHero eyebrow={t("Website information", "Informationen zur Website", "Información del sitio web")} title={title} intro={intro} />
       <section className="section legal-section">
         <div className="shell legal-layout">
-          <aside className="legal-sidebar" aria-label="Legal information">
+          <aside className="legal-sidebar" aria-label={t("Legal information", "Rechtliche Informationen", "Información legal")}>
             <p>DeepBridge Advisory</p>
-            <span>Clear information, kept current.</span>
+            <span>{t("Clear information, kept current.", "Klare und aktuelle Informationen.", "Información clara y actualizada.")}</span>
           </aside>
           <div className="prose">{children}</div>
         </div>

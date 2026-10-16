@@ -20,6 +20,7 @@ import {
   useParams,
 } from "react-router-dom";
 import { adminSnapshot, consultantSnapshot } from "./demoData";
+import { company } from "../config/site";
 import {
   acknowledgeDocument,
   completeAuthCallback,
@@ -317,7 +318,7 @@ function LoginPage({
           <p className="portal-login-footnote">
             Access is restricted to invited users. By continuing, you agree to
             the <Link to="/terms">portal terms</Link> and acknowledge the{" "}
-            <Link to="/privacy">privacy notice</Link>.
+            <Link to="/privacy?context=portal">privacy notice</Link>.
           </p>
         </div>
       </section>
@@ -405,7 +406,7 @@ function PortalLegalPage({ kind }: { kind: "privacy" | "terms" }) {
         {kind === "privacy" ? (
           <>
             <p>
-              DustDeep Ltd, trading as DeepBridge Advisory, uses the information
+              {company.legalName} uses the information
               in this portal to administer consulting engagements, complete
               proportionate compliance checks, manage assignments and maintain
               contractual records.
@@ -450,8 +451,10 @@ function PortalLegalPage({ kind }: { kind: "privacy" | "terms" }) {
           </>
         )}
         <p>
-          DustDeep Ltd · Company number 16775578 · Kemp House, 152–160 City
-          Road, London, EC1V 2NX, United Kingdom
+          {company.legalName} · Company number {company.companyNumber} · {company.registeredOffice}
+        </p>
+        <p>
+          <a href={`mailto:${company.contactEmail}`}>{company.contactEmail}</a>
         </p>
         <Link className="portal-text-link" to="/login">
           Return to sign in
@@ -1143,7 +1146,7 @@ function DocumentDetailPage() {
           </div>
           <div className="portal-paper">
             <Brand />
-            <p className="portal-document-overline">DustDeep Ltd</p>
+            <p className="portal-document-overline">{company.legalName}</p>
             <h2>{document.title}</h2>
             <p className="portal-document-lede">{document.description}</p>
             <div className="portal-document-rule" />
@@ -1380,7 +1383,7 @@ function CompliancePage() {
           Files are stored privately and checked before review. PDF, JPG and PNG
           files are accepted, up to 10 MB each. Redact unrelated personal
           information where appropriate.{" "}
-          <Link to="/privacy">Read the privacy information</Link>.
+          <Link to="/privacy?context=portal">Read the privacy information</Link>.
         </p>
       </div>
       {message ? (
@@ -1971,12 +1974,12 @@ function demoOrganisations(): AdminOrganisation[] {
   return [
     {
       id: "demo-deepbridge-uk",
-      legalName: "DUSTDEEP LTD",
-      tradingName: "DeepBridge Advisory",
-      companyNumber: "16775578",
+      legalName: company.legalName,
+      tradingName: "",
+      companyNumber: company.companyNumber,
       countryCode: "GB",
       relationshipTypes: ["deepbridge_entity"],
-      registeredAddress: "London, United Kingdom",
+      registeredAddress: company.registeredOffice,
       website: "https://deepbridgeadvisory.com",
       taxNumber: "",
       notes: "",
@@ -4183,7 +4186,7 @@ function AdminContractCountersignDialog({
             <span>
               {isIntercompany
                 ? `I reviewed the complete agreement, I am authorised to sign for ${activeIntercompanyOrganisation}, and I intend this electronic ${intercompanySigningOrder === 1 ? "signature" : "countersignature"} to bind that company.`
-                : "I reviewed the complete counterparty-signed contract, I am authorised to sign for DUSTDEEP LTD trading as DeepBridge Advisory, and intend this electronic countersignature to bind DeepBridge."}
+                : "I reviewed the complete counterparty-signed contract, I am authorised to sign for DEEPBRIDGE ADVISORY LTD, and intend this electronic countersignature to bind DeepBridge."}
             </span>
           </label>
           {error ? (
@@ -7562,10 +7565,9 @@ function AdminCountersignDialog({
                       <span>Advisory</span>
                     </p>
                   </div>
-                  <b>DUSTDEEP LTD</b>
-                  <p>Registered in England and Wales · Company no. 16775578</p>
-                  <p>Kemp House, 152–160 City Road</p>
-                  <p>London, United Kingdom, EC1V 2NX</p>
+                  <b>{company.legalName}</b>
+                  <p>Registered in {company.registeredIn} · Company no. {company.companyNumber}</p>
+                  <p>{company.registeredOffice}</p>
                 </div>
                 <p className="portal-signature-date">
                   Signing date:{" "}
@@ -8246,6 +8248,9 @@ export function PortalApp() {
 
   if (loading && !publicRoute) return <LoadingPortal />;
   if (error && !publicRoute) return <ErrorPortal message={error} />;
+  // Legal information remains available before and after a session is loaded.
+  if (location.pathname === "/privacy") return <PortalLegalPage kind="privacy" />;
+  if (location.pathname === "/terms") return <PortalLegalPage kind="terms" />;
 
   if (!snapshot || !contextValue) {
     return (
@@ -8255,8 +8260,6 @@ export function PortalApp() {
           element={<LoginPage onDemoSignIn={enterDemoRole} />}
         />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
-        <Route path="/privacy" element={<PortalLegalPage kind="privacy" />} />
-        <Route path="/terms" element={<PortalLegalPage kind="terms" />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );

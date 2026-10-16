@@ -1,40 +1,72 @@
 # DeepBridge Advisory
 
-> DeepBridge Advisory is a UK-based transformation advisory and delivery partner helping organisations shape programmes from the first brief, build experienced independent teams and support complex delivery across the United Kingdom, Spain, DACH, the United States, Central America and South America.
+> DeepBridge supports industrial businesses through SAP transformation, operational improvement and interim leadership. We bring together experienced professionals, define the assignment and stay involved through delivery, coordination and handover. European focus: London · Munich · Madrid, with particular attention to industrial programmes in Germany.
 
-DeepBridge Advisory is the trading name of DUSTDEEP LTD, company number 16775578, registered in England and Wales. The registered office is Kemp House, 152-160 City Road, London, United Kingdom, EC1V 2NX.
+The website operator is DEEPBRIDGE ADVISORY LTD, company number 16775578, registered in England and Wales. The registered office is 71–75 Shelton Street, Covent Garden, London WC2H 9JQ, United Kingdom. The European city line describes strategic focus, not a claim of three physical offices.
 
-## Core services
+## Expertise
 
-- [SAP and ERP transformation](https://www.deepbridgeadvisory.co.uk/expertise): independent specialists supporting SAP S/4HANA and enterprise resource planning programmes.
-- [Supply chain transformation](https://www.deepbridgeadvisory.co.uk/expertise): specialist capability across planning, procurement, logistics, manufacturing and operating-model change.
-- [Data and business intelligence](https://www.deepbridgeadvisory.co.uk/expertise): expertise spanning data strategy, governance, migration, analytics and business intelligence.
-- [Programme leadership and delivery](https://www.deepbridgeadvisory.co.uk/expertise): experienced programme, workstream and change leadership for complex delivery.
+- [SAP & Business Transformation](https://deepbridgeadvisory.com/expertise): SAP S/4HANA programmes, business processes, planning, operational data, Power BI reporting and workstream coordination.
+- [Operations & Supply Chain](https://deepbridgeadvisory.com/expertise): planning, production, logistics, inventory, order-to-delivery improvement and operational stabilisation.
+- [Interim Leadership & Finance](https://deepbridgeadvisory.com/expertise): interim management, finance and controlling, programme leadership, transformation PMO and operational coordination.
 
-## Transformation approach
+Specific capability, availability, scope and deliverables are assessed for each assignment. These areas are not a claim of completed project experience in every listed discipline.
 
-DeepBridge can engage while a requirement is still taking shape. The approach connects five stages: frame the ambition and constraints; design workstreams and governance; mobilise specialist capability; support delivery as priorities evolve; and plan for knowledge transfer and operational ownership.
+## How we work
 
-## Who DeepBridge supports
+Define the requirement and responsibilities; assemble relevant expertise; mobilise the assignment; oversee agreed progress reviews and issue coordination; transition through handover and continuity planning. The level of DeepBridge involvement is agreed for each assignment.
 
-- [For clients](https://www.deepbridgeadvisory.co.uk/for-clients): focused specialist search, transformation team build-out, contracting, onboarding and delivery coordination.
-- [For independent consultants](https://www.deepbridgeadvisory.co.uk/for-consultants): relevant transformation opportunities across DeepBridge's international markets.
-- [About DeepBridge](https://www.deepbridgeadvisory.co.uk/about): company purpose, principles and cross-border approach.
+- [How We Work](https://deepbridgeadvisory.com/for-clients)
+- [For Professionals](https://deepbridgeadvisory.com/for-consultants)
+- [About DeepBridge](https://deepbridgeadvisory.com/about)
+- [Opportunities](https://deepbridgeadvisory.com/opportunities)
+- [Discuss a project](https://deepbridgeadvisory.com/contact?type=client#contact-form)
+- [Join the professional network](https://deepbridgeadvisory.com/contact?type=consultant#contact-form)
+
+## Deutsch
+
+DeepBridge unterstützt Industrieunternehmen bei SAP-Transformationen, operativen Verbesserungen und Interim-Management-Aufgaben. Wir bringen erfahrene Fachleute zusammen, klären den Auftrag und begleiten die Zusammenarbeit von der Mobilisierung bis zur Übergabe. Europäischer Fokus: London · München · Madrid. Der Umfang unserer Begleitung wird für jeden Auftrag individuell vereinbart.
+
+- [Deutsche Website](https://deepbridgeadvisory.com/de)
+- [Leistungen](https://deepbridgeadvisory.com/de/expertise)
+- [Zusammenarbeit](https://deepbridgeadvisory.com/de/for-clients)
+- [Für Experten](https://deepbridgeadvisory.com/de/for-consultants)
+- [Über uns](https://deepbridgeadvisory.com/de/about)
+- [Einblicke](https://deepbridgeadvisory.com/de/insights)
+- [Kontakt](https://deepbridgeadvisory.com/de/contact)
+- [Impressum](https://deepbridgeadvisory.com/de/legal)
+- [Datenschutz](https://deepbridgeadvisory.com/de/privacy)
+
+## Español
+
+DeepBridge apoya a empresas industriales en la transformación SAP, la mejora operativa y la dirección interina. Reunimos a profesionales con experiencia, definimos el encargo y acompañamos la ejecución, la coordinación y el traspaso. Enfoque europeo: Londres · Múnich · Madrid. El grado de participación de DeepBridge se acuerda para cada encargo.
+
+El operador del sitio web es DEEPBRIDGE ADVISORY LTD, registrada en Inglaterra y Gales con el número 16775578. Su domicilio social es 71–75 Shelton Street, Covent Garden, London WC2H 9JQ, United Kingdom.
+
+- [Sitio web en español](https://deepbridgeadvisory.com/es)
+- [Especialidades](https://deepbridgeadvisory.com/es/expertise)
+- [Cómo trabajamos](https://deepbridgeadvisory.com/es/for-clients)
+- [Para profesionales](https://deepbridgeadvisory.com/es/for-consultants)
+- [Quiénes somos](https://deepbridgeadvisory.com/es/about)
+- [Perspectivas](https://deepbridgeadvisory.com/es/insights)
+- [Contacto](https://deepbridgeadvisory.com/es/contact)
+- [Aviso legal](https://deepbridgeadvisory.com/es/legal)
+- [Privacidad](https://deepbridgeadvisory.com/es/privacy)
 
 ## Practical insights
 
-- [How to define a transformation consultant requirement](https://www.deepbridgeadvisory.co.uk/insights/defining-transformation-consultant-requirement)
-- [When an SAP programme needs independent specialist support](https://www.deepbridgeadvisory.co.uk/insights/when-sap-programme-needs-independent-specialist-support)
-- [Building cross-border transformation teams across international markets](https://www.deepbridgeadvisory.co.uk/insights/building-cross-border-transformation-teams-uk-europe)
+- [How to define a transformation consultant requirement](https://deepbridgeadvisory.com/insights/defining-transformation-consultant-requirement)
+- [When an SAP programme needs independent specialist support](https://deepbridgeadvisory.com/insights/when-sap-programme-needs-independent-specialist-support)
+- [Building cross-border transformation teams across international markets](https://deepbridgeadvisory.com/insights/building-cross-border-transformation-teams-uk-europe)
 
 ## Contact and authoritative sources
 
-- Website: https://www.deepbridgeadvisory.co.uk/
-- Contact: hello@deepbridgeadvisory.co.uk
+- Website: https://deepbridgeadvisory.com/
+- Email: hello@deepbridgeadvisory.co.uk
 - LinkedIn: https://www.linkedin.com/company/deepbridge-advisory
-- Legal details: https://www.deepbridgeadvisory.co.uk/legal
-- Privacy notice: https://www.deepbridgeadvisory.co.uk/privacy
-- Sitemap: https://www.deepbridgeadvisory.co.uk/sitemap.xml
-- Extended company briefing: https://www.deepbridgeadvisory.co.uk/llms-full.txt
+- Legal details: https://deepbridgeadvisory.com/legal
+- Privacy notice: https://deepbridgeadvisory.com/privacy
+- Sitemap: https://deepbridgeadvisory.com/sitemap.xml
+- Extended company briefing: https://deepbridgeadvisory.com/llms-full.txt
 
-Last updated: 22 August 2026.
+Last updated: 16 October 2026.

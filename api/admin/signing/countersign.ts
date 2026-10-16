@@ -170,9 +170,9 @@ function drawKeyValue(
 
 const DEEPBRIDGE_COMPANY_NUMBER = "16775578";
 const DEEPBRIDGE_REGISTERED_OFFICE_LINE_1 =
-  "Kemp House, 152-160 City Road";
+  "71–75 Shelton Street, Covent Garden";
 const DEEPBRIDGE_REGISTERED_OFFICE_LINE_2 =
-  "London, United Kingdom, EC1V 2NX";
+  "London WC2H 9JQ, United Kingdom";
 
 function drawCentredText(
   page: PDFPage,
@@ -314,7 +314,7 @@ function drawDeepBridgeCompanySeal(
     color: rgb(0.65, 0.75, 0.72),
     opacity: stampOpacity,
   });
-  drawCentredText(page, "DUSTDEEP LTD", fonts.bold, {
+  drawCentredText(page, "DEEPBRIDGE ADVISORY LTD", fonts.bold, {
     centreX: x + width / 2,
     y: y + 60,
     size: 7,
@@ -626,7 +626,7 @@ function drawManualPdfPlacement(
 const DEEPBRIDGE_COUNTERSIGNATORY_EMAIL =
   "yon.wallace@deepbridgeadvisory.co.uk";
 const DEEPBRIDGE_SIGNED_FOR =
-  "DUSTDEEP LTD trading as DeepBridge Advisory";
+  "DEEPBRIDGE ADVISORY LTD";
 const COUNTERSIGNATURE_RECORD_VERSION = "1.0";
 const ROLAND_FRAMEWORK_DOCUMENT_ID = "7f4e5866-6dee-4484-a3d1-2b3997414d34";
 const ROLAND_SOW_DOCUMENT_ID = "3dd2a4ff-97e6-4ee2-8a3f-818c7183d2b2";
@@ -849,7 +849,7 @@ function appendCountersignatureRecordPage(
   drawWrappedText(
     page,
     input.countersignatureStatement ||
-      "I have reviewed the complete consultant-signed document and, being authorised to sign for DUSTDEEP LTD trading as DeepBridge Advisory, intend this electronic countersignature to bind DeepBridge to the document.",
+      "I have reviewed the complete consultant-signed document and, being authorised to sign for DEEPBRIDGE ADVISORY LTD, intend this electronic countersignature to bind DeepBridge to the document.",
     fonts.regular,
     {
       x: 74,

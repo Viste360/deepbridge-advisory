@@ -1,6 +1,8 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import { LocaleProvider, locales, localizePath } from "./i18n";
 import { SiteShell } from "./components/SiteShell";
+import { isPortalLocation } from "./config/appRouting";
 import {
   AboutPage,
   ClientsPage,
@@ -23,62 +25,55 @@ const PortalApp = lazy(() =>
   import("./portal/PortalApp").then((module) => ({ default: module.PortalApp })),
 );
 
-const portalPathPrefixes = [
-  "/login",
-  "/auth",
-  "/dashboard",
-  "/assignment",
-  "/documents",
-  "/compliance",
-  "/onboarding",
-  "/support",
-  "/profile",
-  "/admin",
-  "/terms",
-];
-
 export default function App() {
-  const portalHostname =
-    window.location.hostname === "portal.deepbridgeadvisory.com" ||
-    window.location.hostname.startsWith("portal.");
-  const portalPath = portalPathPrefixes.some(
-    (path) =>
-      window.location.pathname === path ||
-      window.location.pathname.startsWith(`${path}/`),
-  );
-
   return (
     <BrowserRouter>
-      {portalHostname || portalPath ? (
-        <Suspense
-          fallback={
-            <div className="portal-loading" role="status" aria-live="polite">
-              Loading secure portal…
-            </div>
-          }
-        >
-          <PortalApp />
-        </Suspense>
-      ) : (
-        <SiteShell>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/expertise" element={<ExpertisePage />} />
-            <Route path="/for-clients" element={<ClientsPage />} />
-            <Route path="/for-consultants" element={<ConsultantsPage />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/insights" element={<InsightsPage />} />
-            <Route path="/insights/:slug" element={<InsightArticlePage />} />
-            <Route path="/opportunities" element={<OpportunitiesPage />} />
-            <Route path="/contact" element={<ContactPage />} />
-            <Route path="/privacy" element={<PrivacyPage />} />
-            <Route path="/cookies" element={<CookiesPage />} />
-            <Route path="/legal" element={<LegalNoticePage />} />
-            <Route path="/accessibility" element={<AccessibilityPage />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </SiteShell>
-      )}
+      <ApplicationRoutes />
     </BrowserRouter>
   );
+}
+
+function ApplicationRoutes() {
+  const { pathname, search } = useLocation();
+  const portal = isPortalLocation(window.location.hostname, pathname, search);
+
+  return portal ? (
+    <Suspense
+      fallback={
+        <div className="portal-loading" role="status" aria-live="polite">
+          Loading secure portal…
+        </div>
+      }
+    >
+      <PortalApp />
+    </Suspense>
+  ) : (
+    <SiteRoutes />
+  );
+}
+
+
+// Shared route tree for the browser and build-time public-page rendering.
+export function SiteRoutes() {
+  const pages = [
+    ["/", <HomePage />],
+    ["/expertise", <ExpertisePage />],
+    ["/for-clients", <ClientsPage />],
+    ["/for-consultants", <ConsultantsPage />],
+    ["/about", <AboutPage />],
+    ["/insights", <InsightsPage />],
+    ["/insights/:slug", <InsightArticlePage />],
+    ["/opportunities", <OpportunitiesPage />],
+    ["/contact", <ContactPage />],
+    ["/privacy", <PrivacyPage />],
+    ["/cookies", <CookiesPage />],
+    ["/legal", <LegalNoticePage />],
+    ["/accessibility", <AccessibilityPage />],
+  ] as const;
+  return <LocaleProvider><SiteShell><Routes>
+    {pages.flatMap(([path, element]) => locales.map((locale) =>
+      <Route key={`${locale}${path}`} path={localizePath(path, locale)} element={element} />,
+    ))}
+    <Route path="*" element={<NotFoundPage />} />
+  </Routes></SiteShell></LocaleProvider>;
 }

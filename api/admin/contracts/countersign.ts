@@ -126,7 +126,7 @@ export default async function handler(
 
     const signedAt = new Date();
     const envelopeId = randomUUID();
-    const statement = "I have reviewed the complete counterparty-signed document and, being authorised to sign for DUSTDEEP LTD trading as DeepBridge Advisory, intend this electronic countersignature to bind DeepBridge to the document.";
+    const statement = "I have reviewed the complete counterparty-signed document and, being authorised to sign for DEEPBRIDGE ADVISORY LTD, intend this electronic countersignature to bind DeepBridge to the document.";
     const countersigned = await createCountersignedPdf({
       sourceBytes,
       signatureBytes,

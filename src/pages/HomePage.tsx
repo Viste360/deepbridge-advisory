@@ -1,294 +1,57 @@
-import { Link } from "react-router-dom";
 import { PageMeta } from "../components/SiteShell";
-import {
-  ButtonLink,
-  ExpertiseGrid,
-  ProcessSection,
-  SectionHeading,
-  SplitCta,
-} from "../components/Ui";
-import { commonQuestions, homeSchema } from "../config/structuredData";
-import { insights } from "../content/insights";
-import {
-  engagementModels,
-  industries,
-  transformationFoundations,
-  transformationStages,
-} from "../content/siteContent";
-
-function HeroVisual() {
-  return (
-    <figure className="hero-visual">
-      <img
-        src="/images/transformation/deepbridge-transformation-hero.webp"
-        width="1122"
-        height="1402"
-        alt="Transformation professionals reviewing a modern industrial operation"
-        fetchPriority="high"
-      />
-      <div className="hero-visual-shade" aria-hidden="true" />
-      <div className="hero-visual-grid" aria-hidden="true" />
-      <figcaption>
-        <span>Transformation, built deliberately</span>
-        <strong>Define · Mobilise · Deliver</strong>
-      </figcaption>
-    </figure>
-  );
-}
+import { ButtonLink, ExpertiseGrid, ProcessSection, SectionHeading } from "../components/Ui";
+import { buildHomeSchema } from "../config/structuredData";
+import { useLocale } from "../i18n";
+import { ProjectExperience } from "../components/ProjectExperience";
 
 export function HomePage() {
-  return (
-    <>
-      <PageMeta path="/" schema={homeSchema} />
-      <section className="home-hero">
-        <div className="shell home-hero-grid">
-          <div className="hero-copy">
-            <p className="eyebrow">Transformation advisory &amp; delivery</p>
-            <h1>
-              Build the transformation. <em>From first decision to delivery.</em>
-            </h1>
-            <p className="hero-intro">
-              DeepBridge brings transformation consultancy experience to the
-              point programmes are shaped—defining the need, structuring the
-              capability and assembling experienced specialists across SAP,
-              supply chain, data and business transformation.
-            </p>
-            <div className="hero-actions">
-              <ButtonLink to="/contact?type=client#contact-form">
-                Discuss a requirement
-              </ButtonLink>
-              <ButtonLink to="/contact?type=consultant" variant="secondary">
-                Join our network
-              </ButtonLink>
-            </div>
-            <p className="hero-trust">
-              <span aria-hidden="true" />
-              UK · Spain · DACH · US · Central &amp; South America
-            </p>
-          </div>
-          <HeroVisual />
+  const { locale, t } = useLocale();
+  const coordination = [
+    ["A named DeepBridge contact", "Ein benannter Ansprechpartner bei DeepBridge", "Un interlocutor designado en DeepBridge"],
+    ["Clear responsibilities and communication", "Klare Verantwortlichkeiten und Kommunikation", "Responsabilidades y comunicación claras"],
+    ["Agreed progress reviews", "Vereinbarte Fortschrittsgespräche", "Revisiones de avance acordadas"],
+    ["Practical issue and change coordination", "Koordination von Problemen und Änderungen", "Coordinación práctica de incidencias y cambios"],
+    ["Planned handover and replacement coordination when needed", "Geplante Übergabe und bei Bedarf koordinierte Nachbesetzung", "Traspaso planificado y coordinación de sustituciones cuando sea necesario"],
+  ];
+  return <>
+    <PageMeta path="/" schema={buildHomeSchema(locale)} />
+    <section className="home-hero">
+      <div className="shell home-hero-grid">
+        <div className="hero-copy">
+          <p className="eyebrow"><span className="eyebrow-line" aria-hidden="true" />{t("Industrial transformation & project delivery", "Industrielle Transformation & Projektumsetzung", "Transformación industrial y ejecución de proyectos")}</p>
+          <h1>{t("Industrial expertise.", "Erfahrene Experten.", "Experiencia industrial.")}<br /><span>{t("Accountable delivery.", "Klare Verantwortung.", "Responsabilidad en la ejecución.")}</span></h1>
+          <p className="hero-intro">{t("DeepBridge supports industrial businesses through SAP transformation, operational improvement and interim leadership.", "DeepBridge unterstützt Industrieunternehmen bei SAP-Transformationen, operativen Verbesserungen und Interim-Management-Aufgaben.", "DeepBridge apoya a las empresas industriales en la transformación SAP, la mejora operativa y la dirección interina.")}</p>
+          <p className="hero-detail">{t("We bring together experienced professionals, define the assignment and stay involved through delivery, coordination and handover.", "Wir bringen erfahrene Fachleute zusammen, klären den Auftrag und begleiten die Zusammenarbeit von der Mobilisierung bis zur Übergabe.", "Reunimos a profesionales con experiencia, definimos el encargo y mantenemos nuestra implicación durante la ejecución, la coordinación y el traspaso.")}</p>
+          <div className="hero-actions"><ButtonLink to="/contact?type=client#contact-form">{t("Discuss your project", "Projekt besprechen", "Hablemos de su proyecto")}</ButtonLink><ButtonLink to="/expertise" variant="secondary">{t("Explore our expertise", "Leistungen entdecken", "Conozca nuestras especialidades")}</ButtonLink></div>
+          <p className="hero-location"><span aria-hidden="true">◦</span>{t("European focus: London · Munich · Madrid", "Europäischer Fokus: London · München · Madrid", "Enfoque europeo: Londres · Múnich · Madrid")}</p>
         </div>
-        <div className="shell hero-proof" aria-label="How DeepBridge works">
-          <p>
-            <span>01</span> Define the transformation need
-          </p>
-          <p>
-            <span>02</span> Build the right capability
-          </p>
-          <p>
-            <span>03</span> Stay close through delivery
-          </p>
-        </div>
-      </section>
+        <figure className="industrial-visual">
+          <img src="/images/transformation/industrial-delivery.webp" width="1672" height="941" alt={t("Illustrative view of an industrial production hall", "Illustrative Ansicht einer industriellen Produktionshalle", "Imagen ilustrativa de una nave de producción industrial")} fetchPriority="high" />
+          <figcaption><span>{t("Industry in focus", "Industrie im Fokus", "La industria, en el centro")}</span><span>{t("Illustrative image", "Illustrative Darstellung", "Imagen ilustrativa")}</span></figcaption>
+          <div className="visual-index" aria-hidden="true"><span>DB / 01</span><span>{t("EUROPE", "EUROPA", "EUROPA")}</span></div>
+        </figure>
+      </div>
+      <div className="shell hero-bottom"><span>{t("Expertise where it matters", "Expertise, wo sie zählt", "Experiencia donde se necesita")}</span><p>SAP <span aria-hidden="true">/</span> {t("Operations", "Operations", "Operaciones")} <span aria-hidden="true">/</span> {t("Supply Chain", "Supply Chain", "Cadena de suministro")} <span aria-hidden="true">/</span> {t("Interim Leadership", "Interim Management", "Dirección interina")}</p><a href="#expertise" aria-label={t("Discover our expertise", "Unsere Leistungen entdecken", "Descubra nuestras especialidades")}>↓</a></div>
+    </section>
 
-      <section className="section problem-section">
-        <div className="shell editorial-grid">
-          <p className="eyebrow">Start before the job title</p>
-          <div>
-            <h2>A transformation is designed before it is staffed.</h2>
-            <div className="two-column-copy">
-              <p>
-                The earliest decisions shape everything that follows: which
-                outcomes matter, how workstreams connect, where ownership sits
-                and what capability is genuinely missing.
-              </p>
-              <p>
-                DeepBridge helps turn that context into a practical capability
-                model, then identifies credible specialists and stays involved
-                through mobilisation, onboarding and delivery.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+    <section className="section expertise-section" id="expertise">
+      <div className="shell"><div className="section-heading-row"><SectionHeading eyebrow={t("01 / Core expertise", "01 / Leistungen", "01 / Especialidades")} title={t("Expertise for demanding industrial programmes.", "Kompetenz für anspruchsvolle Industrieprojekte.", "Experiencia para proyectos industriales exigentes.")} text={t("Focused support where business operations, technology and project leadership meet.", "Gezielte Unterstützung an der Schnittstelle von operativem Geschäft, Technologie und Projektführung.", "Apoyo especializado en la confluencia de las operaciones, la tecnología y la dirección de proyectos.")} /><ButtonLink to="/expertise" variant="text">{t("Our expertise", "Unsere Leistungen", "Nuestras especialidades")}</ButtonLink></div><ExpertiseGrid /></div>
+    </section>
 
-      <section className="section transformation-lifecycle-section">
-        <div className="shell lifecycle-intro-grid">
-          <div>
-            <p className="eyebrow">End-to-end perspective</p>
-            <h2>From first brief to operating reality.</h2>
-          </div>
-          <p>
-            DeepBridge can engage while the requirement is still taking shape,
-            helping organisations connect programme design with the specialist
-            capability needed to carry it forward.
-          </p>
-        </div>
-        <div className="shell lifecycle-grid">
-          {transformationStages.map((stage) => (
-            <article key={stage.number}>
-              <span>{stage.number}</span>
-              <h3>{stage.title}</h3>
-              <p>{stage.text}</p>
-            </article>
-          ))}
-        </div>
-      </section>
+    <section className="section how-section">
+      <div className="shell"><div className="section-heading-row"><SectionHeading eyebrow={t("02 / How we work", "02 / Zusammenarbeit", "02 / Cómo trabajamos")} title={t("Clear scope. Coordinated delivery. Practical continuity.", "Klarer Auftrag. Koordinierte Umsetzung. Geregelte Übergabe.", "Alcance claro. Ejecución coordinada. Continuidad planificada.")} text={t("Every assignment starts with understanding the work, the operating environment and the responsibilities involved.", "Jeder Einsatz beginnt mit einem klaren Verständnis der Aufgabe, des betrieblichen Umfelds und der jeweiligen Verantwortlichkeiten.", "Cada encargo comienza por comprender el trabajo, el entorno operativo y las responsabilidades de las partes.")} /><ButtonLink to="/for-clients" variant="text">{t("How we work", "Unsere Zusammenarbeit", "Cómo trabajamos")}</ButtonLink></div><ProcessSection /><p className="process-note">{t("The level of DeepBridge involvement is agreed for each assignment.", "Der Umfang unserer Begleitung wird für jeden Auftrag individuell vereinbart.", "El grado de implicación de DeepBridge se acuerda para cada encargo.")}</p></div>
+    </section>
 
-      <section className="section expertise-section">
-        <div className="shell">
-          <div className="section-heading-row">
-            <SectionHeading
-              eyebrow="Core expertise"
-              title="Where we add value"
-              text="Specialist capability for the points where business operations, technology and programme delivery meet."
-            />
-            <ButtonLink to="/expertise" variant="text">
-              Explore our expertise
-            </ButtonLink>
-          </div>
-          <ExpertiseGrid />
-        </div>
-      </section>
+    <ProjectExperience />
 
-      <section className="section entity-section" aria-labelledby="deepbridge-overview">
-        <div className="shell entity-grid">
-          <div className="entity-intro">
-            <p className="eyebrow">DeepBridge at a glance</p>
-            <h2 id="deepbridge-overview">What DeepBridge Advisory does</h2>
-            <p>
-              A concise view of who we support, where we operate and how an
-              engagement begins.
-            </p>
-          </div>
-          <dl className="entity-answers">
-            {commonQuestions.map((item, index) => (
-              <div key={item.question}>
-                <span aria-hidden="true">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <dt>{item.question}</dt>
-                <dd>{item.answer}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      </section>
+    <section className="section accountability-section">
+      <div className="shell accountability-grid"><div><p className="eyebrow">{t("03 / Accountability & continuity", "03 / Verantwortung & Kontinuität", "03 / Responsabilidad y continuidad")}</p><h2>{t("A clear point of coordination throughout the assignment.", "Ein zentraler Ansprechpartner während des gesamten Einsatzes.", "Un interlocutor de referencia durante todo el encargo.")}</h2><p className="section-copy">{t("DeepBridge remains involved beyond the initial introduction. We agree how progress is reviewed, how issues are escalated and how continuity is managed.", "DeepBridge bleibt auch nach der Vorstellung der Experten eingebunden. Wir vereinbaren, wie Fortschritte besprochen, Probleme eskaliert und Kontinuität organisiert werden.", "La implicación de DeepBridge continúa tras la presentación inicial. Acordamos cómo se revisa el avance, cómo se escalan las incidencias y cómo se gestiona la continuidad.")}</p></div><ul className="accountability-list">{coordination.map(([en,de,es],i)=><li key={en}><span aria-hidden="true">{String(i+1).padStart(2,"0")}</span>{t(en,de,es)}<span className="checkmark" aria-hidden="true">✓</span></li>)}</ul></div>
+    </section>
 
-      <section className="section process-section">
-        <div className="shell">
-          <SectionHeading
-            eyebrow="How we work"
-            title="A focused route from requirement to delivery"
-            text="Clear decisions at each stage, with DeepBridge involved beyond the initial introduction."
-          />
-          <ProcessSection />
-        </div>
-      </section>
+    <section className="section european-section">
+      <div className="shell european-grid"><div><p className="eyebrow">{t("04 / European focus", "04 / Europäischer Fokus", "04 / Enfoque europeo")}</p><h2>{t("European perspective.\nIndustrial understanding.", "Europäische Perspektive.\nIndustrielles Verständnis.", "Perspectiva europea.\nConocimiento industrial.")}</h2></div><div><p className="european-cities">{t("London · Munich · Madrid", "London · München · Madrid", "Londres · Múnich · Madrid")}</p><p>{t("Our European focus connects the UK, Germany and Spain, with particular attention to industrial programmes in Germany.", "Unser europäischer Fokus verbindet Großbritannien, Deutschland und Spanien – mit besonderem Augenmerk auf Industrieprojekte in Deutschland.", "Nuestro enfoque europeo conecta el Reino Unido, Alemania y España, con especial atención a los proyectos industriales en Alemania.")}</p><p>{t("We shape each assignment around its location, language needs and working arrangements.", "Wir stimmen jeden Einsatz auf den Standort, die Sprachanforderungen und das Arbeitsmodell ab.", "Adaptamos cada encargo a su ubicación, sus necesidades lingüísticas y su modelo de trabajo.")}</p><ButtonLink to="/about" variant="text">{t("About DeepBridge", "Über DeepBridge", "Quiénes somos")}</ButtonLink></div></div>
+    </section>
 
-      <section className="section engagement-section">
-        <div className="shell engagement-grid">
-          <div className="engagement-intro">
-            <p className="eyebrow">Flexible engagement</p>
-            <h2>Support that adapts as the programme evolves.</h2>
-            <p>
-              Requirements change as programmes move from design into
-              implementation and delivery. DeepBridge can support individual
-              specialist requirements, multiple project roles and the gradual
-              build-out of a wider transformation team.
-            </p>
-          </div>
-          <div className="engagement-list">
-            {engagementModels.map((item) => (
-              <article key={item.number}>
-                <span>{item.number}</span>
-                <div>
-                  <h3>{item.title}</h3>
-                  <p>{item.text}</p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="transformation-media-section">
-        <div className="shell transformation-media-frame">
-          <img
-            src="/images/transformation/industrial-delivery.webp"
-            width="1672"
-            height="941"
-            loading="lazy"
-            alt="A connected manufacturing and logistics operation"
-          />
-          <div className="transformation-media-overlay">
-            <p className="eyebrow">Where transformation becomes real</p>
-            <h2>Business, technology and operations—moving together.</h2>
-          </div>
-        </div>
-        <div className="shell foundation-grid">
-          {transformationFoundations.map((item, index) => (
-            <article key={item.title}>
-              <span>{String(index + 1).padStart(2, "0")}</span>
-              <h3>{item.title}</h3>
-              <p>{item.text}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="section industries-section">
-        <div className="shell editorial-grid">
-          <div>
-            <p className="eyebrow">Industry context</p>
-            <p className="micro-copy">
-              Experience matters most when the operating environment is
-              genuinely complex.
-            </p>
-          </div>
-          <div>
-            <h2>Experience in operationally complex environments</h2>
-            <div className="industry-list">
-              {industries.map((industry, index) => (
-                <div key={industry}>
-                  <span>{String(index + 1).padStart(2, "0")}</span>
-                  <p>{industry}</p>
-                </div>
-              ))}
-            </div>
-            <Link className="text-link" to="/for-clients">
-              See how we support clients
-              <span className="direction-arrow" aria-hidden="true">
-                →
-              </span>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <section className="section home-insights-section">
-        <div className="shell">
-          <div className="section-heading-row">
-            <SectionHeading
-              eyebrow="Transformation insights"
-              title="Useful thinking before the next delivery decision"
-              text="Practical guidance for defining requirements, strengthening programme teams and working across borders."
-            />
-            <ButtonLink to="/insights" variant="text">
-              View all insights
-            </ButtonLink>
-          </div>
-          <div className="home-insights-grid">
-            {insights.map((insight, index) => (
-              <article key={insight.slug}>
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <p>{insight.eyebrow}</p>
-                <h3>
-                  <Link to={`/insights/${insight.slug}`}>{insight.title}</Link>
-                </h3>
-                <Link className="text-link" to={`/insights/${insight.slug}`}>
-                  Read insight
-                  <span className="direction-arrow" aria-hidden="true">
-                    →
-                  </span>
-                </Link>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <SplitCta />
-    </>
-  );
+    <section className="final-cta"><div className="shell final-cta-grid"><div><p className="eyebrow">{t("Let's move your project forward", "Bringen wir Ihr Projekt voran", "Avancemos con su proyecto")}</p><h2>{t("What does your project need next?", "Was braucht Ihr Projekt als Nächstes?", "¿Qué necesita su proyecto ahora?")}</h2><p>{t("Tell us about the assignment, the operating challenge and the expertise you need. We will help clarify the next step.", "Beschreiben Sie uns die Aufgabe, die operative Herausforderung und die benötigte Expertise. Gemeinsam klären wir den nächsten Schritt.", "Cuéntenos en qué consiste el encargo, cuál es el reto operativo y qué experiencia necesita. Le ayudaremos a concretar el siguiente paso.")}</p></div><ButtonLink to="/contact?type=client#contact-form">{t("Discuss your project", "Projekt besprechen", "Hablemos de su proyecto")}</ButtonLink></div></section>
+  </>;
 }

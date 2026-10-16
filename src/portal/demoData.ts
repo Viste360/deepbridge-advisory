@@ -335,7 +335,7 @@ export const adminSnapshot: PortalSnapshot = {
     id: "demo-admin",
     email: "admin@deepbridgeadvisory.co.uk",
     fullName: "DeepBridge Administrator",
-    businessName: "DustDeep Ltd",
+    businessName: "DEEPBRIDGE ADVISORY LTD",
     country: "United Kingdom",
     phone: "",
     role: "admin",
