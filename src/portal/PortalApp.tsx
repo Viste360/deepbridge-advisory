@@ -22,6 +22,12 @@ import {
 import { adminSnapshot, consultantSnapshot } from "./demoData";
 import { company } from "../config/site";
 import {
+  portalLoginPath,
+  portalPostLoginPath,
+  safePortalNext,
+} from "../../shared/portalRedirect";
+import { TimesheetsPage } from "./timesheets/TimesheetsPage";
+import {
   acknowledgeDocument,
   completeAuthCallback,
   countersignAdminContract,
@@ -166,6 +172,8 @@ function LoginPage({
 }: {
   onDemoSignIn: (role: PortalRole) => void;
 }) {
+  const location = useLocation();
+  const next = safePortalNext(new URLSearchParams(location.search).get("next"));
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<{
     tone: "neutral" | "success" | "error";
@@ -181,7 +189,7 @@ function LoginPage({
     setBusy(true);
     setStatus({ tone: "neutral", message: "" });
     try {
-      await sendMagicLink(email.trim().toLowerCase());
+      await sendMagicLink(email.trim().toLowerCase(), next);
       setStatus({
         tone: "success",
         message:
@@ -203,7 +211,7 @@ function LoginPage({
   async function handleGoogle() {
     setBusy(true);
     try {
-      await signInWithGoogle();
+      await signInWithGoogle(next);
     } catch (error) {
       setStatus({
         tone: "error",
@@ -222,10 +230,15 @@ function LoginPage({
         <Brand />
         <div className="portal-login-copy">
           <p className="portal-kicker">Private &amp; secure</p>
-          <h1>Your contracts, assignments and documents in one secure place.</h1>
+          <h1>
+            {next
+              ? "Your service records, ready when you are."
+              : "Your contracts, assignments and documents in one secure place."}
+          </h1>
           <p>
-            Manage DeepBridge relationships and agreements, complete signing
-            and keep controlled documents in one protected workspace.
+            {next
+              ? "Upload your own service record or use the optional weekly form to send your record to DeepBridge."
+              : "Manage DeepBridge relationships and agreements, complete signing and keep controlled documents in one protected workspace."}
           </p>
         </div>
         <div className="portal-security-points" aria-label="Security features">
@@ -239,7 +252,9 @@ function LoginPage({
         <div className="portal-login-card">
           <div>
             <p className="portal-kicker">Welcome back</p>
-            <h2 id="sign-in-heading">Sign in to your portal</h2>
+            <h2 id="sign-in-heading">
+              {next ? "Sign in to your service records" : "Sign in to your portal"}
+            </h2>
             <p className="portal-muted">
               Use the email address that received your DeepBridge invitation.
             </p>
@@ -328,30 +343,46 @@ function LoginPage({
 
 function AuthCallbackPage() {
   const [error, setError] = useState("");
+  const location = useLocation();
+  const next = safePortalNext(new URLSearchParams(location.search).get("next"));
+  const pendingVerification = useRef<{
+    search: string;
+    promise: ReturnType<typeof completeAuthCallback>;
+  } | null>(null);
 
   useEffect(() => {
     let active = true;
-    const search = new URLSearchParams(window.location.search);
+    const search = new URLSearchParams(location.search);
     const code = search.get("code") || undefined;
     const tokenHash = search.get("token_hash") || undefined;
     const type = search.get("type") || undefined;
     const notice = search.get("notice") || undefined;
     const hasVerification = Boolean(code || (tokenHash && type));
-    const complete = hasVerification
-      ? completeAuthCallback({ code, tokenHash, type }).then(() =>
-          getPortalSession(),
-        )
-      : getPortalSession();
+    // Reuse the exchange if React restarts this effect: verification is one-use.
+    if (hasVerification && pendingVerification.current?.search !== location.search) {
+      pendingVerification.current = {
+        search: location.search,
+        promise: completeAuthCallback({ code, tokenHash, type }),
+      };
+    }
+    const complete = hasVerification && pendingVerification.current
+      ? pendingVerification.current.promise.then(async (result) => ({
+          session: await getPortalSession(),
+          destination: safePortalNext(result.next) || next,
+        }))
+      : getPortalSession().then((session) => ({ session, destination: next }));
     complete
-      .then((session) => {
+      .then(({ session, destination: requestedDestination }) => {
         if (!active) return;
-        if (session)
-          window.location.replace(
-            session.role === "admin"
-              ? "/admin"
-              : `/dashboard${notice ? `?notice=${encodeURIComponent(notice)}` : ""}`,
+        if (session) {
+          const destination = portalPostLoginPath(
+            requestedDestination,
+            session.role,
           );
-        else setError("The secure link could not create a portal session.");
+          window.location.replace(
+            `${destination}${destination === "/dashboard" && notice ? `?notice=${encodeURIComponent(notice)}` : ""}`,
+          );
+        } else setError("The secure link could not create a portal session.");
       })
       .catch((callbackError: unknown) => {
         if (active)
@@ -364,7 +395,7 @@ function AuthCallbackPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [location.search, next]);
 
   return (
     <main className="portal-centred-state">
@@ -373,7 +404,7 @@ function AuthCallbackPage() {
         <>
           <h1>Sign-in link could not be completed</h1>
           <p>{error}</p>
-          <Link className="portal-button" to="/login">
+          <Link className="portal-button" to={portalLoginPath(next)}>
             Request a new secure link
           </Link>
         </>
@@ -467,6 +498,7 @@ function PortalLegalPage({ kind }: { kind: "privacy" | "terms" }) {
 const consultantNavigation = [
   ["Dashboard", "/dashboard"],
   ["Assignment", "/assignment"],
+  ["Service records", "/timesheets"],
   ["Documents", "/documents"],
   ["Compliance", "/compliance"],
   ["Onboarding", "/onboarding"],
@@ -480,6 +512,7 @@ const adminNavigation = [
   ["Contracts", "/admin/contracts"],
   ["Consultants", "/admin/consultants"],
   ["Projects", "/admin/assignments"],
+  ["Service records", "/admin/timesheets"],
   ["Documents", "/admin/documents"],
   ["Signing", "/admin/signing"],
   ["Compliance", "/admin/compliance"],
@@ -8248,6 +8281,8 @@ export function PortalApp() {
 
   if (loading && !publicRoute) return <LoadingPortal />;
   if (error && !publicRoute) return <ErrorPortal message={error} />;
+  // The callback must remain mounted while the initial session snapshot loads.
+  if (location.pathname === "/auth/callback") return <AuthCallbackPage />;
   // Legal information remains available before and after a session is loaded.
   if (location.pathname === "/privacy") return <PortalLegalPage kind="privacy" />;
   if (location.pathname === "/terms") return <PortalLegalPage kind="terms" />;
@@ -8259,8 +8294,10 @@ export function PortalApp() {
           path="/login"
           element={<LoginPage onDemoSignIn={enterDemoRole} />}
         />
-        <Route path="/auth/callback" element={<AuthCallbackPage />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route
+          path="*"
+          element={<Navigate to={portalLoginPath(location.pathname)} replace />}
+        />
       </Routes>
     );
   }
@@ -8279,7 +8316,28 @@ export function PortalApp() {
           <Route
             path="/login"
             element={
-              <Navigate to={consultant ? "/dashboard" : "/admin"} replace />
+              <Navigate
+                to={portalPostLoginPath(
+                  new URLSearchParams(location.search).get("next"),
+                  snapshot.profile.role,
+                )}
+                replace
+              />
+            }
+          />
+          <Route
+            path="/timesheets"
+            element={
+              consultant ? (
+                <TimesheetsPage
+                  key={snapshot.profile.id}
+                  profile={snapshot.profile}
+                  demo={demo}
+                  assignment={snapshot.assignment}
+                />
+              ) : (
+                <Navigate to="/admin/timesheets" replace />
+              )
             }
           />
           <Route
@@ -8321,6 +8379,21 @@ export function PortalApp() {
           <Route
             path="/admin"
             element={!consultant ? <AdminDashboard /> : <Navigate to="/dashboard" />}
+          />
+          <Route
+            path="/admin/timesheets"
+            element={
+              !consultant ? (
+                <TimesheetsPage
+                  key={snapshot.profile.id}
+                  profile={snapshot.profile}
+                  demo={demo}
+                  assignment={snapshot.assignment}
+                />
+              ) : (
+                <Navigate to="/timesheets" replace />
+              )
+            }
           />
           <Route
             path="/admin/organisations"

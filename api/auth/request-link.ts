@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { portalAuthCallbackUrl } from "../../shared/portalRedirect.js";
 import { createPortalAuthClient } from "../_lib/authCookies.js";
+import { setPortalNextCookie } from "../_lib/portalNextCookie.js";
 import {
   enforceRateLimit,
   handleApiError,
@@ -33,13 +35,14 @@ export default async function handler(
     const { error } = await auth.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${portalUrl}/auth/callback`,
+        emailRedirectTo: portalAuthCallbackUrl(portalUrl),
         shouldCreateUser: false,
       },
     });
     if (error) {
       console.error("Magic link request failed", error);
     }
+    setPortalNextCookie(response, body.next);
 
     return json(response, 200, {
       message:

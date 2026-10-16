@@ -1,6 +1,6 @@
 # DeepBridge European website update — review handover
 
-Prepared 16 October 2026. Changes are local and ready for review; nothing has been published to the live domain.
+Prepared 16 October 2026. The user has authorised publication. PR #44 contains the website release and preservation of services recovered from the existing live deployment.
 
 ## Preview
 
@@ -14,7 +14,7 @@ The local preview is available in English at http://127.0.0.1:5173/, German at h
 - Updated Expertise, How We Work, About, For Professionals, Opportunities, both enquiry paths and the four legal information pages. Preserved all three existing insight articles and provided complete German and Spanish translations.
 - Kept the current Formspree endpoint and existing submission field names. Added telephone, duration and professional language information; translated labels, field errors, error summaries and confirmation states. No CV upload or new tracking.
 - Generated full HTML content for all 48 English/German/Spanish routes, including the three not-found pages, with canonical URLs, reciprocal hreflang, social metadata and verified-fact Organization schema. Updated the sitemap and AI-readable overview to the `.com` website.
-- Preserved consultant portal routing and all pre-existing uncommitted portal/backend work. No live records, portal integrations, DNS, domains or hosting settings were changed.
+- Preserved the live consultant portal, timesheets, service records and authentication flow by recovering the exact deployed source from Vercel deployment `dpl_D8a9r7qaRZTnGrGzcwy5sHt7D4a8` and verifying its SHA1 hashes. These already deployed changes are included so a Git release does not remove live functionality. Newer unfinished intercompany changes remain local. No database migrations or live record mutations are part of this release.
 - Added a reusable project experience component which renders nothing until approved records are provided. No fictional project examples or team members appear.
 
 ## Confirmed company details
@@ -38,7 +38,7 @@ The user confirmed the current company address as **71–75 Shelton Street, Cove
 ## Verification
 
 - Frontend and API TypeScript checks pass.
-- The isolated website commit passes 53 tests across 8 files, covering content, contact validation, mocked submission outcomes, locale/application routing, section navigation, portal data and the existing countersignature PDF tests. It excludes unrelated local timesheet, service-record and intercompany changes.
+- The clean release snapshot passes 112 tests across 16 files, covering content, contact validation, mocked submission outcomes, locale/application routing, section navigation, portal data, signature PDFs, HTML parsing, authentication redirect handling and the recovered timesheet helpers. Only verified previously deployed service changes are included; unfinished local intercompany changes remain excluded.
 - Production build passes and emits 48 complete public HTML pages across English, German and Spanish; 45 indexable routes are in the sitemap.
 - All 48 generated routes checked for one H1, language, title, description, canonical, hreflang, schema, content, unique IDs and internal routes/anchors. Spanish articles preserve the same three URLs and 15 content sections, with complete translations and Spanish date formatting. No old company name or old address remains in generated public pages.
 - `npm run check:links` runs on every production build. The latest run verifies 2,576 link references across 48 public routes, 117 distinct internal destinations, 268 anchors and 448 asset references. The build also renders all nine English/German/Spanish project, professional and general enquiry selections and checks their fields and language links. Each page and sitemap entry has reciprocal English, German, Spanish and x-default alternatives. Deliberately broken route, anchor, asset, form, language-switch and accessibility-reference fixtures were rejected during verification.
@@ -52,4 +52,4 @@ The user confirmed the current company address as **71–75 Shelton Street, Cove
 
 ## Publication
 
-Review all three language versions and the confirmations above before publishing to the live domain, as requested in the brief. Existing useful English URLs are retained, so they need no redirects. Deployment remains on the existing project/hosting configuration.
+The user authorised publishing the reviewed language versions. Release PR #44 to the existing Vercel project only after its checks pass, then verify the production domain. Existing useful English URLs are retained. The shared portal and timesheet domains must retain their existing functionality; the release includes the exact previously deployed service files rather than unfinished local changes.

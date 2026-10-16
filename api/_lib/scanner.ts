@@ -5,6 +5,7 @@ export type ScanObjectType =
   | "compliance_submission"
   | "signature_artifact"
   | "contract_version"
+  | "supplier_service_record"
   | "contract_artifact";
 
 export interface ScanRequest {

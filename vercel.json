@@ -41,9 +41,73 @@
     },
     "api/compliance/upload-finalize.ts": {
       "maxDuration": 300
+    },
+    "api/service-records/finalize.ts": {
+      "maxDuration": 300
     }
   },
+  "redirects": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "timesheet.deepbridgeadvisory.co.uk"
+        }
+      ],
+      "destination": "https://portal.deepbridgeadvisory.com/timesheets",
+      "permanent": false
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "timesheet.deepbridgeadvisory.co.uk"
+        }
+      ],
+      "destination": "https://portal.deepbridgeadvisory.com/timesheets",
+      "permanent": false
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "timesheet.deepbridgeadvisory.com"
+        }
+      ],
+      "destination": "https://portal.deepbridgeadvisory.com/timesheets",
+      "permanent": false
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "timesheet.deepbridgeadvisory.com"
+        }
+      ],
+      "destination": "https://portal.deepbridgeadvisory.com/timesheets",
+      "permanent": false
+    },
+    {
+      "source": "/timesheets/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "(www\\.)?deepbridgeadvisory\\.(com|co\\.uk)"
+        }
+      ],
+      "destination": "https://portal.deepbridgeadvisory.com/timesheets",
+      "permanent": false
+    }
+  ],
   "rewrites": [
+    {
+      "source": "/timesheets/:path*",
+      "destination": "/"
+    },
     {
       "source": "/robots.txt",
       "has": [

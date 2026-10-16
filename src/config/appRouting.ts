@@ -3,6 +3,7 @@ const portalPathPrefixes = [
   "/auth",
   "/dashboard",
   "/assignment",
+  "/timesheets",
   "/documents",
   "/compliance",
   "/onboarding",

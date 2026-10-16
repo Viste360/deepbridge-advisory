@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { safePortalNext } from "../../shared/portalRedirect";
 import type {
   Assignment,
   AuditEvent,
@@ -340,23 +341,29 @@ export async function completeAuthCallback({
   tokenHash?: string;
   type?: string;
 }) {
-  return post<{ authenticated: true }>("/api/auth/exchange", {
+  return post<{ authenticated: true; next?: string }>("/api/auth/exchange", {
     code,
     tokenHash,
     type,
   });
 }
 
-export async function sendMagicLink(email: string) {
+export async function sendMagicLink(email: string, next?: string) {
   if (!portalConfigured)
     throw new Error("Portal authentication is not configured.");
-  return post<{ message: string }>("/api/auth/request-link", { email });
+  return post<{ message: string }>("/api/auth/request-link", {
+    email,
+    next: safePortalNext(next),
+  });
 }
 
-export async function signInWithGoogle() {
+export async function signInWithGoogle(next?: string) {
   if (!portalConfigured)
     throw new Error("Portal authentication is not configured.");
-  window.location.assign("/api/auth/google");
+  const path = safePortalNext(next);
+  window.location.assign(
+    `/api/auth/google${path ? `?next=${encodeURIComponent(path)}` : ""}`,
+  );
 }
 
 export async function signOutPortal() {

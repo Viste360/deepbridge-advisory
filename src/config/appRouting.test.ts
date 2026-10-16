@@ -3,7 +3,7 @@ import { isPortalLocation } from "./appRouting";
 
 describe("application routing", () => {
   it.each([
-    "/login", "/auth", "/dashboard", "/assignment",
+    "/login", "/auth", "/dashboard", "/assignment", "/timesheets",
     "/documents", "/compliance", "/onboarding", "/support", "/profile",
     "/admin", "/terms",
   ])("recognises the portal route %s and its nested routes", (pathname) => {
