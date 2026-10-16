@@ -1,313 +1,233 @@
-import { company, siteConfig } from "./site";
+import { company, pageMeta, siteConfig } from "./site";
 import type { Insight } from "../content/insights";
 
+import type { Locale } from "../i18n";
 const organisationId = `${siteConfig.siteUrl}/#organisation`;
 const websiteId = `${siteConfig.siteUrl}/#website`;
+const operatingAreas = ["Germany", "United Kingdom", "Spain", "Europe"];
 
-const operatingAreas = [
-  { "@type": "Country", name: "United Kingdom" },
-  { "@type": "Country", name: "Spain" },
-  { "@type": "Country", name: "Germany" },
-  { "@type": "Country", name: "Austria" },
-  { "@type": "Country", name: "Switzerland" },
-  { "@type": "Country", name: "United States" },
-  { "@type": "Place", name: "Central America" },
-  { "@type": "Place", name: "South America" },
-] as const;
+const localizedPath = (path: string, locale: Locale) =>
+  locale === "en" ? path : (path === "/" ? `/${locale}` : `/${locale}${path}`);
+const language = (locale: Locale) => ({ en: "en-GB", de: "de-DE", es: "es-ES" })[locale];
 
 export const services = [
   {
-    name: "SAP and ERP transformation consulting",
-    description:
-      "Independent specialists supporting SAP S/4HANA and enterprise resource planning programmes.",
+    name: "SAP & Business Transformation",
+    description: "Specialist support for SAP S/4HANA programmes, business processes, operational data and reporting.",
   },
   {
-    name: "Supply chain transformation consulting",
-    description:
-      "Specialist capability across planning, procurement, logistics, manufacturing and operating-model change.",
+    name: "Operations & Supply Chain",
+    description: "Experienced professionals supporting planning, production, logistics and order-to-delivery improvement.",
   },
   {
-    name: "Data and business intelligence consulting",
-    description:
-      "Independent expertise spanning data strategy, governance, migration, analytics and business intelligence.",
-  },
-  {
-    name: "Programme leadership and delivery consulting",
-    description:
-      "Experienced programme, workstream and change leadership for complex transformation delivery.",
+    name: "Interim Leadership & Finance",
+    description: "Senior capability for periods of change, delivery pressure and temporary leadership needs.",
   },
 ] as const;
 
-const organisation = {
-  "@type": ["Organization", "ProfessionalService"],
-  "@id": organisationId,
-  name: company.tradingName,
-  alternateName: "DeepBridge",
-  legalName: company.legalName,
-  url: siteConfig.siteUrl,
-  logo: {
-    "@type": "ImageObject",
-    url: `${siteConfig.siteUrl}/brand/deepbridge-monogram-512.png`,
-    width: 512,
-    height: 512,
+const germanServices = [
+  {
+    name: "SAP & Unternehmenstransformation",
+    description: "Spezialisierte Unterstützung für SAP-S/4HANA-Programme, Geschäftsprozesse, operative Daten und Reporting.",
   },
-  image: `${siteConfig.siteUrl}${siteConfig.socialImagePath}`,
-  email: company.contactEmail,
-  foundingDate: "2025-10-09",
-  identifier: {
-    "@type": "PropertyValue",
-    propertyID: "Companies House company number",
-    value: company.companyNumber,
+  {
+    name: "Operations & Supply Chain",
+    description: "Erfahrene Fachleute für Planung, Produktion, Logistik und die Verbesserung von Order-to-Delivery-Prozessen.",
   },
-  sameAs: [siteConfig.linkedInUrl],
-  areaServed: operatingAreas,
-  knowsAbout: [
-    "SAP S/4HANA transformation",
-    "Enterprise resource planning",
-    "Supply chain transformation",
-    "Data and business intelligence",
-    "Programme leadership",
-    "Business transformation",
-  ],
-  slogan: "From first decision to transformation delivery.",
-  description:
-    "A specialist transformation advisory and delivery partner helping organisations shape programme requirements, build experienced independent project teams and support complex delivery across the UK, Spain, DACH, the United States, Central America and South America.",
-  address: {
-    "@type": "PostalAddress",
-    streetAddress: "Kemp House, 152-160 City Road",
-    addressLocality: "London",
-    postalCode: "EC1V 2NX",
-    addressCountry: "GB",
+  {
+    name: "Interim Management & Finance",
+    description: "Erfahrene Führungskräfte und Spezialisten für Veränderungsphasen, anspruchsvolle Projekte und temporären Führungsbedarf.",
   },
-  contactPoint: {
-    "@type": "ContactPoint",
-    contactType: "client and consultant enquiries",
+] as const;
+
+const spanishServices = [
+  {
+    name: "SAP y transformación empresarial",
+    description: "Apoyo especializado para programas SAP S/4HANA, procesos de negocio, datos operativos e informes.",
+  },
+  {
+    name: "Operaciones y cadena de suministro",
+    description: "Profesionales con experiencia en planificación, producción, logística y mejora del proceso desde el pedido hasta la entrega.",
+  },
+  {
+    name: "Dirección interina y finanzas",
+    description: "Directivos y especialistas para etapas de cambio, proyectos exigentes y necesidades temporales de liderazgo.",
+  },
+] as const;
+
+function organisation(locale: Locale) {
+  return {
+    "@type": "Organization",
+    "@id": organisationId,
+    name: company.brandName,
+    alternateName: "DeepBridge",
+    legalName: company.legalName,
+    url: siteConfig.siteUrl,
+    logo: `${siteConfig.siteUrl}/brand/deepbridge-monogram-512.png`,
+    image: `${siteConfig.siteUrl}${siteConfig.socialImagePath}`,
     email: company.contactEmail,
-    availableLanguage: "English",
-  },
-  hasOfferCatalog: {
-    "@type": "OfferCatalog",
-    name: "Transformation consulting services",
-    itemListElement: services.map((service) => ({
-      "@type": "Offer",
-      itemOffered: {
+    foundingDate: "2025-10-09",
+    identifier: {
+      "@type": "PropertyValue",
+      propertyID: "Companies House company number",
+      value: company.companyNumber,
+    },
+    sameAs: [siteConfig.linkedInUrl],
+    areaServed: operatingAreas,
+    description: locale === "de"
+      ? "DeepBridge unterstützt Industrieunternehmen bei SAP-Transformationen, operativen Verbesserungen und Interim-Management-Aufgaben. Europäischer Fokus: London, München und Madrid."
+      : locale === "es"
+        ? "DeepBridge apoya a empresas industriales en la transformación SAP, la mejora operativa y la dirección interina. Enfoque europeo: Londres, Múnich y Madrid."
+        : "DeepBridge supports industrial businesses through SAP transformation, operational improvement and interim leadership. European focus: London, Munich and Madrid.",
+    // This is the existing registered company address, not a claim of local offices.
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: "71–75 Shelton Street, Covent Garden",
+      addressLocality: "London",
+      postalCode: "WC2H 9JQ",
+      addressCountry: "GB",
+    },
+  };
+}
+
+const website = {
+  "@type": "WebSite",
+  "@id": websiteId,
+  url: siteConfig.siteUrl,
+  name: company.brandName,
+  inLanguage: ["en-GB", "de-DE", "es-ES"],
+  publisher: { "@id": organisationId },
+};
+
+function breadcrumb(path: string, label: string, locale: Locale) {
+  const fullPath = localizedPath(path, locale);
+  const items = [{
+    "@type": "ListItem",
+    position: 1,
+    name: locale === "de" ? "Startseite" : locale === "es" ? "Inicio" : "Home",
+    item: `${siteConfig.siteUrl}${localizedPath("/", locale)}`,
+  }];
+  if (path.startsWith("/insights/")) {
+    items.push({
+      "@type": "ListItem",
+      position: 2,
+      name: locale === "de" ? "Einblicke" : locale === "es" ? "Perspectivas" : "Insights",
+      item: `${siteConfig.siteUrl}${localizedPath("/insights", locale)}`,
+    });
+  }
+  if (path !== "/") {
+    items.push({
+      "@type": "ListItem",
+      position: items.length + 1,
+      name: label,
+      item: `${siteConfig.siteUrl}${fullPath}`,
+    });
+  }
+  return {
+    "@type": "BreadcrumbList",
+    "@id": `${siteConfig.siteUrl}${fullPath}#breadcrumb`,
+    itemListElement: items,
+  };
+}
+
+export function buildPageSchema(path: string, locale: Locale = "en"): Record<string, unknown> {
+  const fullPath = localizedPath(path, locale);
+  const url = `${siteConfig.siteUrl}${fullPath}`;
+  const meta = pageMeta[fullPath];
+  const title = meta?.title ?? company.brandName;
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      organisation(locale),
+      website,
+      {
+        "@type": path === "/insights" || path === "/expertise" ? "CollectionPage" : "WebPage",
+        "@id": `${url}#webpage`,
+        url,
+        name: title,
+        description: meta?.description,
+        inLanguage: language(locale),
+        isPartOf: { "@id": websiteId },
+        about: { "@id": organisationId },
+        breadcrumb: { "@id": `${url}#breadcrumb` },
+      },
+      breadcrumb(path, title.replace(/ \| DeepBridge(?: Advisory)?$/, ""), locale),
+    ],
+  };
+}
+
+export function buildHomeSchema(locale: Locale = "en"): Record<string, unknown> {
+  return buildPageSchema("/", locale);
+}
+export const homeSchema = buildHomeSchema();
+
+export function buildServiceSchema(locale: Locale = "en"): Record<string, unknown> {
+  const schema = buildPageSchema("/expertise", locale);
+  const graph = schema["@graph"] as Record<string, unknown>[];
+  graph[2].mainEntity = {
+    "@type": "ItemList",
+    itemListElement: (locale === "de" ? germanServices : locale === "es" ? spanishServices : services).map((service, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      item: {
         "@type": "Service",
         ...service,
         provider: { "@id": organisationId },
         areaServed: operatingAreas,
       },
     })),
-  },
-};
+  };
+  return schema;
+}
 
-const website = {
-  "@type": "WebSite",
-  "@id": websiteId,
-  url: siteConfig.siteUrl,
-  name: company.tradingName,
-  inLanguage: "en-GB",
-  publisher: { "@id": organisationId },
-};
+export function buildInsightsSchema(insights: Insight[], locale: Locale = "en"): Record<string, unknown> {
+  const schema = buildPageSchema("/insights", locale);
+  const graph = schema["@graph"] as Record<string, unknown>[];
+  graph[2].mainEntity = {
+    "@type": "ItemList",
+    itemListElement: insights.map((insight, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      url: `${siteConfig.siteUrl}${localizedPath(`/insights/${insight.slug}`, locale)}`,
+      name: insight.title,
+    })),
+  };
+  return schema;
+}
 
-const commonQuestions = [
+export function buildArticleSchema(insight: Insight, locale: Locale = "en"): Record<string, unknown> {
+  const path = `/insights/${insight.slug}`;
+  const url = `${siteConfig.siteUrl}${localizedPath(path, locale)}`;
+  const schema = buildPageSchema(path, locale);
+  const graph = schema["@graph"] as Record<string, unknown>[];
+  graph.push({
+    "@type": "Article",
+    "@id": `${url}#article`,
+    headline: insight.title,
+    description: insight.description,
+    datePublished: insight.published,
+    dateModified: insight.updated,
+    inLanguage: language(locale),
+    mainEntityOfPage: { "@id": `${url}#webpage` },
+    author: { "@id": organisationId },
+    publisher: { "@id": organisationId },
+    image: `${siteConfig.siteUrl}${siteConfig.socialImagePath}`,
+  });
+  return schema;
+}
+
+// Kept as a content export for compatibility; no hidden FAQ structured data.
+export const commonQuestions = [
   {
     question: "What is DeepBridge Advisory?",
-    answer:
-      "DeepBridge Advisory is a UK-based transformation advisory and delivery partner that helps organisations shape programme requirements, build experienced independent teams and support complex delivery.",
+    answer: "DeepBridge supports industrial businesses through SAP transformation, operational improvement and interim leadership.",
   },
   {
-    question: "Which transformation programmes does DeepBridge support?",
-    answer:
-      "DeepBridge focuses on SAP and ERP, supply chain, data and business intelligence, programme leadership and wider business transformation.",
+    question: "How does DeepBridge support delivery?",
+    answer: "We define the assignment, bring together experienced professionals and agree our involvement through mobilisation, progress reviews, issue coordination and handover.",
   },
   {
-    question: "Where does DeepBridge Advisory operate?",
-    answer:
-      "DeepBridge supports programmes and independent consultants across the United Kingdom, Spain, DACH, the United States, Central America and South America from its base in London.",
-  },
-  {
-    question: "How does DeepBridge engage consultants?",
-    answer:
-      "DeepBridge frames the delivery requirement, connects programme design with the capability needed, identifies a focused group of relevant independent specialists and supports contracting, onboarding and delivery coordination.",
+    question: "Where is DeepBridge focused?",
+    answer: "Our European focus centres on London, Munich and Madrid, with particular attention to industrial programmes in Germany.",
   },
 ] as const;
-
-function breadcrumb(path: string, label: string) {
-  const items = [
-    {
-      "@type": "ListItem",
-      position: 1,
-      name: "Home",
-      item: `${siteConfig.siteUrl}/`,
-    },
-  ];
-
-  if (path.startsWith("/insights/") && path !== "/insights") {
-    items.push({
-      "@type": "ListItem",
-      position: 2,
-      name: "Insights",
-      item: `${siteConfig.siteUrl}/insights`,
-    });
-  }
-
-  items.push({
-    "@type": "ListItem",
-    position: items.length + 1,
-    name: label,
-    item: `${siteConfig.siteUrl}${path}`,
-  });
-
-  return {
-    "@type": "BreadcrumbList",
-    "@id": `${siteConfig.siteUrl}${path}#breadcrumb`,
-    itemListElement: items,
-  };
-}
-
-export const homeSchema: Record<string, unknown> = {
-  "@context": "https://schema.org",
-  "@graph": [
-    organisation,
-    website,
-    {
-      "@type": "WebPage",
-      "@id": `${siteConfig.siteUrl}/#webpage`,
-      url: `${siteConfig.siteUrl}/`,
-      name: "DeepBridge Advisory",
-      isPartOf: { "@id": websiteId },
-      about: { "@id": organisationId },
-      inLanguage: "en-GB",
-      mainEntity: { "@id": organisationId },
-      primaryImageOfPage: {
-        "@type": "ImageObject",
-        url: `${siteConfig.siteUrl}/images/transformation/deepbridge-transformation-hero.webp`,
-        width: 1122,
-        height: 1402,
-        caption:
-          "DeepBridge Advisory transformation consultancy and industrial delivery",
-      },
-    },
-    {
-      "@type": "FAQPage",
-      "@id": `${siteConfig.siteUrl}/#common-questions`,
-      mainEntity: commonQuestions.map((item) => ({
-        "@type": "Question",
-        name: item.question,
-        acceptedAnswer: { "@type": "Answer", text: item.answer },
-      })),
-    },
-  ],
-};
-
-export function buildServiceSchema(): Record<string, unknown> {
-  const path = "/expertise";
-  return {
-    "@context": "https://schema.org",
-    "@graph": [
-      organisation,
-      website,
-      {
-        "@type": "CollectionPage",
-        "@id": `${siteConfig.siteUrl}${path}#webpage`,
-        url: `${siteConfig.siteUrl}${path}`,
-        name: "Transformation expertise",
-        isPartOf: { "@id": websiteId },
-        about: { "@id": organisationId },
-        breadcrumb: { "@id": `${siteConfig.siteUrl}${path}#breadcrumb` },
-        primaryImageOfPage: {
-          "@type": "ImageObject",
-          url: `${siteConfig.siteUrl}/images/transformation/transformation-planning.webp`,
-          width: 1536,
-          height: 1024,
-          caption: "Transformation programme framing and capability planning",
-        },
-        mainEntity: {
-          "@type": "ItemList",
-          itemListElement: services.map((service, index) => ({
-            "@type": "ListItem",
-            position: index + 1,
-            item: {
-              "@type": "Service",
-              ...service,
-              provider: { "@id": organisationId },
-              areaServed: operatingAreas,
-            },
-          })),
-        },
-      },
-      breadcrumb(path, "Expertise"),
-    ],
-  };
-}
-
-export function buildInsightsSchema(insights: Insight[]): Record<string, unknown> {
-  const path = "/insights";
-  return {
-    "@context": "https://schema.org",
-    "@graph": [
-      organisation,
-      website,
-      {
-        "@type": "CollectionPage",
-        "@id": `${siteConfig.siteUrl}${path}#webpage`,
-        url: `${siteConfig.siteUrl}${path}`,
-        name: "Transformation insights",
-        isPartOf: { "@id": websiteId },
-        about: { "@id": organisationId },
-        breadcrumb: { "@id": `${siteConfig.siteUrl}${path}#breadcrumb` },
-        mainEntity: {
-          "@type": "ItemList",
-          itemListElement: insights.map((insight, index) => ({
-            "@type": "ListItem",
-            position: index + 1,
-            url: `${siteConfig.siteUrl}/insights/${insight.slug}`,
-            name: insight.title,
-          })),
-        },
-      },
-      breadcrumb(path, "Insights"),
-    ],
-  };
-}
-
-export function buildArticleSchema(insight: Insight): Record<string, unknown> {
-  const path = `/insights/${insight.slug}`;
-  const url = `${siteConfig.siteUrl}${path}`;
-  return {
-    "@context": "https://schema.org",
-    "@graph": [
-      organisation,
-      website,
-      {
-        "@type": "Article",
-        "@id": `${url}#article`,
-        headline: insight.title,
-        description: insight.description,
-        datePublished: insight.published,
-        dateModified: insight.updated,
-        inLanguage: "en-GB",
-        mainEntityOfPage: { "@id": `${url}#webpage` },
-        author: { "@id": organisationId },
-        publisher: { "@id": organisationId },
-        image: `${siteConfig.siteUrl}${siteConfig.socialImagePath}`,
-        about: services.map((service) => service.name),
-      },
-      {
-        "@type": "WebPage",
-        "@id": `${url}#webpage`,
-        url,
-        name: insight.title,
-        isPartOf: { "@id": websiteId },
-        breadcrumb: { "@id": `${url}#breadcrumb` },
-        primaryImageOfPage: {
-          "@type": "ImageObject",
-          url: `${siteConfig.siteUrl}${siteConfig.socialImagePath}`,
-        },
-      },
-      breadcrumb(path, insight.title),
-    ],
-  };
-}
-
-export { commonQuestions };

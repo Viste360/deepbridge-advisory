@@ -55,6 +55,7 @@ function validScan(body) {
     "signature_artifact",
     "contract_version",
     "contract_artifact",
+    "supplier_service_record",
   ]);
   return (
     body &&

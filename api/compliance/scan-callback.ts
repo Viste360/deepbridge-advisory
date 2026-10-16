@@ -43,8 +43,10 @@ export default async function handler(
         : typeof body.submissionId === "string"
           ? body.submissionId
           : "";
-    const objectType =
-      body.objectType === "document_version"
+    let objectType =
+      body.objectType === "supplier_service_record"
+        ? "supplier_service_record"
+        : body.objectType === "document_version"
         ? "document_version"
         : body.objectType === "signature_artifact"
           ? "signature_artifact"
@@ -66,6 +68,37 @@ export default async function handler(
 
     const admin = getSupabaseAdmin();
     const now = new Date().toISOString();
+
+    // Compatibility with the deployed scanner's submission envelope. Resolve
+    // server-generated IDs explicitly; database errors and ambiguous IDs fail
+    // closed instead of falling through to an unrelated compliance record.
+    if (objectType === "compliance_submission") {
+      const serviceRecord = await admin.from("supplier_service_records").select("id").eq("id", objectId).maybeSingle();
+      if (serviceRecord.error) throw serviceRecord.error;
+      if (serviceRecord.data) {
+        const complianceRecord = await admin.from("compliance_submissions").select("id").eq("id", objectId).maybeSingle();
+        if (complianceRecord.error) throw complianceRecord.error;
+        if (complianceRecord.data) throw new PortalHttpError(409, "Ambiguous scan target.");
+        objectType = "supplier_service_record";
+      }
+    }
+
+    if (objectType === "supplier_service_record") {
+      const result = await admin.from("supplier_service_records")
+        .update({ scan_status: status, scanned_at: now })
+        .eq("id", objectId).eq("status", "submitted").eq("scan_status", "pending")
+        .select("id").maybeSingle();
+      if (result.error) throw result.error;
+      if (!result.data) {
+        const existing = await admin.from("supplier_service_records").select("id")
+          .eq("id", objectId).eq("status", "submitted").maybeSingle();
+        if (existing.error) throw existing.error;
+        if (!existing.data) throw new PortalHttpError(404, "Service record not found.");
+      }
+      // The immutable record's database trigger writes the scan audit atomically.
+      // Replayed callbacks cannot overwrite a completed scan result.
+      return json(response, 200, { received: true });
+    }
 
     if (objectType === "contract_artifact") {
       const statusColumn =

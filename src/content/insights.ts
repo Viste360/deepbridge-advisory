@@ -1,3 +1,7 @@
+import { germanInsights } from "./insights.de";
+import { spanishInsights } from "./insights.es";
+import type { Locale } from "../i18n";
+
 export type InsightSection = {
   heading: string;
   paragraphs: string[];
@@ -203,6 +207,10 @@ export const insights: Insight[] = [
   },
 ];
 
-export function getInsight(slug: string) {
-  return insights.find((insight) => insight.slug === slug);
+export function getInsights(locale: Locale = "en"): Insight[] {
+  return locale === "de" ? germanInsights : locale === "es" ? spanishInsights : insights;
+}
+
+export function getInsight(slug: string, locale: Locale = "en") {
+  return getInsights(locale).find((insight) => insight.slug === slug);
 }

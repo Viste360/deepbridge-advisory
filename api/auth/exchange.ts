@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { createPortalAuthClient } from "../_lib/authCookies.js";
+import { consumePortalNextCookie } from "../_lib/portalNextCookie.js";
 import {
   handleApiError,
   json,
@@ -37,7 +38,10 @@ export default async function handler(
         401,
         "The secure link is invalid or has expired.",
       );
-    return json(response, 200, { authenticated: true });
+    return json(response, 200, {
+      authenticated: true,
+      next: consumePortalNextCookie(request, response),
+    });
   } catch (error) {
     return handleApiError(response, error);
   }

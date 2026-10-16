@@ -13,4 +13,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://www.deepbridgeadvisory.co.uk/sitemap.xml
+Sitemap: https://deepbridgeadvisory.com/sitemap.xml

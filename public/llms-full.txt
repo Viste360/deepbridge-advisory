@@ -1,82 +1,147 @@
 # DeepBridge Advisory — extended company briefing
 
-## Entity
+## Positioning
 
-DeepBridge Advisory is a UK-based specialist advisory and delivery partner for complex transformation programmes. It is the trading name of DUSTDEEP LTD, company number 16775578, incorporated on 9 October 2025 and registered in England and Wales. The registered office is Kemp House, 152-160 City Road, London, United Kingdom, EC1V 2NX.
+DeepBridge supports industrial businesses through SAP transformation, operational improvement and interim leadership. We bring together experienced professionals, define the assignment and stay involved through delivery, coordination and handover.
 
-Canonical website: https://www.deepbridgeadvisory.co.uk/
+European focus: London · Munich · Madrid, with particular attention to industrial programmes in Germany. These cities describe strategic focus. They are not a claim of three physical offices.
 
-DeepBridge supports organisations and independent consultants across the United Kingdom, Spain, the DACH region (Germany, Austria and Switzerland), the United States, Central America and South America. This international reach describes the programmes, networks and markets DeepBridge supports; it does not imply a physical office in every location. The company does not present itself as a law firm, tax adviser, immigration adviser or provider of employment-status advice.
+Canonical website: https://deepbridgeadvisory.com/
+German website: https://deepbridgeadvisory.com/de
+Spanish website: https://deepbridgeadvisory.com/es
 
-## What the company does
+## Registered entity
 
-DeepBridge helps organisations shape transformation requirements from the first brief, connect programme design with the capability required, identify a focused group of relevant independent consultants, and coordinate the practical route through contracting, onboarding and delivery. The operating model prioritises relevance and continued involvement over high-volume candidate submissions.
+The website operator is DEEPBRIDGE ADVISORY LTD, company number 16775578, incorporated on 9 October 2025 and registered in England and Wales. The registered office is 71–75 Shelton Street, Covent Garden, London WC2H 9JQ, United Kingdom.
 
-The transformation approach spans five connected stages: frame the ambition, operating context and constraints; design workstreams, governance and capability; mobilise experienced specialists; keep capability aligned through delivery; and plan knowledge transfer and operational ownership so the change can hold beyond launch.
+Company details are separate from the European strategic focus. The company does not present itself as a law firm, tax adviser, immigration adviser or provider of employment-status advice.
 
-The four connected areas of expertise are:
+## Expertise
 
-1. SAP and ERP transformation — SAP S/4HANA, enterprise resource planning, functional and technical workstreams, data migration, testing, deployment and stabilisation.
-2. Supply chain transformation — planning, procurement, logistics, manufacturing, warehousing and operating-model change.
-3. Data and business intelligence — data strategy, governance, architecture, migration, analytics and business intelligence.
-4. Programme leadership and delivery — programme direction, PMO, workstream leadership, business analysis, change and recovery.
+1. SAP & Business Transformation: specialist support for SAP S/4HANA programmes, business processes, planning and process improvement, business analysis, operational data and Power BI reporting, and workstream coordination.
+2. Operations & Supply Chain: experienced professionals supporting production and operations leadership, supply chain planning, customer service and order-to-delivery, inventory, logistics and operational stabilisation.
+3. Interim Leadership & Finance: senior capability for change, delivery pressure and temporary leadership needs, including interim management, finance and controlling, programme and project leadership, transformation PMO and operational coordination.
 
-DeepBridge can support one specialist requirement, several complementary roles or the gradual build-out of a wider programme team. Each requirement is assessed against the outcome, programme stage, stakeholder setting, industry context, location, working model and timing.
+The detailed requirement, availability and suitable expertise are assessed for each assignment. Listed areas are possible assignments, not a claim of completed DeepBridge experience in every discipline. No SAP partner status, certification or guaranteed business outcome is claimed.
 
-## Client process
+## Engagement process
 
-1. Clarify the requirement and programme context.
-2. Identify and assess relevant independent specialists.
-3. Coordinate engagement, contracting and onboarding requirements.
-4. Stay involved through the assignment and delivery lifecycle.
+1. Define: clarify the requirement, scope, expected outputs, working model and client dependencies.
+2. Assemble: identify professionals whose experience and availability match the assignment.
+3. Mobilise: align responsibilities, engagement arrangements, onboarding and reporting.
+4. Oversee: maintain agreed progress reviews, coordinate issues and manage changes as the work develops.
+5. Transition: plan handover, knowledge transfer and continuity, including replacement coordination where required.
 
-Start a client enquiry: https://www.deepbridgeadvisory.co.uk/contact?type=client#contact-form
+The level of DeepBridge involvement is agreed for each assignment. DeepBridge can support an individual specialist assignment, several complementary professionals, or an agreed project work package or coordination mandate. The applicable written agreement defines the actual engagement and responsibilities.
 
-## Consultant network
+DeepBridge remains involved beyond the initial introduction. The assignment can include a named contact, clear communication and responsibilities, agreed progress reviews, practical issue and change coordination, and planned handover and replacement coordination when needed.
 
-DeepBridge works with experienced independent professionals across SAP, supply chain, business analysis, data and programme delivery. Joining the network does not create an employment relationship, guarantee an assignment or oblige either party to proceed. Assignment status and terms are defined in the applicable written agreement.
+Client enquiries: https://deepbridgeadvisory.com/contact?type=client#contact-form
+How We Work: https://deepbridgeadvisory.com/for-clients
 
-Join the network: https://www.deepbridgeadvisory.co.uk/contact?type=consultant
+## Professional network
 
-## Geographic coverage
+DeepBridge works with experienced independent professionals and interim managers across SAP, operations, supply chain, data, finance and programme leadership. Professionals should provide relevant expertise, location, languages, availability and useful professional background. The public form is not a channel for sensitive identity, banking or tax documents.
 
-DeepBridge supports programmes across the UK, Spain, DACH, the United States, Central America and South America from its base in London. Cross-border engagements may raise assignment-specific legal, tax, immigration, social-security, insurance, data-handling and employment-status questions. Appropriately qualified advisers should review those matters where required.
+Opportunities are assessed against the assignment, experience, availability, working model and expectations. Joining the network does not guarantee an assignment or create an employment relationship. Engagement arrangements are discussed for each assignment and defined in the applicable written agreement.
 
-## Published guidance
+For Professionals: https://deepbridgeadvisory.com/for-consultants
+Join the network: https://deepbridgeadvisory.com/contact?type=consultant#contact-form
+Opportunities: https://deepbridgeadvisory.com/opportunities
+
+## Geography
+
+The European proposition centres on London, Munich and Madrid, with Germany a particular focus. The existing wider network also relates to programmes in the UK, Spain, the DACH region, the United States, Central America and South America. This describes markets and networks, not a physical office in every location.
+
+Cross-border engagements may raise assignment-specific questions about contracting, work location, immigration, taxation, social security, insurance, data handling or employment status. Appropriately qualified advisers should review those questions where required.
+
+## Deutsch: Unternehmen und Zusammenarbeit
+
+DeepBridge verbindet die Anforderungen industrieller Projekte mit erfahrenen Fachleuten und einer praxisnahen Begleitung der Umsetzung. Wir unterstützen Unternehmen bei SAP-Transformationen, operativen Verbesserungen und temporärem Führungsbedarf. Europäischer Fokus: London · München · Madrid, mit besonderem Augenmerk auf Industrieprojekte in Deutschland.
+
+Unsere drei Leistungsbereiche sind SAP & Unternehmenstransformation, Operations & Supply Chain sowie Interim Management & Finance. Welche Expertise verfügbar ist und wie der Auftrag ausgestaltet wird, klären wir im Einzelfall.
+
+Die Zusammenarbeit umfasst fünf Schritte: Auftrag klären, Expertise zusammenstellen, Einsatz vorbereiten, Umsetzung begleiten und Übergabe sichern. Der Umfang unserer Begleitung wird für jeden Auftrag individuell vereinbart. DeepBridge bleibt nach der Vorstellung der Experten eingebunden und stimmt Fortschrittsgespräche, Eskalationen und Kontinuität mit dem Kunden ab.
+
+Betreiber der Website ist DEEPBRIDGE ADVISORY LTD, registriert in England und Wales unter der Nummer 16775578. Die eingetragene Geschäftsanschrift lautet 71–75 Shelton Street, Covent Garden, London WC2H 9JQ, United Kingdom. Die genannten Städte beschreiben den strategischen Fokus und sind keine Aussage über drei bestehende Büros.
+
+- Leistungen: https://deepbridgeadvisory.com/de/expertise
+- Zusammenarbeit: https://deepbridgeadvisory.com/de/for-clients
+- Für Experten: https://deepbridgeadvisory.com/de/for-consultants
+- Über uns: https://deepbridgeadvisory.com/de/about
+- Einblicke: https://deepbridgeadvisory.com/de/insights
+- Projektmöglichkeiten: https://deepbridgeadvisory.com/de/opportunities
+- Kontakt: https://deepbridgeadvisory.com/de/contact
+- Impressum: https://deepbridgeadvisory.com/de/legal
+- Datenschutz: https://deepbridgeadvisory.com/de/privacy
+- Cookies: https://deepbridgeadvisory.com/de/cookies
+- Barrierefreiheit: https://deepbridgeadvisory.com/de/accessibility
+
+## Español: empresa y colaboración
+
+DeepBridge conecta las necesidades de proyectos industriales con profesionales experimentados y una coordinación práctica de la ejecución. Apoyamos a empresas en transformaciones SAP, mejoras operativas y necesidades temporales de liderazgo. Enfoque europeo: Londres · Múnich · Madrid, con especial atención a los programas industriales en Alemania.
+
+Nuestras tres áreas son SAP y transformación empresarial, operaciones y cadena de suministro, y dirección interina y finanzas. La disponibilidad de especialistas, el alcance y los entregables se evalúan para cada encargo.
+
+La colaboración se articula en cinco pasos: definir el encargo, reunir la experiencia adecuada, preparar la incorporación, acompañar la ejecución y organizar el traspaso. El grado de participación de DeepBridge se acuerda en cada caso. Mantenemos nuestra implicación tras la presentación de los profesionales y acordamos con el cliente las revisiones de progreso, el escalado de incidencias y la continuidad.
+
+Trabajamos con profesionales independientes y directivos interinos con experiencia en SAP, operaciones, cadena de suministro, datos, finanzas y dirección de programas. Para valorar un posible encargo son relevantes la experiencia, la ubicación, los idiomas y la disponibilidad. Incorporarse a la red no garantiza un proyecto ni crea una relación laboral.
+
+El operador del sitio web es DEEPBRIDGE ADVISORY LTD, registrada en Inglaterra y Gales con el número de sociedad 16775578. Su domicilio social es 71–75 Shelton Street, Covent Garden, London WC2H 9JQ, United Kingdom. Las ciudades mencionadas describen el enfoque geográfico y no afirman la existencia de tres oficinas físicas.
+
+- Especialidades: https://deepbridgeadvisory.com/es/expertise
+- Cómo trabajamos: https://deepbridgeadvisory.com/es/for-clients
+- Para profesionales: https://deepbridgeadvisory.com/es/for-consultants
+- Quiénes somos: https://deepbridgeadvisory.com/es/about
+- Perspectivas: https://deepbridgeadvisory.com/es/insights
+- Oportunidades: https://deepbridgeadvisory.com/es/opportunities
+- Contacto: https://deepbridgeadvisory.com/es/contact
+- Aviso legal: https://deepbridgeadvisory.com/es/legal
+- Privacidad: https://deepbridgeadvisory.com/es/privacy
+- Cookies: https://deepbridgeadvisory.com/es/cookies
+- Accesibilidad: https://deepbridgeadvisory.com/es/accessibility
+
+## Published guidance / Veröffentlichte Beiträge / Artículos publicados
 
 ### How to define a transformation consultant requirement
 
 A strong brief leads with the delivery outcome, explains programme stage and constraints, distinguishes essential experience from useful signals, and makes decision authority, working model, location and timing explicit.
 
-Source: https://www.deepbridgeadvisory.co.uk/insights/defining-transformation-consultant-requirement
+English: https://deepbridgeadvisory.com/insights/defining-transformation-consultant-requirement
+Deutsch: https://deepbridgeadvisory.com/de/insights/defining-transformation-consultant-requirement
+Español: https://deepbridgeadvisory.com/es/insights/defining-transformation-consultant-requirement
 
 ### When an SAP programme needs independent specialist support
 
-Independent support can add value when a critical workstream lacks experienced ownership, business and technology teams are not reaching decisions, the programme is moving into a higher-risk phase, or recovery needs an objective view. The remit, decision rights, success measures and knowledge-transfer expectation should be clear.
+Independent support can add value when a critical workstream lacks experienced ownership, business and technology teams are not reaching decisions, the programme enters a higher-risk phase, or recovery needs an objective view. The remit, decision rights, success measures and knowledge-transfer expectations should be clear.
 
-Source: https://www.deepbridgeadvisory.co.uk/insights/when-sap-programme-needs-independent-specialist-support
+English: https://deepbridgeadvisory.com/insights/when-sap-programme-needs-independent-specialist-support
+Deutsch: https://deepbridgeadvisory.com/de/insights/when-sap-programme-needs-independent-specialist-support
+Español: https://deepbridgeadvisory.com/es/insights/when-sap-programme-needs-independent-specialist-support
 
 ### Building cross-border transformation teams
 
 Cross-border teams should be designed around programme outcomes, decision coverage, stakeholder access, location and working patterns. Engagement constraints should be identified early, with one shared governance and reporting rhythm across countries.
 
-Source: https://www.deepbridgeadvisory.co.uk/insights/building-cross-border-transformation-teams-uk-europe
+English: https://deepbridgeadvisory.com/insights/building-cross-border-transformation-teams-uk-europe
+Deutsch: https://deepbridgeadvisory.com/de/insights/building-cross-border-transformation-teams-uk-europe
+Español: https://deepbridgeadvisory.com/es/insights/building-cross-border-transformation-teams-uk-europe
 
 ## Authoritative links
 
-- Expertise: https://www.deepbridgeadvisory.co.uk/expertise
-- For clients: https://www.deepbridgeadvisory.co.uk/for-clients
-- For consultants: https://www.deepbridgeadvisory.co.uk/for-consultants
-- About: https://www.deepbridgeadvisory.co.uk/about
-- Insights: https://www.deepbridgeadvisory.co.uk/insights
-- Contact: https://www.deepbridgeadvisory.co.uk/contact
-- Legal notice: https://www.deepbridgeadvisory.co.uk/legal
-- Privacy: https://www.deepbridgeadvisory.co.uk/privacy
+- Expertise: https://deepbridgeadvisory.com/expertise
+- About: https://deepbridgeadvisory.com/about
+- Insights: https://deepbridgeadvisory.com/insights
+- Contact: https://deepbridgeadvisory.com/contact
+- Legal notice: https://deepbridgeadvisory.com/legal
+- Privacy: https://deepbridgeadvisory.com/privacy
+- Cookies: https://deepbridgeadvisory.com/cookies
+- Accessibility: https://deepbridgeadvisory.com/accessibility
 - LinkedIn: https://www.linkedin.com/company/deepbridge-advisory
-- Sitemap: https://www.deepbridgeadvisory.co.uk/sitemap.xml
+- Sitemap: https://deepbridgeadvisory.com/sitemap.xml
 
-## Contact
+## Contact / Kontakt / Contacto
 
 Email: hello@deepbridgeadvisory.co.uk
 
-Last reviewed: 22 August 2026.
+Last updated / Aktualisiert / Actualizado: 16 October / Oktober / octubre 2026.

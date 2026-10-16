@@ -1,193 +1,122 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { build } from "vite";
+import { assertRenderedContactRoutes } from "./check-site-links.mjs";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const distDirectory = resolve(projectRoot, "dist");
-const seo = JSON.parse(
-  await readFile(resolve(projectRoot, "src/config/seo.json"), "utf8"),
-);
+const seo = JSON.parse(await readFile(resolve(projectRoot, "src/config/seo.json"), "utf8"));
 const sourceHtml = await readFile(resolve(distDirectory, "index.html"), "utf8");
 const siteUrl = seo.siteUrl.replace(/\/$/, "");
 const socialImageUrl = `${siteUrl}${seo.socialImagePath}`;
 
+const locales = ["en", "de", "es"];
+const routeLocale = (path) => path.match(/^\/(de|es)(?:\/|$)/)?.[1] ?? "en";
+const basePath = (path) => path.replace(/^\/(de|es)(?=\/|$)/, "") || "/";
+const localizePath = (path, locale) => locale === "en" ? path : path === "/" ? `/${locale}` : `/${locale}${path}`;
+const openGraphLocale = { en: "en_GB", de: "de_DE", es: "es_ES" };
+const imageAlt = {
+  en: "DeepBridge Advisory — Industrial transformation and project delivery",
+  de: "DeepBridge Advisory — Industrielle Transformation und Projektumsetzung",
+  es: "DeepBridge Advisory — Transformación industrial y ejecución de proyectos",
+};
+const canonical = (path) => `${siteUrl}${path}`;
+
 function escapeHtml(value) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
+  return String(value).replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }
 
 function replaceTag(html, pattern, replacement) {
   return pattern.test(html)
-    ? html.replace(pattern, replacement)
-    : html.replace("</head>", `    ${replacement}\n  </head>`);
+    ? html.replace(pattern, () => replacement)
+    : html.replace("</head>", () => `    ${replacement}\n  </head>`);
 }
 
-function structuredData(path, meta, pageUrl) {
-  const organisationId = `${siteUrl}/#organisation`;
-  const websiteId = `${siteUrl}/#website`;
-  const graph = [
-    {
-      "@type": "Organization",
-      "@id": organisationId,
-      name: seo.siteName,
-      alternateName: "DeepBridge",
-      legalName: "DUSTDEEP LTD",
-      url: siteUrl,
-      logo: `${siteUrl}/brand/deepbridge-monogram-512.png`,
-      email: "hello@deepbridgeadvisory.co.uk",
-      foundingDate: "2025-10-09",
-      sameAs: ["https://www.linkedin.com/company/deepbridge-advisory"],
-      areaServed: ["United Kingdom", "Europe"],
-    },
-    {
-      "@type": "WebSite",
-      "@id": websiteId,
-      url: siteUrl,
-      name: seo.siteName,
-      inLanguage: "en-GB",
-      publisher: { "@id": organisationId },
-    },
+function renderDocument(path, meta, rendered) {
+  const locale = routeLocale(path);
+  const route = basePath(path);
+  const pageUrl = canonical(path);
+  const robots = route === "/404" ? "noindex, nofollow" : "index, follow, max-image-preview:large";
+  let html = sourceHtml.replace(/<html[^>]*>/i, `<html lang="${locale}">`);
+  // Vite may remove the optional slash from void tags in production output.
+  const metaTag = (attribute, key, value) => [
+    new RegExp(`<meta\\s+${attribute}="${key}"[^>]*>`, "i"),
+    `<meta ${attribute}="${key}" content="${escapeHtml(value)}" />`,
   ];
-
-  if (meta.type === "article") {
-    graph.push({
-      "@type": "Article",
-      "@id": `${pageUrl}#article`,
-      headline: meta.title.replace(/ \| DeepBridge(?: Advisory)?$/, ""),
-      description: meta.description,
-      datePublished: meta.published,
-      dateModified: meta.modified,
-      inLanguage: "en-GB",
-      mainEntityOfPage: { "@id": `${pageUrl}#webpage` },
-      author: { "@id": organisationId },
-      publisher: { "@id": organisationId },
-      image: socialImageUrl,
-    });
-  }
-
-  graph.push({
-    "@type": path === "/insights" ? "CollectionPage" : "WebPage",
-    "@id": `${pageUrl}#webpage`,
-    url: pageUrl,
-    name: meta.title,
-    description: meta.description,
-    inLanguage: "en-GB",
-    isPartOf: { "@id": websiteId },
-    about: { "@id": organisationId },
-  });
-
-  return JSON.stringify({ "@context": "https://schema.org", "@graph": graph })
-    .replaceAll("<", "\\u003c");
-}
-
-function renderPage(path, meta) {
-  const pageUrl = `${siteUrl}${path === "/" ? "/" : path}`;
-  const robots =
-    path === "/404"
-      ? "noindex, nofollow"
-      : "index, follow, max-image-preview:large";
-  let html = sourceHtml;
-
-  html = replaceTag(
-    html,
-    /<title>[\s\S]*?<\/title>/i,
-    `<title>${escapeHtml(meta.title)}</title>`,
-  );
-  html = replaceTag(
-    html,
-    /<meta\s+name="description"[\s\S]*?\/>/i,
-    `<meta name="description" content="${escapeHtml(meta.description)}" />`,
-  );
-
   const tags = [
-    [
-      /<link\s+rel="canonical"[\s\S]*?\/>/i,
-      `<link rel="canonical" href="${pageUrl}" />`,
-    ],
-    [
-      /<meta\s+name="robots"[\s\S]*?\/>/i,
-      `<meta name="robots" content="${robots}" />`,
-    ],
-    [
-      /<meta\s+property="og:title"[\s\S]*?\/>/i,
-      `<meta property="og:title" content="${escapeHtml(meta.title)}" />`,
-    ],
-    [
-      /<meta\s+property="og:description"[\s\S]*?\/>/i,
-      `<meta property="og:description" content="${escapeHtml(meta.description)}" />`,
-    ],
-    [
-      /<meta\s+property="og:url"[\s\S]*?\/>/i,
-      `<meta property="og:url" content="${pageUrl}" />`,
-    ],
-    [
-      /<meta\s+property="og:image"[\s\S]*?\/>/i,
-      `<meta property="og:image" content="${socialImageUrl}" />`,
-    ],
-    [
-      /<meta\s+property="og:type"[\s\S]*?\/>/i,
-      `<meta property="og:type" content="${meta.type ?? "website"}" />`,
-    ],
-    [
-      /<meta\s+name="twitter:title"[\s\S]*?\/>/i,
-      `<meta name="twitter:title" content="${escapeHtml(meta.title)}" />`,
-    ],
-    [
-      /<meta\s+name="twitter:description"[\s\S]*?\/>/i,
-      `<meta name="twitter:description" content="${escapeHtml(meta.description)}" />`,
-    ],
-    [
-      /<meta\s+name="twitter:image"[\s\S]*?\/>/i,
-      `<meta name="twitter:image" content="${socialImageUrl}" />`,
-    ],
+    [/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(meta.title)}</title>`],
+    metaTag("name", "description", meta.description),
+    [/<link\s+rel="canonical"[^>]*>/i, `<link rel="canonical" href="${pageUrl}" />`],
+    metaTag("name", "robots", robots),
+    metaTag("property", "og:title", meta.title),
+    metaTag("property", "og:description", meta.description),
+    metaTag("property", "og:url", pageUrl),
+    metaTag("property", "og:image", socialImageUrl),
+    metaTag("property", "og:type", meta.type ?? "website"),
+    metaTag("property", "og:locale", openGraphLocale[locale]),
+    metaTag("name", "twitter:title", meta.title),
+    metaTag("name", "twitter:description", meta.description),
+    metaTag("name", "twitter:image", socialImageUrl),
+    metaTag("property", "og:image:alt", imageAlt[locale]),
+    metaTag("name", "twitter:image:alt", imageAlt[locale]),
   ];
-
-  for (const [pattern, replacement] of tags) {
-    html = replaceTag(html, pattern, replacement);
-  }
-
-  html = html.replace(
-    "</head>",
-    `    <script id="deepbridge-structured-data" type="application/ld+json">${structuredData(path, meta, pageUrl)}</script>\n  </head>`,
-  );
-
-  if (meta.type === "article") {
-    html = html.replace(
-      "</head>",
-      `    <meta property="article:published_time" content="${meta.published}" />\n    <meta property="article:modified_time" content="${meta.modified}" />\n  </head>`,
-    );
-  }
-
+  for (const [pattern, replacement] of tags) html = replaceTag(html, pattern, replacement);
+  html = html.replace(/\s*<link\b[^>]*hreflang=[^>]*>/gi, "");
+  html = html.replace(/\s*<meta\s+property="og:locale:alternate"[^>]*>/gi, "");
+  const alternateLocales = locales.filter((other) => other !== locale)
+    .map((other) => `<meta property="og:locale:alternate" content="${openGraphLocale[other]}" />`).join("\n    ");
+  const alternates = route === "/404" ? "" : [
+    ...locales.map((other) => `<link rel="alternate" hreflang="${other}" href="${canonical(localizePath(route, other))}" />`),
+    `<link rel="alternate" hreflang="x-default" href="${canonical(route)}" />`,
+  ].join("\n    ");
+  const articleTags = meta.type === "article"
+    ? `<meta property="article:published_time" content="${escapeHtml(meta.published)}" />\n    <meta property="article:modified_time" content="${escapeHtml(meta.modified)}" />`
+    : "";
+  const json = JSON.stringify(rendered.schema).replaceAll("<", "\\u003c");
+  html = html.replace("</head>", () => `    ${alternates}\n    ${alternateLocales}\n    ${articleTags}\n    <script id="deepbridge-structured-data" type="application/ld+json">${json}</script>\n  </head>`);
+  // The real page content is searchable and readable before JavaScript runs.
+  html = html.replace(/<noscript>[\s\S]*?<\/noscript>\s*/i, "");
+  html = html.replace('<div id="root"></div>', () => `<div id="root" data-prerendered="${escapeHtml(path)}">${rendered.html}</div>`);
   return html;
 }
 
-for (const [path, meta] of Object.entries(seo.pages)) {
-  const outputPath =
-    path === "/"
-      ? resolve(distDirectory, "index.html")
-      : resolve(distDirectory, `${path.slice(1)}.html`);
-  await mkdir(dirname(outputPath), { recursive: true });
-  await writeFile(outputPath, renderPage(path, meta));
+// Keep server bundles outside dist, so only public client assets are deployed.
+const ssrDirectory = await mkdtemp(resolve(projectRoot, ".deepbridge-prerender-"));
+try {
+  await build({
+    root: projectRoot,
+    logLevel: "warn",
+    build: {
+      ssr: resolve(projectRoot, "src/entry-server.tsx"),
+      outDir: ssrDirectory,
+      emptyOutDir: false,
+      copyPublicDir: false,
+      rollupOptions: { output: { entryFileNames: "entry-server.mjs" } },
+    },
+  });
+  const { renderPage } = await import(pathToFileURL(resolve(ssrDirectory, "entry-server.mjs")).href);
+  assertRenderedContactRoutes(renderPage);
+  for (const [path, meta] of Object.entries(seo.pages)) {
+    const outputPath = path === "/" ? resolve(distDirectory, "index.html") : resolve(distDirectory, `${path.slice(1)}.html`);
+    await mkdir(dirname(outputPath), { recursive: true });
+    await writeFile(outputPath, renderDocument(path, meta, renderPage(path)));
+  }
+} finally {
+  await rm(ssrDirectory, { recursive: true, force: true });
 }
 
-const publicPaths = Object.keys(seo.pages).filter((path) => path !== "/404");
+const publicPaths = Object.keys(seo.pages).filter((path) => basePath(path) !== "/404");
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${publicPaths
-  .map(
-    (path) => {
-      const meta = seo.pages[path];
-      const lastModified = meta.lastModified
-        ? `<lastmod>${meta.lastModified}</lastmod>`
-        : "";
-      return `  <url><loc>${siteUrl}${path === "/" ? "/" : path}</loc>${lastModified}</url>`;
-    },
-  )
-  .join("\n")}
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+${publicPaths.map((path) => {
+  const meta = seo.pages[path];
+  const route = basePath(path);
+  const lastModified = meta.lastModified ? `<lastmod>${meta.lastModified}</lastmod>` : "";
+  const alternates = locales.map((locale) => `<xhtml:link rel="alternate" hreflang="${locale}" href="${canonical(localizePath(route, locale))}"/>`).join("");
+  return `  <url><loc>${canonical(path)}</loc>${lastModified}${alternates}<xhtml:link rel="alternate" hreflang="x-default" href="${canonical(route)}"/></url>`;
+}).join("\n")}
 </urlset>
 `;
-
 await writeFile(resolve(distDirectory, "sitemap.xml"), sitemap);
+console.log(`Prerendered ${Object.keys(seo.pages).length} public English, German and Spanish routes.`);
